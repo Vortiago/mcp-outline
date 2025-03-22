@@ -1,29 +1,28 @@
 # MCP Outline Server
 
-A Model Context Protocol (MCP) server enabling AI assistants to interact with Outline documentation services.
+A Model Context Protocol (MCP) server enabling AI assistants to interact with document outlines.
 
 ## Overview
 
-This project implements a Model Context Protocol (MCP) server that allows AI assistants (like Claude) to interact with Outline, providing a bridge between natural language interactions and the Outline API to manage documentation.
+This project implements a Model Context Protocol (MCP) server that allows AI assistants (like Claude) to interact with document outline services, providing a bridge between natural language interactions and document structure operations.
 
 ## Features
 
 Currently implemented:
-- **Document Retrieval**: Search and retrieve documents from Outline
-- **Content Management**: Read and browse documents in Outline workspaces
+- **Document Outline Retrieval**: Get document outlines
 
 Planned features:
-- **Document Creation**: Create new documents and update existing ones
-- **Collaboration**: Manage comments and collaborative editing
-- **Workspace Organization**: Organize collections and document structures
+- **Document Creation**: Create new documents with outlines
+- **Outline Manipulation**: Add, move, and remove sections
+- **Content Management**: Add and update content within outline sections
+- **Document Export**: Export documents in various formats (Markdown, HTML, etc.)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.9+
-- Outline instance with API access
-- API token with necessary permissions for Outline access
+- Python 3.10+
+- Document storage backend (to be determined)
 
 ### Installation
 
@@ -36,7 +35,7 @@ cd mcp-outline
 pip install -e ".[dev]"
 
 # Install from PyPi
-pip install mcp_outline
+pip install mcp-outline
 ```
 
 ### Configuration
@@ -44,11 +43,8 @@ pip install mcp_outline
 Create a `.env` file in the project root with the following variables:
 
 ```
-OUTLINE_API_TOKEN=your_api_token
-OUTLINE_URL=https://your-outline-instance.example.com
+# Configuration variables will go here
 ```
-
-Note: Make sure to provide the full URL to your Outline instance.
 
 ### Running the Server
 
@@ -57,27 +53,27 @@ Note: Make sure to provide the full URL to your Outline instance.
 mcp dev src/mcp_outline/server.py
 
 # Install in Claude Desktop
-mcp install src/mcp_outline/server.py --name "Outline Documentation Assistant"
+mcp install src/mcp_outline/server.py --name "Document Outline Assistant"
 ```
 
 ## Usage Examples
 
-### Search for Documents
+### Query Document Outline
 
 ```
-Find all documents related to API authentication in our documentation
-```
-
-### Read Document Content (Coming Soon)
-
-```
-Show me the content of the "Getting Started" guide
+Show me the outline for document "project-proposal"
 ```
 
 ### Create a New Document (Coming Soon)
 
 ```
-Create a new document in the Development collection titled "API Rate Limiting"
+Create a new document titled "Research Report" with sections for Introduction, Methodology, Results, and Discussion
+```
+
+### Modify an Outline (Coming Soon)
+
+```
+Add a new section called "Future Work" after the Discussion section in document "research-report"
 ```
 
 ## Contributing
@@ -91,4 +87,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Built with [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- Uses [Outline API](https://github.com/outline/outline/blob/main/docs/API.md)

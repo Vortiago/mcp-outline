@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-outline"
+description = "A Model Context Protocol (MCP) server for Outline (https://www.getoutline.com)"
+version = "0.1.0"
+authors = [
+    {name = "Atle H. Havsø", email = "atle@havso.net"},
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {file = "LICENSE"}
+dependencies = [
+    "mcp>=0.1.0",
+    "requests>=2.25.0",
+]
+
+[project.scripts]
+mcp-outline = "mcp_outline.server:main"
+
+[project.urls]
+"Homepage" = "https://github.com/Vortiago/mcp-outline"
+"Bug Tracker" = "https://github.com/Vortiago/mcp-outline/issues"
+
+[project.optional-dependencies]
+dev = [
+    "mcp[cli]>=0.1.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.0.267",
+    "anyio>=3.6.2",
+    "pyright>=1.1.350",
+    "trio>=0.22.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+
+[tool.ruff]
+line-length = 79
+target-version = "py310"
+select = ["E", "F", "I"]
+extend-exclude = ["docs"]
+
+[tool.pyright]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "docs/"
+]
