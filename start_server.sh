@@ -7,5 +7,7 @@ if [ -d ".venv" ]; then
     source .venv/bin/activate
 fi
 
+export $(grep -v '^#' .env | xargs)
+
 # Run the server in development mode
-python -m mcp_outline
+python src/mcp_outline/server.py
