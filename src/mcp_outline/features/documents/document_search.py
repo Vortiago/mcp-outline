@@ -168,7 +168,9 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
             
     @mcp.tool()
-    def get_document_id_from_title(query: str, collection_id: Optional[str] = None) -> str:
+    def get_document_id_from_title(
+        query: str, collection_id: Optional[str] = None
+    ) -> str:
         """
         Find a document ID by searching for its title.
         
@@ -187,7 +189,11 @@ def register_tools(mcp) -> None:
                 return f"No documents found matching '{query}'"
             
             # Check if we have an exact title match
-            exact_matches = [r for r in results if r.get("document", {}).get("title", "").lower() == query.lower()]
+            exact_matches = [
+                r for r in results 
+                if (r.get("document", {}).get("title", "").lower() 
+                    == query.lower())
+            ]
             
             if exact_matches:
                 doc = exact_matches[0].get("document", {})

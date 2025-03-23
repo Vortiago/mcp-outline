@@ -1,7 +1,8 @@
 """
 Document collaboration tools for the MCP Outline server.
 
-This module provides MCP tools for document comments, sharing, and collaboration.
+This module provides MCP tools for document comments, sharing, and 
+collaboration.
 """
 from typing import Any, Dict, List
 
@@ -50,7 +51,9 @@ def register_tools(mcp) -> None:
         """
         try:
             client = get_outline_client()
-            response = client.post("comments.list", {"documentId": document_id})
+            response = client.post(
+                "comments.list", {"documentId": document_id}
+            )
             comments = response.get("data", [])
             return _format_comments(comments)
         except OutlineClientError as e:

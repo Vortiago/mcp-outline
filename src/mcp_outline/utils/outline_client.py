@@ -132,7 +132,9 @@ class OutlineClient:
         response = self.post("collections.list", {"limit": limit})
         return response.get("data", [])
     
-    def get_collection_documents(self, collection_id: str) -> List[Dict[str, Any]]:
+    def get_collection_documents(
+        self, collection_id: str
+    ) -> List[Dict[str, Any]]:
         """
         Get document structure for a collection.
         
@@ -203,7 +205,9 @@ class OutlineClient:
         Returns:
             List of documents in trash
         """
-        response = self.post("documents.list", {"limit": limit, "deleted": True})
+        response = self.post(
+            "documents.list", {"limit": limit, "deleted": True}
+        )
         return response.get("data", [])
     
     def restore_document(self, document_id: str) -> Dict[str, Any]:
@@ -236,7 +240,12 @@ class OutlineClient:
         return response.get("success", False)
     
     # Collection management methods
-    def create_collection(self, name: str, description: str = "", color: Optional[str] = None) -> Dict[str, Any]:
+    def create_collection(
+        self, 
+        name: str, 
+        description: str = "", 
+        color: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Create a new collection.
         
@@ -259,8 +268,13 @@ class OutlineClient:
         response = self.post("collections.create", data)
         return response.get("data", {})
     
-    def update_collection(self, collection_id: str, name: Optional[str] = None, 
-                         description: Optional[str] = None, color: Optional[str] = None) -> Dict[str, Any]:
+    def update_collection(
+        self, 
+        collection_id: str, 
+        name: Optional[str] = None,
+        description: Optional[str] = None, 
+        color: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Update an existing collection.
         
@@ -300,7 +314,11 @@ class OutlineClient:
         response = self.post("collections.delete", {"id": collection_id})
         return response.get("success", False)
     
-    def export_collection(self, collection_id: str, format: str = "outline-markdown") -> Dict[str, Any]:
+    def export_collection(
+        self, 
+        collection_id: str, 
+        format: str = "outline-markdown"
+    ) -> Dict[str, Any]:
         """
         Export a collection to a file.
         
@@ -317,7 +335,10 @@ class OutlineClient:
         })
         return response.get("data", {})
     
-    def export_all_collections(self, format: str = "outline-markdown") -> Dict[str, Any]:
+    def export_all_collections(
+        self, 
+        format: str = "outline-markdown"
+    ) -> Dict[str, Any]:
         """
         Export all collections to a file.
         

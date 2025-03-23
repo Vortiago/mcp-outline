@@ -13,7 +13,9 @@ from mcp_outline.features.documents import (
 )
 
 
-def register(mcp, api_key: Optional[str] = None, api_url: Optional[str] = None):
+def register(
+    mcp, api_key: Optional[str] = None, api_url: Optional[str] = None
+):
     """
     Register document management features with the MCP server.
     

@@ -40,7 +40,10 @@ def register_tools(mcp) -> None:
             
             # Require at least one destination parameter
             if collection_id is None and parent_document_id is None:
-                return "Error: You must specify either a collection_id or parent_document_id."
+                return (
+                    "Error: You must specify either a collection_id or "
+                    "parent_document_id."
+                )
             
             data = {"id": document_id}
             

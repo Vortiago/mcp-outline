@@ -31,8 +31,7 @@ def get_outline_client() -> OutlineClient:
         client = OutlineClient(api_key=api_key, api_url=api_url)
         
         # Test the connection by attempting to get auth info
-        auth_info = client.auth_info()
-        user_name = auth_info.get('user', {}).get('name', 'Unknown')
+        _ = client.auth_info()
         
         return client
     except OutlineError as e:

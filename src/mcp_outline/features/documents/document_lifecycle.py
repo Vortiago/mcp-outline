@@ -1,7 +1,8 @@
 """
 Document lifecycle management for the MCP Outline server.
 
-This module provides MCP tools for archiving, trashing, and restoring documents.
+This module provides MCP tools for archiving, trashing, and restoring 
+documents.
 """
 
 from mcp_outline.features.documents.common import (
@@ -76,7 +77,8 @@ def register_tools(mcp) -> None:
         
         Args:
             document_id: The document ID to delete
-            permanent: If True, permanently deletes the document instead of moving to trash
+            permanent: If True, permanently deletes the document instead of 
+                moving to trash
             
         Returns:
             Result message

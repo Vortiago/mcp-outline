@@ -15,7 +15,10 @@ def _format_ai_answer(response: Dict[str, Any]) -> str:
     """Format AI answer into readable text."""
     # Check if the search field exists (indicates AI answer is available)
     if "search" not in response:
-        return "AI answering is not enabled for this workspace or no relevant information was found."
+        return (
+            "AI answering is not enabled for this workspace or "
+            "no relevant information was found."
+        )
     
     search = response.get("search", {})
     answer = search.get("answer", "")
@@ -54,9 +57,10 @@ def register_tools(mcp) -> None:
         """
         Ask a natural language question about your documents.
         
-        Uses AI to find an answer from your document content. You should use this
-        when a user asks questions about information that might be in the documents,
-        such as "What is our vacation policy?" or "Tell me about project X".
+        Uses AI to find an answer from your document content. You should 
+        use this when a user asks questions about information that might be 
+        in the documents, such as "What is our vacation policy?" or "Tell me 
+        about project X".
         
         Args:
             question: The natural language question to ask
@@ -68,7 +72,9 @@ def register_tools(mcp) -> None:
         """
         try:
             client = get_outline_client()
-            response = client.answer_question(question, collection_id, document_id)
+            response = client.answer_question(
+                question, collection_id, document_id
+            )
             return _format_ai_answer(response)
         except OutlineClientError as e:
             return f"Error getting answer: {str(e)}"

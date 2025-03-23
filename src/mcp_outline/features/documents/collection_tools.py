@@ -31,10 +31,16 @@ def _format_file_operation(file_operation: Dict[str, Any]) -> str:
     # Provide instructions based on the state
     if state == "complete":
         output += "The export is complete and ready to download. "
-        output += "Use the ID with the appropriate download tool to retrieve the file.\n"
+        output += (
+            "Use the ID with the appropriate download tool to retrieve "
+            "the file.\n"
+        )
     else:
         output += "The export is still in progress. "
-        output += f"Check the operation state again later using the ID: {file_operation_id}\n"
+        output += (
+            f"Check the operation state again later using the ID: "
+            f"{file_operation_id}\n"
+        )
     
     return output
 
@@ -72,7 +78,10 @@ def register_tools(mcp) -> None:
             collection_id = collection.get("id", "unknown")
             collection_name = collection.get("name", "Untitled")
             
-            return f"Collection created successfully: {collection_name} (ID: {collection_id})"
+            return (
+                f"Collection created successfully: {collection_name} "
+                f"(ID: {collection_id})"
+            )
         except OutlineClientError as e:
             return f"Error creating collection: {str(e)}"
         except Exception as e:
@@ -104,7 +113,9 @@ def register_tools(mcp) -> None:
             if name is None and description is None and color is None:
                 return "Error: You must specify at least one field to update."
             
-            collection = client.update_collection(collection_id, name, description, color)
+            collection = client.update_collection(
+                collection_id, name, description, color
+            )
             
             if not collection:
                 return "Failed to update collection."
@@ -122,7 +133,8 @@ def register_tools(mcp) -> None:
         """
         Delete a collection and all its documents.
         
-        This action cannot be undone! All documents within the collection will be deleted.
+        This action cannot be undone! All documents within the collection 
+        will be deleted.
         
         Args:
             collection_id: The collection ID to delete
