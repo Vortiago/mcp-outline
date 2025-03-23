@@ -164,7 +164,9 @@ class TestDocumentSearchTools:
     """Tests for document search tools."""
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_search_documents_success(self, mock_get_client, register_search_tools):
+    def test_search_documents_success(
+        self, mock_get_client, register_search_tools
+    ):
         """Test search_documents tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -175,14 +177,19 @@ class TestDocumentSearchTools:
         result = register_search_tools.tools["search_documents"]("test query")
         
         # Verify client was called correctly
-        mock_client.search_documents.assert_called_once_with("test query", None)
+        mock_client.search_documents.assert_called_once_with(
+            "test query", 
+            None
+        )
         
         # Verify result contains expected information
         assert "Test Document 1" in result
         assert "doc1" in result
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_search_documents_with_collection(self, mock_get_client, register_search_tools):
+    def test_search_documents_with_collection(
+        self, mock_get_client, register_search_tools
+    ):
         """Test search_documents tool with collection filter."""
         # Set up mock client
         mock_client = MagicMock()
@@ -190,17 +197,24 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_search_tools.tools["search_documents"]("test query", "coll1")
+        _ = register_search_tools.tools["search_documents"](
+            "test query", 
+            "coll1"
+        )
         
         # Verify client was called correctly
-        mock_client.search_documents.assert_called_once_with("test query", "coll1")
+        mock_client.search_documents.assert_called_once_with(
+            "test query", "coll1")
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_search_documents_client_error(self, mock_get_client, register_search_tools):
+    def test_search_documents_client_error(
+        self, mock_get_client, register_search_tools
+    ):
         """Test search_documents tool with client error."""
         # Set up mock client to raise an error
         mock_client = MagicMock()
-        mock_client.search_documents.side_effect = OutlineClientError("API error")
+        mock_client.search_documents.side_effect = OutlineClientError(
+            "API error")
         mock_get_client.return_value = mock_client
         
         # Call the tool
@@ -211,7 +225,9 @@ class TestDocumentSearchTools:
         assert "API error" in result
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_list_collections_success(self, mock_get_client, register_search_tools):
+    def test_list_collections_success(
+        self, mock_get_client, register_search_tools
+    ):
         """Test list_collections tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -229,15 +245,19 @@ class TestDocumentSearchTools:
         assert "coll1" in result
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_collection_structure_success(self, mock_get_client, register_search_tools):
+    def test_get_collection_structure_success(
+        self, mock_get_client, register_search_tools
+    ):
         """Test get_collection_structure tool success case."""
         # Set up mock client
         mock_client = MagicMock()
-        mock_client.get_collection_documents.return_value = SAMPLE_COLLECTION_DOCUMENTS
+        mock_client.get_collection_documents.return_value = (
+            SAMPLE_COLLECTION_DOCUMENTS)
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_search_tools.tools["get_collection_structure"]("coll1")
+        result = register_search_tools.tools[
+            "get_collection_structure"]("coll1")
         
         # Verify client was called correctly
         mock_client.get_collection_documents.assert_called_once_with("coll1")
@@ -247,7 +267,9 @@ class TestDocumentSearchTools:
         assert "Child Document" in result
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_document_id_from_title_exact_match(self, mock_get_client, register_search_tools):
+    def test_get_document_id_from_title_exact_match(
+        self, mock_get_client, register_search_tools
+    ):
         """Test get_document_id_from_title tool with exact match."""
         # Search results with exact title match
         exact_match_results = [
@@ -265,17 +287,22 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_search_tools.tools["get_document_id_from_title"]("Exact Match")
+        result = register_search_tools.tools["get_document_id_from_title"](
+            "Exact Match"
+        )
         
         # Verify client was called correctly
-        mock_client.search_documents.assert_called_once_with("Exact Match", None)
+        mock_client.search_documents.assert_called_once_with(
+            "Exact Match", None)
         
         # Verify result contains expected information
         assert "Document ID: doc1" in result
         assert "Exact Match" in result
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_document_id_from_title_best_match(self, mock_get_client, register_search_tools):
+    def test_get_document_id_from_title_best_match(
+        self, mock_get_client, register_search_tools
+    ):
         """Test get_document_id_from_title tool with best match (non-exact)."""
         # Set up mock client
         mock_client = MagicMock()
@@ -283,14 +310,17 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool with title that doesn't exactly match
-        result = register_search_tools.tools["get_document_id_from_title"]("Test Doc")
+        result = register_search_tools.tools[
+            "get_document_id_from_title"]("Test Doc")
         
         # Verify result contains expected information
         assert "Best match" in result
         assert "doc1" in result
     
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_document_id_from_title_no_results(self, mock_get_client, register_search_tools):
+    def test_get_document_id_from_title_no_results(
+        self, mock_get_client, register_search_tools
+    ):
         """Test get_document_id_from_title tool with no results."""
         # Set up mock client
         mock_client = MagicMock()
@@ -298,7 +328,8 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_search_tools.tools["get_document_id_from_title"]("Nonexistent")
+        result = register_search_tools.tools[
+            "get_document_id_from_title"]("Nonexistent")
         
         # Verify result contains expected information
         assert "No documents found" in result

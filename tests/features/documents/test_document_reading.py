@@ -81,7 +81,9 @@ class TestDocumentReadingTools:
     """Tests for document reading tools."""
     
     @patch("mcp_outline.features.documents.document_reading.get_outline_client")
-    def test_read_document_success(self, mock_get_client, register_reading_tools):
+    def test_read_document_success(
+        self, mock_get_client, register_reading_tools
+    ):
         """Test read_document tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -99,7 +101,9 @@ class TestDocumentReadingTools:
         assert "This is a test document with some content." in result
     
     @patch("mcp_outline.features.documents.document_reading.get_outline_client")
-    def test_read_document_client_error(self, mock_get_client, register_reading_tools):
+    def test_read_document_client_error(
+        self, mock_get_client, register_reading_tools
+    ):
         """Test read_document tool with client error."""
         # Set up mock client to raise an error
         mock_client = MagicMock()
@@ -114,7 +118,9 @@ class TestDocumentReadingTools:
         assert "API error" in result
     
     @patch("mcp_outline.features.documents.document_reading.get_outline_client")
-    def test_export_document_success(self, mock_get_client, register_reading_tools):
+    def test_export_document_success(
+        self, mock_get_client, register_reading_tools
+    ):
         """Test export_document tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -125,14 +131,19 @@ class TestDocumentReadingTools:
         result = register_reading_tools.tools["export_document"]("doc123")
         
         # Verify client was called correctly
-        mock_client.post.assert_called_once_with("documents.export", {"id": "doc123"})
+        mock_client.post.assert_called_once_with(
+            "documents.export", 
+            {"id": "doc123"}
+        )
         
         # Verify result contains expected information
         assert "# Test Document" in result
         assert "This is a test document with some content." in result
     
     @patch("mcp_outline.features.documents.document_reading.get_outline_client")
-    def test_export_document_empty_response(self, mock_get_client, register_reading_tools):
+    def test_export_document_empty_response(
+        self, mock_get_client, register_reading_tools
+    ):
         """Test export_document tool with empty response."""
         # Set up mock client with empty response
         mock_client = MagicMock()
@@ -146,7 +157,9 @@ class TestDocumentReadingTools:
         assert "No content available" in result
     
     @patch("mcp_outline.features.documents.document_reading.get_outline_client")
-    def test_export_document_client_error(self, mock_get_client, register_reading_tools):
+    def test_export_document_client_error(
+        self, mock_get_client, register_reading_tools
+    ):
         """Test export_document tool with client error."""
         # Set up mock client to raise an error
         mock_client = MagicMock()

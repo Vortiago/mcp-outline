@@ -135,7 +135,9 @@ class TestDocumentCollaborationTools:
     """Tests for document collaboration tools."""
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_list_document_comments_success(self, mock_get_client, register_collaboration_tools):
+    def test_list_document_comments_success(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test list_document_comments tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -143,7 +145,8 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["list_document_comments"]("doc123")
+        result = register_collaboration_tools.tools[
+            "list_document_comments"]("doc123")
         
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -156,7 +159,9 @@ class TestDocumentCollaborationTools:
         assert "This is a test comment" in result
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_list_document_comments_empty(self, mock_get_client, register_collaboration_tools):
+    def test_list_document_comments_empty(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test list_document_comments tool with no comments."""
         # Set up mock client with empty response
         mock_client = MagicMock()
@@ -164,13 +169,16 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["list_document_comments"]("doc123")
+        result = register_collaboration_tools.tools[
+            "list_document_comments"]("doc123")
         
         # Verify result contains expected message
         assert "No comments found" in result
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_get_comment_success(self, mock_get_client, register_collaboration_tools):
+    def test_get_comment_success(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test get_comment tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -178,7 +186,8 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["get_comment"]("comment1")
+        result = register_collaboration_tools.tools[
+            "get_comment"]("comment1")
         
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -191,7 +200,9 @@ class TestDocumentCollaborationTools:
         assert "2023-01-01" in result
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_get_comment_not_found(self, mock_get_client, register_collaboration_tools):
+    def test_get_comment_not_found(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test get_comment tool with comment not found."""
         # Set up mock client with empty response
         mock_client = MagicMock()
@@ -199,13 +210,16 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["get_comment"]("comment999")
+        result = register_collaboration_tools.tools[
+            "get_comment"]("comment999")
         
         # Verify result contains expected message
         assert "Comment not found" in result
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_get_document_backlinks_success(self, mock_get_client, register_collaboration_tools):
+    def test_get_document_backlinks_success(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test get_document_backlinks tool success case."""
         # Set up mock client
         mock_client = MagicMock()
@@ -213,7 +227,8 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["get_document_backlinks"]("doc123")
+        result = register_collaboration_tools.tools[
+            "get_document_backlinks"]("doc123")
         
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -228,7 +243,9 @@ class TestDocumentCollaborationTools:
         assert "doc2" in result
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_get_document_backlinks_none(self, mock_get_client, register_collaboration_tools):
+    def test_get_document_backlinks_none(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test get_document_backlinks tool with no backlinks."""
         # Set up mock client with empty response
         mock_client = MagicMock()
@@ -236,13 +253,16 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["get_document_backlinks"]("doc123")
+        result = register_collaboration_tools.tools[
+            "get_document_backlinks"]("doc123")
         
         # Verify result contains expected message
         assert "No documents link to this document" in result
     
     @patch("mcp_outline.features.documents.document_collaboration.get_outline_client")
-    def test_get_document_backlinks_client_error(self, mock_get_client, register_collaboration_tools):
+    def test_get_document_backlinks_client_error(
+        self, mock_get_client, register_collaboration_tools
+    ):
         """Test get_document_backlinks tool with client error."""
         # Set up mock client to raise an error
         mock_client = MagicMock()
@@ -250,7 +270,8 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
         
         # Call the tool
-        result = register_collaboration_tools.tools["get_document_backlinks"]("doc123")
+        result = register_collaboration_tools.tools[
+            "get_document_backlinks"]("doc123")
         
         # Verify error is handled and returned
         assert "Error retrieving backlinks" in result
