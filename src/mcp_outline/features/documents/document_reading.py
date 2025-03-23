@@ -3,9 +3,13 @@ Document reading tools for the MCP Outline server.
 
 This module provides MCP tools for reading document content.
 """
-from typing import Dict, Any
+from typing import Any, Dict
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def _format_document_content(document: Dict[str, Any]) -> str:
     """Format document content into readable text."""

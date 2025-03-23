@@ -3,9 +3,13 @@ Document collaboration tools for the MCP Outline server.
 
 This module provides MCP tools for document comments, sharing, and collaboration.
 """
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def _format_comments(comments: List[Dict[str, Any]]) -> str:
     """Format document comments into readable text."""

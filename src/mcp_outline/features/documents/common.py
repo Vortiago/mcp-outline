@@ -4,7 +4,9 @@ Common utilities for document outline features.
 This module provides shared functionality used by both tools and resources.
 """
 import os
+
 from mcp_outline.utils.outline_client import OutlineClient, OutlineError
+
 
 class OutlineClientError(Exception):
     """Exception raised for errors in document outline client operations."""

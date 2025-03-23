@@ -3,9 +3,13 @@ Document search tools for the MCP Outline server.
 
 This module provides MCP tools for searching and listing documents.
 """
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def _format_search_results(results: List[Dict[str, Any]]) -> str:
     """Format search results into readable text."""

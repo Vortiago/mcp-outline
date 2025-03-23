@@ -1,13 +1,17 @@
 # Document management features for MCP Outline
 from typing import Optional
-from mcp_outline.features.documents import document_search
-from mcp_outline.features.documents import document_reading
-from mcp_outline.features.documents import document_content
-from mcp_outline.features.documents import document_organization
-from mcp_outline.features.documents import document_lifecycle
-from mcp_outline.features.documents import document_collaboration
-from mcp_outline.features.documents import collection_tools
-from mcp_outline.features.documents import ai_tools
+
+from mcp_outline.features.documents import (
+    ai_tools,
+    collection_tools,
+    document_collaboration,
+    document_content,
+    document_lifecycle,
+    document_organization,
+    document_reading,
+    document_search,
+)
+
 
 def register(mcp, api_key: Optional[str] = None, api_url: Optional[str] = None):
     """

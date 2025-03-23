@@ -3,9 +3,13 @@ Document content management for the MCP Outline server.
 
 This module provides MCP tools for creating and updating document content.
 """
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def register_tools(mcp) -> None:
     """

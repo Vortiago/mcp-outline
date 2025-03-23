@@ -3,9 +3,12 @@ Document lifecycle management for the MCP Outline server.
 
 This module provides MCP tools for archiving, trashing, and restoring documents.
 """
-from typing import Dict, Any
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def register_tools(mcp) -> None:
     """
@@ -143,7 +146,9 @@ def register_tools(mcp) -> None:
         try:
             client = get_outline_client()
             response = client.post("documents.archived")
-            from mcp_outline.features.documents.document_search import _format_documents_list
+            from mcp_outline.features.documents.document_search import (
+                _format_documents_list,
+            )
             documents = response.get("data", [])
             return _format_documents_list(documents, "Archived Documents")
         except OutlineClientError as e:
@@ -162,7 +167,9 @@ def register_tools(mcp) -> None:
         try:
             client = get_outline_client()
             documents = client.list_trash()
-            from mcp_outline.features.documents.document_search import _format_documents_list
+            from mcp_outline.features.documents.document_search import (
+                _format_documents_list,
+            )
             return _format_documents_list(documents, "Documents in Trash")
         except OutlineClientError as e:
             return f"Error listing trash: {str(e)}"

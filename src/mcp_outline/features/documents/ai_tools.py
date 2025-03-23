@@ -3,9 +3,13 @@ AI-powered tools for interacting with documents.
 
 This module provides MCP tools for AI-powered features in Outline.
 """
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, Optional
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def _format_ai_answer(response: Dict[str, Any]) -> str:
     """Format AI answer into readable text."""

@@ -1,8 +1,10 @@
 """
 Tests for the MCP Outline server.
 """
-from mcp_outline.server import mcp
 import pytest
+
+from mcp_outline.server import mcp
+
 
 @pytest.mark.anyio
 async def test_server_initialization():

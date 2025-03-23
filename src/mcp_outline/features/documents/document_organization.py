@@ -5,7 +5,11 @@ This module provides MCP tools for organizing documents.
 """
 from typing import Optional
 
-from mcp_outline.features.documents.common import get_outline_client, OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
+
 
 def register_tools(mcp) -> None:
     """
