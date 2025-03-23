@@ -232,3 +232,29 @@ class OutlineClient:
             "permanent": True
         })
         return response.get("success", False)
+    
+    def answer_question(self, 
+                       query: str,
+                       collection_id: Optional[str] = None, 
+                       document_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Ask a natural language question about document content.
+        
+        Args:
+            query: The natural language question to answer
+            collection_id: Optional collection to search within
+            document_id: Optional document to search within
+            
+        Returns:
+            Dictionary containing AI answer and search results
+        """
+        data: Dict[str, Any] = {"query": query}
+        
+        if collection_id:
+            data["collectionId"] = collection_id
+            
+        if document_id:
+            data["documentId"] = document_id
+            
+        response = self.post("documents.answerQuestion", data)
+        return response

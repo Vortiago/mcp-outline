@@ -3,6 +3,7 @@ from typing import Optional
 from mcp_outline.features.documents import tools
 from mcp_outline.features.documents import document_reading
 from mcp_outline.features.documents import document_editing
+from mcp_outline.features.documents import ai_tools
 
 def register(mcp, api_key: Optional[str] = None, api_url: Optional[str] = None):
     """
@@ -16,3 +17,4 @@ def register(mcp, api_key: Optional[str] = None, api_url: Optional[str] = None):
     tools.register_tools(mcp)
     document_reading.register_tools(mcp)
     document_editing.register_tools(mcp)
+    ai_tools.register_tools(mcp)
