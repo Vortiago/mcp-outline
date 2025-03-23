@@ -241,3 +241,69 @@ def register_tools(mcp) -> None:
             return f"Error unarchiving document: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"
+    
+    @mcp.tool()
+    def delete_document(document_id: str, permanent: bool = False) -> str:
+        """
+        Delete a document (move to trash or permanently delete).
+        
+        Args:
+            document_id: The document ID to delete
+            permanent: If True, permanently deletes the document instead of moving to trash
+            
+        Returns:
+            Result message
+        """
+        try:
+            client = get_outline_client()
+            
+            if permanent:
+                success = client.permanently_delete_document(document_id)
+                if success:
+                    return "Document permanently deleted."
+                else:
+                    return "Failed to permanently delete document."
+            else:
+                # First get the document details for the success message
+                document = client.get_document(document_id)
+                doc_title = document.get("title", "Untitled")
+                
+                # Move to trash (using the regular delete endpoint)
+                response = client.post("documents.delete", {"id": document_id})
+                
+                # Check for successful response
+                if response.get("success", False):
+                    return f"Document moved to trash: {doc_title}"
+                else:
+                    return "Failed to move document to trash."
+                    
+        except OutlineClientError as e:
+            return f"Error deleting document: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"
+    
+    @mcp.tool()
+    def restore_document(document_id: str) -> str:
+        """
+        Restore a document from trash.
+        
+        Args:
+            document_id: The document ID to restore
+            
+        Returns:
+            Result message
+        """
+        try:
+            client = get_outline_client()
+            document = client.restore_document(document_id)
+            
+            if not document:
+                return "Failed to restore document from trash."
+                
+            doc_title = document.get("title", "Untitled")
+            
+            return f"Document restored successfully: {doc_title}"
+        except OutlineClientError as e:
+            return f"Error restoring document: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"

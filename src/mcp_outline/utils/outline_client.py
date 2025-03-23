@@ -190,3 +190,45 @@ class OutlineClient:
         """
         response = self.post("documents.unarchive", {"id": document_id})
         return response.get("data", {})
+        
+    def list_trash(self, limit: int = 25) -> List[Dict[str, Any]]:
+        """
+        List documents in the trash.
+        
+        Args:
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of documents in trash
+        """
+        response = self.post("documents.list", {"limit": limit, "deleted": True})
+        return response.get("data", [])
+    
+    def restore_document(self, document_id: str) -> Dict[str, Any]:
+        """
+        Restore a document from trash.
+        
+        Args:
+            document_id: The document ID to restore.
+            
+        Returns:
+            The restored document data.
+        """
+        response = self.post("documents.restore", {"id": document_id})
+        return response.get("data", {})
+    
+    def permanently_delete_document(self, document_id: str) -> bool:
+        """
+        Permanently delete a document by ID.
+        
+        Args:
+            document_id: The document ID to permanently delete.
+            
+        Returns:
+            Success status.
+        """
+        response = self.post("documents.delete", {
+            "id": document_id,
+            "permanent": True
+        })
+        return response.get("success", False)

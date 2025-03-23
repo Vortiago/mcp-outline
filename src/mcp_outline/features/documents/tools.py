@@ -206,3 +206,20 @@ def register_tools(mcp) -> None:
             return f"Error listing archived documents: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"
+            
+    @mcp.tool()
+    def list_trash() -> str:
+        """
+        List all documents in the trash.
+        
+        Returns:
+            Formatted string containing trashed documents
+        """
+        try:
+            client = get_outline_client()
+            documents = client.list_trash()
+            return _format_documents_list(documents, "Documents in Trash")
+        except OutlineClientError as e:
+            return f"Error listing trash: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"
