@@ -164,3 +164,29 @@ class OutlineClient:
             
         response = self.post("documents.list", data)
         return response.get("data", [])
+    
+    def archive_document(self, document_id: str) -> Dict[str, Any]:
+        """
+        Archive a document by ID.
+        
+        Args:
+            document_id: The document ID to archive.
+            
+        Returns:
+            The archived document data.
+        """
+        response = self.post("documents.archive", {"id": document_id})
+        return response.get("data", {})
+    
+    def unarchive_document(self, document_id: str) -> Dict[str, Any]:
+        """
+        Unarchive a document by ID.
+        
+        Args:
+            document_id: The document ID to unarchive.
+            
+        Returns:
+            The unarchived document data.
+        """
+        response = self.post("documents.unarchive", {"id": document_id})
+        return response.get("data", {})

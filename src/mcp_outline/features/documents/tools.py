@@ -54,6 +54,26 @@ def _format_search_results(results: List[Dict[str, Any]]) -> str:
     
     return output
 
+def _format_documents_list(documents: List[Dict[str, Any]], title: str) -> str:
+    """Format a list of documents into readable text."""
+    if not documents:
+        return f"No {title.lower()} found."
+    
+    output = f"# {title}\n\n"
+    
+    for i, document in enumerate(documents, 1):
+        doc_title = document.get("title", "Untitled")
+        doc_id = document.get("id", "")
+        updated_at = document.get("updatedAt", "")
+        
+        output += f"## {i}. {doc_title}\n"
+        output += f"ID: {doc_id}\n"
+        if updated_at:
+            output += f"Last Updated: {updated_at}\n"
+        output += "\n"
+    
+    return output
+
 def _format_collections(collections: List[Dict[str, Any]]) -> str:
     """Format collections into readable text."""
     if not collections:
@@ -166,5 +186,23 @@ def register_tools(mcp) -> None:
             return _format_collection_documents(docs)
         except OutlineClientError as e:
             return f"Error getting collection structure: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"
+    
+    @mcp.tool()
+    def list_archived_documents() -> str:
+        """
+        List all archived documents.
+        
+        Returns:
+            Formatted string containing archived documents
+        """
+        try:
+            client = get_outline_client()
+            response = client.post("documents.archived")
+            documents = response.get("data", [])
+            return _format_documents_list(documents, "Archived Documents")
+        except OutlineClientError as e:
+            return f"Error listing archived documents: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"

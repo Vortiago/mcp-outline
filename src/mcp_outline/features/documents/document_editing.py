@@ -189,3 +189,55 @@ def register_tools(mcp) -> None:
             return f"Error adding comment: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"
+            
+    @mcp.tool()
+    def archive_document(document_id: str) -> str:
+        """
+        Archive a document.
+        
+        Args:
+            document_id: The document ID to archive
+            
+        Returns:
+            Result message
+        """
+        try:
+            client = get_outline_client()
+            document = client.archive_document(document_id)
+            
+            if not document:
+                return "Failed to archive document."
+                
+            doc_title = document.get("title", "Untitled")
+            
+            return f"Document archived successfully: {doc_title}"
+        except OutlineClientError as e:
+            return f"Error archiving document: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"
+    
+    @mcp.tool()
+    def unarchive_document(document_id: str) -> str:
+        """
+        Unarchive a previously archived document.
+        
+        Args:
+            document_id: The document ID to unarchive
+            
+        Returns:
+            Result message
+        """
+        try:
+            client = get_outline_client()
+            document = client.unarchive_document(document_id)
+            
+            if not document:
+                return "Failed to unarchive document."
+                
+            doc_title = document.get("title", "Untitled")
+            
+            return f"Document unarchived successfully: {doc_title}"
+        except OutlineClientError as e:
+            return f"Error unarchiving document: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"
