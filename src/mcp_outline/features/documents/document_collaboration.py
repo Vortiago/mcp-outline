@@ -37,9 +37,18 @@ def _format_comments(
     for i, comment in enumerate(comments, offset+1):
         user = comment.get("createdBy", {}).get("name", "Unknown User")
         created_at = comment.get("createdAt", "")
-        text = comment.get("text", "")
         comment_id = comment.get("id", "")
         anchor_text = comment.get("anchorText", "")
+        
+        # Extract data object containing the comment content
+        data = comment.get("data", {})
+        
+        # Convert data to JSON string for display
+        try:
+            import json
+            text = json.dumps(data, indent=2)
+        except Exception:
+            text = str(data)
         
         output += f"## {i}. Comment by {user}\n"
         output += f"ID: {comment_id}\n"
@@ -47,7 +56,10 @@ def _format_comments(
             output += f"Date: {created_at}\n"
         if anchor_text:
             output += f"\nReferencing text: \"{anchor_text}\"\n"
-        output += f"\n{text}\n\n"
+        if data:
+            output += f"\nComment content:\n```json\n{text}\n```\n\n"
+        else:
+            output += "\n(No comment content found)\n\n"
     
     return output
 
@@ -143,15 +155,27 @@ def register_tools(mcp) -> None:
             
             user = comment.get("createdBy", {}).get("name", "Unknown User")
             created_at = comment.get("createdAt", "")
-            text = comment.get("text", "")
             anchor_text = comment.get("anchorText", "")
+            
+            # Extract data object containing the comment content
+            data = comment.get("data", {})
+            
+            # Convert data to JSON string for display
+            try:
+                import json
+                text = json.dumps(data, indent=2)
+            except Exception:
+                text = str(data)
             
             output = f"# Comment by {user}\n"
             if created_at:
                 output += f"Date: {created_at}\n"
             if anchor_text:
                 output += f"\nReferencing text: \"{anchor_text}\"\n"
-            output += f"\n{text}\n"
+            if data:
+                output += f"\nComment content:\n```json\n{text}\n```\n"
+            else:
+                output += "\n(No comment content found)\n"
             
             return output
         except OutlineClientError as e:
