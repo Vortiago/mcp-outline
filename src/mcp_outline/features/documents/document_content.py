@@ -40,8 +40,8 @@ def register_tools(mcp) -> None:
             collection_id: The collection ID to create the document in
             text: Optional markdown content for the document
             parent_document_id: Optional parent document ID for nesting
-            publish: Whether to publish the document immediately (True) or save as
-    draft (False)
+            publish: Whether to publish the document immediately (True) or 
+                save as draft (False)
             
         Returns:
             Result message with the new document ID

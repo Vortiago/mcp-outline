@@ -182,11 +182,13 @@ within the collection.
         """
         Exports all documents in a collection to a downloadable file.
         
-        IMPORTANT: This tool starts an asynchronous export operation which may take time
-        to complete. The function returns information about the operation, including its
-        status. When the operation is complete, the file can be downloaded or accessed
-        via Outline's UI. The export preserves the document hierarchy and includes all
-        document content and structure in the specified format.
+        IMPORTANT: This tool starts an asynchronous export operation which may 
+        take time to complete. The function returns information about the 
+        operation, including its status. When the operation is complete, the 
+        file can be downloaded or accessed via Outline's UI. The export 
+        preserves the document hierarchy and includes all document content and 
+        structure in the 
+        specified format.
         
         Use this tool when you need to:
         - Create a backup of collection content
@@ -219,11 +221,13 @@ within the collection.
         """
         Exports the entire workspace content to a downloadable file.
         
-        IMPORTANT: This tool starts an asynchronous export operation which may take time
-        to complete, especially for large workspaces. The function returns information
-        about the operation, including its status. When the operation is complete, the
-        file can be downloaded or accessed via Outline's UI. The export includes all
-        collections, documents, and their hierarchies in the specified format.
+        IMPORTANT: This tool starts an asynchronous export operation which may 
+        take time to complete, especially for large workspaces. The function 
+        returns information about the operation, including its status. When 
+        the operation is complete, the file can be downloaded or accessed via 
+        Outline's UI. The export includes all collections, documents, and 
+        their 
+        hierarchies in the specified format.
         
         Use this tool when you need to:
         - Create a complete backup of all workspace content

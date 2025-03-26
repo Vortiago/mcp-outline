@@ -91,10 +91,12 @@ def register_tools(mcp) -> None:
         """
         Moves a document to trash or permanently deletes it.
         
-        IMPORTANT: When permanent=False (the default), documents are moved to trash
-        and retained for 30 days before being permanently deleted. During this period,
-        they can be restored using the restore_document tool. Setting permanent=True
-        bypasses the trash and immediately deletes the document without any recovery option.
+        IMPORTANT: When permanent=False (the default), documents are moved to 
+        trash and retained for 30 days before being permanently deleted. 
+        During 
+        this period, they can be restored using the restore_document tool. 
+        Setting permanent=True bypasses the trash and immediately deletes the 
+        document without any recovery option.
         
         Use this tool when you need to:
         - Remove unwanted or unnecessary documents
@@ -104,7 +106,8 @@ def register_tools(mcp) -> None:
         
         Args:
             document_id: The document ID to delete
-            permanent: If True, permanently deletes the document without recovery option
+            permanent: If True, permanently deletes the document without 
+                recovery option
             
         Returns:
             Result message confirming deletion

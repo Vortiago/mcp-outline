@@ -112,13 +112,17 @@ def register_tools(mcp) -> None:
         collection_id: Optional[str] = None
     ) -> str:
         """
-        Searches for documents using keywords or phrases across your knowledge base.
+        Searches for documents using keywords or phrases across your knowledge 
+        base.
         
-        IMPORTANT: The search performs full-text search across all document content
-        and titles. Results are ranked by relevance, with exact matches and title matches
-        typically ranked higher. The search will return snippets of content (context)
-        where the search terms appear in the document. You can limit the search to a 
-        specific collection by providing the collection_id.
+        IMPORTANT: The search performs full-text search across all document 
+        content and titles. Results are ranked by relevance, with exact 
+        matches 
+        and title matches typically ranked higher. The search will return 
+        snippets of content (context) where the search terms appear in the 
+        document. You can limit the search to a specific collection by 
+        providing 
+        the collection_id.
         
         Use this tool when you need to:
         - Find documents containing specific terms or topics
@@ -131,7 +135,9 @@ def register_tools(mcp) -> None:
             collection_id: Optional collection to limit the search to
             
         Returns:
-            Formatted string containing search results with document titles and contexts
+            Formatted string containing search results with document titles 
+            and 
+            contexts
         """
         try:
             client = get_outline_client()
@@ -198,11 +204,12 @@ def register_tools(mcp) -> None:
         """
         Locates a document ID by searching for its title.
         
-        IMPORTANT: This tool first checks for exact title matches (case-insensitive).
-        If none are found, it returns the best partial match instead. This is useful
-        when you're not sure of the exact title but need to reference a document in
-        other operations. Results are more accurate when you provide more of the
-        actual title in your query.
+        IMPORTANT: This tool first checks for exact title matches 
+        (case-insensitive). If none are found, it returns the best partial 
+        match instead. This is useful when you're not sure of the exact title 
+        but need 
+        to reference a document in other operations. Results are more accurate 
+        when you provide more of the actual title in your query.
         
         Use this tool when you need to:
         - Find a document's ID when you only know its title

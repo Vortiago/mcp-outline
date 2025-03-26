@@ -150,7 +150,12 @@ class TestDocumentCollaborationTools:
         
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
-            "comments.list", {"documentId": "doc123"}
+            "comments.list", {
+                "documentId": "doc123",
+                "includeAnchorText": False,
+                "limit": 25,
+                "offset": 0
+            }
         )
         
         # Verify result contains expected information
@@ -191,7 +196,10 @@ class TestDocumentCollaborationTools:
         
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
-            "comments.info", {"id": "comment1"}
+            "comments.info", {
+                "id": "comment1",
+                "includeAnchorText": False
+            }
         )
         
         # Verify result contains expected information

@@ -27,9 +27,10 @@ def register_tools(mcp) -> None:
         """
         Relocates a document to a different collection or parent document.
         
-        IMPORTANT: When moving a document that has child documents (nested documents),
-        all child documents will move along with it, maintaining their hierarchical
-        structure. You must specify either collection_id or parent_document_id (or both).
+        IMPORTANT: When moving a document that has child documents (nested 
+        documents), all child documents will move along with it, maintaining 
+        their hierarchical structure. You must specify either collection_id or 
+        parent_document_id (or both).
         
         Use this tool when you need to:
         - Reorganize your document hierarchy
