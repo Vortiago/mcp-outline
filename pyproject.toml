@@ -31,7 +31,7 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "ruff>=0.0.267",
     "anyio>=3.6.2",
-    "pyright>=1.1.350",
+    "pyright>=1.1.398",
     "trio>=0.22.0",
 ]
 

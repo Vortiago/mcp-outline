@@ -21,13 +21,23 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def archive_document(document_id: str) -> str:
         """
-        Archive a document.
+        Archives a document to remove it from active use while preserving it.
+        
+        IMPORTANT: Archived documents are removed from collections but remain
+        searchable in the system. They won't appear in normal collection views
+        but can still be found through search or the archive list.
+        
+        Use this tool when you need to:
+        - Remove outdated or inactive documents from view
+        - Clean up collections while preserving document history
+        - Preserve documents that are no longer relevant
+        - Temporarily hide documents without deleting them
         
         Args:
             document_id: The document ID to archive
             
         Returns:
-            Result message
+            Result message confirming archival
         """
         try:
             client = get_outline_client()
@@ -47,13 +57,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def unarchive_document(document_id: str) -> str:
         """
-        Unarchive a previously archived document.
+        Restores a previously archived document to active status.
+        
+        Use this tool when you need to:
+        - Restore archived documents to active use
+        - Access or reference previously archived content
+        - Make archived content visible in collections again
+        - Update and reuse archived documents
         
         Args:
             document_id: The document ID to unarchive
             
         Returns:
-            Result message
+            Result message confirming restoration
         """
         try:
             client = get_outline_client()
@@ -73,15 +89,25 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def delete_document(document_id: str, permanent: bool = False) -> str:
         """
-        Delete a document (move to trash or permanently delete).
+        Moves a document to trash or permanently deletes it.
+        
+        IMPORTANT: When permanent=False (the default), documents are moved to trash
+        and retained for 30 days before being permanently deleted. During this period,
+        they can be restored using the restore_document tool. Setting permanent=True
+        bypasses the trash and immediately deletes the document without any recovery option.
+        
+        Use this tool when you need to:
+        - Remove unwanted or unnecessary documents
+        - Delete obsolete content
+        - Clean up workspace by removing documents
+        - Permanently remove sensitive information (with permanent=True)
         
         Args:
             document_id: The document ID to delete
-            permanent: If True, permanently deletes the document instead of 
-                moving to trash
+            permanent: If True, permanently deletes the document without recovery option
             
         Returns:
-            Result message
+            Result message confirming deletion
         """
         try:
             client = get_outline_client()
@@ -114,13 +140,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def restore_document(document_id: str) -> str:
         """
-        Restore a document from trash.
+        Recovers a document from the trash back to active status.
+        
+        Use this tool when you need to:
+        - Retrieve accidentally deleted documents
+        - Restore documents from trash to active use
+        - Recover documents deleted within the last 30 days
+        - Access content that was previously trashed
         
         Args:
             document_id: The document ID to restore
             
         Returns:
-            Result message
+            Result message confirming restoration
         """
         try:
             client = get_outline_client()
@@ -140,10 +172,16 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def list_archived_documents() -> str:
         """
-        List all archived documents.
+        Displays all documents that have been archived.
+        
+        Use this tool when you need to:
+        - Find specific archived documents
+        - Review what documents have been archived
+        - Identify documents for possible unarchiving
+        - Check archive status of workspace content
         
         Returns:
-            Formatted string containing archived documents
+            Formatted string containing list of archived documents
         """
         try:
             client = get_outline_client()
@@ -161,10 +199,16 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def list_trash() -> str:
         """
-        List all documents in the trash.
+        Displays all documents currently in the trash.
+        
+        Use this tool when you need to:
+        - Find deleted documents that can be restored
+        - Review what documents are pending permanent deletion
+        - Identify documents to restore from trash
+        - Verify if specific documents were deleted
         
         Returns:
-            Formatted string containing trashed documents
+            Formatted string containing list of documents in trash
         """
         try:
             client = get_outline_client()

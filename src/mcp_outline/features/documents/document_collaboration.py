@@ -43,13 +43,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def list_document_comments(document_id: str) -> str:
         """
-        Get all comments for a document.
+        Retrieves all comments on a specific document.
+        
+        Use this tool when you need to:
+        - Review feedback and discussions on a document
+        - See all comments from different users
+        - Find specific comments or questions
+        - Track collaboration and input on documents
         
         Args:
-            document_id: The document ID
+            document_id: The document ID to get comments from
             
         Returns:
-            Formatted string containing comments
+            Formatted string containing all comments with author and date info
         """
         try:
             client = get_outline_client()
@@ -66,13 +72,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def get_comment(comment_id: str) -> str:
         """
-        Get a specific comment by ID.
+        Retrieves a specific comment by its ID.
+        
+        Use this tool when you need to:
+        - View details of a specific comment
+        - Reference or quote a particular comment
+        - Check comment content and metadata
+        - Find a comment mentioned elsewhere
         
         Args:
-            comment_id: The comment ID
+            comment_id: The comment ID to retrieve
             
         Returns:
-            Formatted string containing the comment details
+            Formatted string with the comment content and metadata
         """
         try:
             client = get_outline_client()
@@ -100,13 +112,20 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def get_document_backlinks(document_id: str) -> str:
         """
-        Get a list of documents that link to this document.
+        Finds all documents that link to a specific document.
+        
+        Use this tool when you need to:
+        - Discover references to a document across the workspace
+        - Identify dependencies between documents
+        - Find documents related to a specific document
+        - Understand document relationships and connections
         
         Args:
-            document_id: The document ID
+            document_id: The document ID to find backlinks for
             
         Returns:
-            Formatted string containing backlink information
+            Formatted string listing all documents that link to the specified 
+document
         """
         try:
             client = get_outline_client()

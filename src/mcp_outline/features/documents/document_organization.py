@@ -25,15 +25,25 @@ def register_tools(mcp) -> None:
         parent_document_id: Optional[str] = None
     ) -> str:
         """
-        Move a document to a different collection or parent.
+        Relocates a document to a different collection or parent document.
+        
+        IMPORTANT: When moving a document that has child documents (nested documents),
+        all child documents will move along with it, maintaining their hierarchical
+        structure. You must specify either collection_id or parent_document_id (or both).
+        
+        Use this tool when you need to:
+        - Reorganize your document hierarchy
+        - Move a document to a more relevant collection
+        - Change a document's parent document
+        - Restructure content organization
         
         Args:
             document_id: The document ID to move
-            collection_id: Target collection ID
-            parent_document_id: Optional parent document ID
+            collection_id: Target collection ID (if moving between collections)
+            parent_document_id: Optional parent document ID (for nesting)
             
         Returns:
-            Result message
+            Result message confirming the move operation
         """
         try:
             client = get_outline_client()

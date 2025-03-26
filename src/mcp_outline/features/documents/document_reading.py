@@ -31,13 +31,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def read_document(document_id: str) -> str:
         """
-        Get the full content of a document.
+        Retrieves and displays the full content of a document.
+        
+        Use this tool when you need to:
+        - Access the complete content of a specific document
+        - Review document information in detail
+        - Quote or reference document content
+        - Analyze document contents
         
         Args:
-            document_id: The document ID
+            document_id: The document ID to retrieve
             
         Returns:
-            Formatted string containing the document content
+            Formatted string containing the document title and content
         """
         try:
             client = get_outline_client()
@@ -51,13 +57,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def export_document(document_id: str) -> str:
         """
-        Export a document as markdown.
+        Exports a document as plain markdown text.
+        
+        Use this tool when you need to:
+        - Get clean markdown content without formatting
+        - Extract document content for external use
+        - Process document content in another application
+        - Share document content outside Outline
         
         Args:
-            document_id: The document ID
+            document_id: The document ID to export
             
         Returns:
-            Document content in markdown format
+            Document content in markdown format without additional formatting
         """
         try:
             client = get_outline_client()

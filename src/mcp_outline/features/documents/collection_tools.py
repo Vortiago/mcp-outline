@@ -58,12 +58,19 @@ def register_tools(mcp) -> None:
         color: Optional[str] = None
     ) -> str:
         """
-        Create a new collection.
+        Creates a new collection for organizing documents.
+        
+        Use this tool when you need to:
+        - Create a new section or category for documents
+        - Set up a workspace for a new project or team
+        - Organize content by department or topic
+        - Establish a separate space for related documents
         
         Args:
             name: Name for the collection
-            description: Optional description
-            color: Optional hex color code (e.g. #FF0000)
+            description: Optional description of the collection's purpose
+            color: Optional hex color code for visual identification 
+    (e.g. #FF0000)
             
         Returns:
             Result message with the new collection ID
@@ -95,16 +102,22 @@ def register_tools(mcp) -> None:
         color: Optional[str] = None
     ) -> str:
         """
-        Update an existing collection.
+        Modifies an existing collection's properties.
+        
+        Use this tool when you need to:
+        - Rename a collection
+        - Update a collection's description
+        - Change a collection's color coding
+        - Refresh collection metadata
         
         Args:
             collection_id: The collection ID to update
-            name: Optional new name
+            name: Optional new name for the collection
             description: Optional new description
             color: Optional new hex color code (e.g. #FF0000)
             
         Returns:
-            Result message
+            Result message confirming update
         """
         try:
             client = get_outline_client()
@@ -131,16 +144,22 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def delete_collection(collection_id: str) -> str:
         """
-        Delete a collection and all its documents.
+        Permanently removes a collection and all its documents.
         
-        This action cannot be undone! All documents within the collection 
-        will be deleted.
+        Use this tool when you need to:
+        - Remove an entire section of content
+        - Delete obsolete project collections
+        - Remove collections that are no longer needed
+        - Clean up workspace organization
+        
+        WARNING: This action cannot be undone and will delete all documents 
+within the collection.
         
         Args:
             collection_id: The collection ID to delete
             
         Returns:
-            Result message
+            Result message confirming deletion
         """
         try:
             client = get_outline_client()
@@ -161,14 +180,26 @@ def register_tools(mcp) -> None:
         format: str = "outline-markdown"
     ) -> str:
         """
-        Export a collection to a file.
+        Exports all documents in a collection to a downloadable file.
+        
+        IMPORTANT: This tool starts an asynchronous export operation which may take time
+        to complete. The function returns information about the operation, including its
+        status. When the operation is complete, the file can be downloaded or accessed
+        via Outline's UI. The export preserves the document hierarchy and includes all
+        document content and structure in the specified format.
+        
+        Use this tool when you need to:
+        - Create a backup of collection content
+        - Share collection content outside of Outline
+        - Convert collection content to other formats
+        - Archive collection content for offline use
         
         Args:
             collection_id: The collection ID to export
             format: Export format ("outline-markdown", "json", or "html")
             
         Returns:
-            Information about the export operation
+            Information about the export operation and how to access the file
         """
         try:
             client = get_outline_client()
@@ -186,13 +217,25 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def export_all_collections(format: str = "outline-markdown") -> str:
         """
-        Export all collections to a file.
+        Exports the entire workspace content to a downloadable file.
+        
+        IMPORTANT: This tool starts an asynchronous export operation which may take time
+        to complete, especially for large workspaces. The function returns information
+        about the operation, including its status. When the operation is complete, the
+        file can be downloaded or accessed via Outline's UI. The export includes all
+        collections, documents, and their hierarchies in the specified format.
+        
+        Use this tool when you need to:
+        - Create a complete backup of all workspace content
+        - Migrate content to another system
+        - Archive all workspace documents
+        - Get a comprehensive export of knowledge base
         
         Args:
             format: Export format ("outline-markdown", "json", or "html")
             
         Returns:
-            Information about the export operation
+            Information about the export operation and how to access the file
         """
         try:
             client = get_outline_client()

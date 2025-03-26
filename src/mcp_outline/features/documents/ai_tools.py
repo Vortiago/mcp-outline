@@ -55,12 +55,14 @@ def register_tools(mcp) -> None:
         document_id: Optional[str] = None
     ) -> str:
         """
-        Ask a natural language question about your documents.
+        Queries document content using natural language questions.
         
-        Uses AI to find an answer from your document content. You should 
-        use this when a user asks questions about information that might be 
-        in the documents, such as "What is our vacation policy?" or "Tell me 
-        about project X".
+        Use this tool when you need to:
+        - Find specific information across multiple documents
+        - Get direct answers to questions about document content
+        - Extract insights from your knowledge base
+        - Answer questions like "What is our vacation policy?" or "How do we 
+  onboard new clients?"
         
         Args:
             question: The natural language question to ask
@@ -68,7 +70,7 @@ def register_tools(mcp) -> None:
             document_id: Optional document to limit the search to
             
         Returns:
-            AI-generated answer based on document content
+            AI-generated answer based on document content with sources
         """
         try:
             client = get_outline_client()

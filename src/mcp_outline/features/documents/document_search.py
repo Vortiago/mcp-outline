@@ -112,14 +112,26 @@ def register_tools(mcp) -> None:
         collection_id: Optional[str] = None
     ) -> str:
         """
-        Search for documents with keywords.
+        Searches for documents using keywords or phrases across your knowledge base.
+        
+        IMPORTANT: The search performs full-text search across all document content
+        and titles. Results are ranked by relevance, with exact matches and title matches
+        typically ranked higher. The search will return snippets of content (context)
+        where the search terms appear in the document. You can limit the search to a 
+        specific collection by providing the collection_id.
+        
+        Use this tool when you need to:
+        - Find documents containing specific terms or topics
+        - Locate information across multiple documents
+        - Search within a specific collection using collection_id
+        - Discover content based on keywords
         
         Args:
-            query: Search terms
-            collection_id: Optional collection to search within
+            query: Search terms (e.g., "vacation policy" or "project plan")
+            collection_id: Optional collection to limit the search to
             
         Returns:
-            Formatted string containing search results
+            Formatted string containing search results with document titles and contexts
         """
         try:
             client = get_outline_client()
@@ -133,10 +145,16 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def list_collections() -> str:
         """
-        List all available collections.
+        Retrieves and displays all available collections in the workspace.
+        
+        Use this tool when you need to:
+        - See what collections exist in the workspace
+        - Get collection IDs for other operations
+        - Explore the organization of the knowledge base
+        - Find a specific collection by name
         
         Returns:
-            Formatted string containing collection information
+            Formatted string containing collection names, IDs, and descriptions
         """
         try:
             client = get_outline_client()
@@ -150,13 +168,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def get_collection_structure(collection_id: str) -> str:
         """
-        Get the document structure for a collection.
+        Retrieves the hierarchical document structure of a collection.
+        
+        Use this tool when you need to:
+        - Understand how documents are organized in a collection
+        - Find document IDs within a specific collection
+        - See the parent-child relationships between documents
+        - Get an overview of a collection's content structure
         
         Args:
-            collection_id: The collection ID
+            collection_id: The collection ID to examine
             
         Returns:
-            Formatted string containing the collection structure
+            Formatted string showing the hierarchical structure of documents
         """
         try:
             client = get_outline_client()
@@ -172,14 +196,26 @@ def register_tools(mcp) -> None:
         query: str, collection_id: Optional[str] = None
     ) -> str:
         """
-        Find a document ID by searching for its title.
+        Locates a document ID by searching for its title.
+        
+        IMPORTANT: This tool first checks for exact title matches (case-insensitive).
+        If none are found, it returns the best partial match instead. This is useful
+        when you're not sure of the exact title but need to reference a document in
+        other operations. Results are more accurate when you provide more of the
+        actual title in your query.
+        
+        Use this tool when you need to:
+        - Find a document's ID when you only know its title
+        - Get the document ID for use in other operations
+        - Verify if a document with a specific title exists
+        - Find the best matching document if exact title is unknown
         
         Args:
-            query: Title to search for
-            collection_id: Optional collection to search within
+            query: Title to search for (can be exact or partial)
+            collection_id: Optional collection to limit the search to
             
         Returns:
-            Document ID if found, or search results
+            Document ID if found, or best match information
         """
         try:
             client = get_outline_client()
