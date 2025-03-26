@@ -23,11 +23,13 @@ def _format_comments(comments: List[Dict[str, Any]]) -> str:
         user = comment.get("createdBy", {}).get("name", "Unknown User")
         created_at = comment.get("createdAt", "")
         text = comment.get("text", "")
+        comment_id = comment.get("id", "")
         
         output += f"## {i}. Comment by {user}\n"
+        output += f"ID: {comment_id}\n"
         if created_at:
-            output += f"Date: {created_at}\n\n"
-        output += f"{text}\n\n"
+            output += f"Date: {created_at}\n"
+        output += f"\n{text}\n\n"
     
     return output
 

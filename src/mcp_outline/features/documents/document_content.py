@@ -116,7 +116,8 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def add_comment(
         document_id: str,
-        text: str
+        text: str,
+        parent_comment_id: Optional[str] = None
     ) -> str:
         """
         Add a comment to a document.
@@ -124,6 +125,7 @@ def register_tools(mcp) -> None:
         Args:
             document_id: The document to comment on
             text: The comment text (supports markdown)
+            parent_comment_id: Optional ID of a parent comment (to reply to a comment)
             
         Returns:
             Result message with the new comment ID
@@ -136,6 +138,9 @@ def register_tools(mcp) -> None:
                 "text": text
             }
             
+            if parent_comment_id:
+                data["parentCommentId"] = parent_comment_id
+            
             response = client.post("comments.create", data)
             comment = response.get("data", {})
             
@@ -144,7 +149,10 @@ def register_tools(mcp) -> None:
                 
             comment_id = comment.get("id", "unknown")
             
-            return f"Comment added successfully (ID: {comment_id})"
+            if parent_comment_id:
+                return f"Reply added successfully (ID: {comment_id})"
+            else:
+                return f"Comment added successfully (ID: {comment_id})"
         except OutlineClientError as e:
             return f"Error adding comment: {str(e)}"
         except Exception as e:
