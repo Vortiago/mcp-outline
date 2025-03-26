@@ -26,7 +26,7 @@ class MockMCP:
 SAMPLE_COMMENTS = [
     {
         "id": "comment1",
-        "text": "This is a test comment",
+        "data": {"content": "This is a test comment"},
         "createdAt": "2023-01-01T12:00:00Z",
         "createdBy": {
             "id": "user1",
@@ -35,7 +35,7 @@ SAMPLE_COMMENTS = [
     },
     {
         "id": "comment2",
-        "text": "Another comment",
+        "data": {"content": "Another comment"},
         "createdAt": "2023-01-02T12:00:00Z",
         "createdBy": {
             "id": "user2",
@@ -100,14 +100,14 @@ class TestDocumentCollaborationFormatters:
             # Missing user name
             {
                 "id": "comment1",
-                "text": "Comment with missing user",
+                "data": {"content": "Comment with missing user"},
                 "createdAt": "2023-01-01T12:00:00Z",
                 "createdBy": {}
             },
             # Missing created date
             {
                 "id": "comment2",
-                "text": "Comment with missing date",
+                "data": {"content": "Comment with missing date"},
                 "createdBy": {
                     "name": "Test User"
                 }
