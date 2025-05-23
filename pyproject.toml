@@ -11,9 +11,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 readme = "README.md"
-license = {file = "LICENSE"}
+license-files = ["LICENSE"]
 dependencies = [
-    "mcp>=0.1.0",
+    "mcp[cli]>=0.1.0",
     "requests>=2.25.0",
 ]
 

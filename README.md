@@ -9,6 +9,7 @@ This project implements a Model Context Protocol (MCP) server that allows AI ass
 ## Features
 
 Currently implemented:
+
 - **Document Search**: Search for documents by keywords
 - **Collection Management**: List collections and view document structure
 - **Document Reading**: Read document content, export as markdown
@@ -17,7 +18,46 @@ Currently implemented:
 - **Document Editing**: Update document content and move documents
 - **Backlink Management**: View documents that link to a specific document
 
-## Getting Started
+## Add to Cursor with Docker
+
+We recommend running this python MCP server using Docker to avoid having to install dependencies on your machine.
+
+1. Install and run Docker (or Docker Desktop)
+2. Build the Docker image `docker buildx build -t mcp-outline .`
+3. In Cursor, go to the "MCP Servers" tab and click "Add Server"
+   ```json
+   {
+     "mcpServers": {
+       "mcp-outline": {
+         "command": "docker",
+         "args": [
+           "run",
+           "-i",
+           "--rm",
+           "--init",
+           "-e",
+           "DOCKER_CONTAINER=true",
+           "-e",
+           "OUTLINE_API_KEY",
+           "-e",
+           "OUTLINE_API_URL",
+           "mcp-outline"
+         ],
+         "env": {
+           "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
+           "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>"
+         }
+       }
+     }
+   }
+   ```
+   > OUTLINE_API_URL is optional, defaulting to https://app.getoutline.com/api
+4. Debug the docker image by using MCP inspector and passing the docker image to it:
+   ```bash
+   npx @modelcontextprotocol/inspector docker run -i --rm --init -e DOCKER_CONTAINER=true --env-file .env mcp-outline
+   ```
+
+## Development
 
 ### Prerequisites
 
@@ -63,6 +103,9 @@ mcp dev src/mcp_outline/server.py
 # Install in Claude Desktop (if available)
 mcp install src/mcp_outline/server.py --name "Document Outline Assistant"
 ```
+
+When running the MCP Inspector, go to Tools > Click on a tool > it appears on the right side so that you can query it.
+![MCP Inspector](./docs/mcp_inspector_guide.png)
 
 ## Usage Examples
 

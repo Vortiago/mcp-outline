@@ -1,0 +1,19 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "docker build",
+      "type": "shell",
+      "command": "sudo docker buildx build -t mcp-outline .",
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP Inspector",
+      "type": "shell",
+      "command": "npx @modelcontextprotocol/inspector docker run -i --rm --init -e DOCKER_CONTAINER=true --env-file .env mcp-outline",
+      "problemMatcher": []
+    }
+  ]
+}

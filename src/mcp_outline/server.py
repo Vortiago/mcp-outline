@@ -13,9 +13,11 @@ mcp = FastMCP("Document Outline")
 # Register all features
 register_all(mcp)
 
+
 def main():
     # Start the server
     mcp.run()
+
 
 if __name__ == "__main__":
     main()
