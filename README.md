@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vortiago-mcp-outline-badge.png)](https://mseep.ai/app/vortiago-mcp-outline)
+
 # MCP Outline Server
 
 A Model Context Protocol (MCP) server enabling AI assistants to interact with Outline (https://www.getoutline.com)
