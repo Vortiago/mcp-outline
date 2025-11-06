@@ -1,6 +1,7 @@
 """
 Tests for the MCP Outline server.
 """
+
 import pytest
 
 from mcp_outline.server import mcp
