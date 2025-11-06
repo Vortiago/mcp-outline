@@ -143,18 +143,14 @@ class TestOutlineClient:
         mock_response.headers = {}
         mock_response.json.return_value = {"data": {"test": "value"}}
 
-        # Use a fixed future timestamp to avoid timing issues
-        future_reset = int(datetime.now().timestamp() + 10)
-
-        with patch.object(
-            client.session, "post", return_value=mock_response
-        ) as mock_post:
+        with patch.object(client.session, "post", return_value=mock_response):
             with patch(
                 "mcp_outline.utils.outline_client.time.sleep"
             ) as mock_sleep:
-                # Set rate limit state to exhausted with reset in future
+                # Set rate limit state to exhausted with reset in near future
+                # Do this inside the patch context to ensure timing is correct
                 client._rate_limit_remaining = 0
-                client._rate_limit_reset = future_reset
+                client._rate_limit_reset = int(datetime.now().timestamp() + 10)
 
                 client.post("test_endpoint")
 
@@ -178,9 +174,7 @@ class TestOutlineClient:
         mock_response.headers = {}
         mock_response.json.return_value = {"data": {"test": "value"}}
 
-        with patch.object(
-            client.session, "post", return_value=mock_response
-        ) as mock_post:
+        with patch.object(client.session, "post", return_value=mock_response):
             with patch(
                 "mcp_outline.utils.outline_client.time.sleep"
             ) as mock_sleep:

@@ -123,9 +123,7 @@ class OutlineClient:
         }
 
         try:
-            response = self.session.post(
-                url, headers=headers, json=data or {}
-            )
+            response = self.session.post(url, headers=headers, json=data or {})
 
             # Update rate limit state from response headers
             self._update_rate_limits(response)
