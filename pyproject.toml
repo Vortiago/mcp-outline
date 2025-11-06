@@ -43,6 +43,9 @@ package-dir = {"" = "src"}
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
+markers = [
+    "integration: Integration tests that start the MCP server",
+]
 
 [tool.ruff]
 line-length = 79
