@@ -19,11 +19,19 @@ Currently implemented:
 - **Backlink Management**: View documents that link to a specific document
 - **Automatic Rate Limiting**: Smart handling of API rate limits with proactive waiting and automatic retry
 
-## Add to Cursor with Docker
+## Installation
 
-We recommend running this python MCP server using Docker to avoid having to install dependencies on your machine.
+### Option 1: Install from PyPI
 
-### Option 1: Use Pre-built Image (Recommended)
+```bash
+pip install mcp-outline
+```
+
+### Option 2: Docker
+
+Run the MCP server using Docker to avoid installing dependencies on your machine.
+
+#### Option 2a: Use Pre-built Image
 
 1. Install and run Docker (or Docker Desktop)
 2. Pull the pre-built image:
@@ -59,7 +67,7 @@ We recommend running this python MCP server using Docker to avoid having to inst
    }
    ```
 
-### Option 2: Build from Source
+#### Option 2b: Build from Source
 
 1. Install and run Docker (or Docker Desktop)
 2. Build the Docker image `docker buildx build -t mcp-outline .`
