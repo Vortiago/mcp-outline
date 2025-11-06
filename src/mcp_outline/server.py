@@ -6,6 +6,7 @@ A simple MCP server that provides document outline capabilities.
 
 import logging
 import os
+from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
 
@@ -18,17 +19,19 @@ mcp = FastMCP("Document Outline", port=3001)
 register_all(mcp)
 
 
-def main():
+def main() -> None:
     # Get transport mode from environment variable,
     # default to stdio for backward compatibility
-    transport_mode = os.getenv("MCP_TRANSPORT", "stdio").lower()
+    transport_str = os.getenv("MCP_TRANSPORT", "stdio").lower()
 
-    # Validate transport mode
-    valid_transports = ["stdio", "sse"]
-    if transport_mode not in valid_transports:
+    # Validate transport mode and ensure type safety
+    transport_mode: Literal["stdio", "sse", "streamable-http"]
+    if transport_str in ("stdio", "sse", "streamable-http"):
+        transport_mode = transport_str  # type: ignore
+    else:
         logging.error(
-            f"Invalid transport mode: {transport_mode}. "
-            f"Must be one of: {valid_transports}"
+            f"Invalid transport mode: {transport_str}. "
+            f"Must be one of: stdio, sse, streamable-http"
         )
         transport_mode = "stdio"
 

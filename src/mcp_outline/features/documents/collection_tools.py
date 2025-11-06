@@ -12,7 +12,7 @@ from mcp_outline.features.documents.common import (
 )
 
 
-def _format_file_operation(file_operation: Dict[str, Any]) -> str:
+def _format_file_operation(file_operation: Optional[Dict[str, Any]]) -> str:
     """Format file operation data into readable text."""
     if not file_operation:
         return "No file operation data available."
