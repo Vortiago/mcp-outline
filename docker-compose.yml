@@ -76,7 +76,7 @@ services:
       retries: 3
     networks:
       - outline
-      
+
 networks:
   intranet:
     external: true
