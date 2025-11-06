@@ -1,14 +1,15 @@
 """
 Tests for collection management tools.
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_outline.features.documents.common import OutlineClientError
 from mcp_outline.features.documents.collection_tools import (
     _format_file_operation,
 )
+from mcp_outline.features.documents.common import OutlineClientError
 
 
 # Mock FastMCP for registering tools
@@ -20,6 +21,7 @@ class MockMCP:
         def decorator(func):
             self.tools[func.__name__] = func
             return func
+
         return decorator
 
 
@@ -27,21 +29,21 @@ class MockMCP:
 SAMPLE_COLLECTION = {
     "id": "col123",
     "name": "Test Collection",
-    "description": "A test collection"
+    "description": "A test collection",
 }
 
 SAMPLE_FILE_OPERATION_COMPLETE = {
     "id": "fileop123",
     "state": "complete",
     "type": "export",
-    "name": "Test Export"
+    "name": "Test Export",
 }
 
 SAMPLE_FILE_OPERATION_PROCESSING = {
     "id": "fileop456",
     "state": "processing",
     "type": "export",
-    "name": "Test Export"
+    "name": "Test Export",
 }
 
 
@@ -54,9 +56,8 @@ def mcp():
 @pytest.fixture
 def register_collection_tools(mcp):
     """Fixture to register collection management tools."""
-    from mcp_outline.features.documents.collection_tools import (
-        register_tools
-    )
+    from mcp_outline.features.documents.collection_tools import register_tools
+
     register_tools(mcp)
     return mcp
 
@@ -100,7 +101,9 @@ class TestFileOperationFormatter:
 class TestCreateCollection:
     """Tests for create_collection tool."""
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_create_collection_success(
         self, mock_get_client, register_collection_tools
     ):
@@ -110,20 +113,19 @@ class TestCreateCollection:
         mock_get_client.return_value = mock_client
 
         result = register_collection_tools.tools["create_collection"](
-            name="Test Collection",
-            description="A test collection"
+            name="Test Collection", description="A test collection"
         )
 
         mock_client.create_collection.assert_called_once_with(
-            "Test Collection",
-            "A test collection",
-            None
+            "Test Collection", "A test collection", None
         )
         assert "Collection created successfully" in result
         assert "Test Collection" in result
         assert "col123" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_create_collection_with_color(
         self, mock_get_client, register_collection_tools
     ):
@@ -135,17 +137,17 @@ class TestCreateCollection:
         result = register_collection_tools.tools["create_collection"](
             name="Test Collection",
             description="A test collection",
-            color="#FF0000"
+            color="#FF0000",
         )
 
         mock_client.create_collection.assert_called_once_with(
-            "Test Collection",
-            "A test collection",
-            "#FF0000"
+            "Test Collection", "A test collection", "#FF0000"
         )
         assert "Collection created successfully" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_create_collection_failure(
         self, mock_get_client, register_collection_tools
     ):
@@ -160,7 +162,9 @@ class TestCreateCollection:
 
         assert "Failed to create collection" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_create_collection_client_error(
         self, mock_get_client, register_collection_tools
     ):
@@ -182,7 +186,9 @@ class TestCreateCollection:
 class TestUpdateCollection:
     """Tests for update_collection tool."""
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_update_collection_success(
         self, mock_get_client, register_collection_tools
     ):
@@ -192,20 +198,18 @@ class TestUpdateCollection:
         mock_get_client.return_value = mock_client
 
         result = register_collection_tools.tools["update_collection"](
-            collection_id="col123",
-            name="Updated Collection"
+            collection_id="col123", name="Updated Collection"
         )
 
         mock_client.update_collection.assert_called_once_with(
-            "col123",
-            "Updated Collection",
-            None,
-            None
+            "col123", "Updated Collection", None, None
         )
         assert "Collection updated successfully" in result
         assert "Test Collection" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_update_collection_all_fields(
         self, mock_get_client, register_collection_tools
     ):
@@ -218,18 +222,17 @@ class TestUpdateCollection:
             collection_id="col123",
             name="New Name",
             description="New Description",
-            color="#00FF00"
+            color="#00FF00",
         )
 
         mock_client.update_collection.assert_called_once_with(
-            "col123",
-            "New Name",
-            "New Description",
-            "#00FF00"
+            "col123", "New Name", "New Description", "#00FF00"
         )
         assert "Collection updated successfully" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_update_collection_no_fields(
         self, mock_get_client, register_collection_tools
     ):
@@ -246,7 +249,9 @@ class TestUpdateCollection:
         assert "Error" in result
         assert "at least one field to update" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_update_collection_failure(
         self, mock_get_client, register_collection_tools
     ):
@@ -256,13 +261,14 @@ class TestUpdateCollection:
         mock_get_client.return_value = mock_client
 
         result = register_collection_tools.tools["update_collection"](
-            collection_id="col123",
-            name="Updated Name"
+            collection_id="col123", name="Updated Name"
         )
 
         assert "Failed to update collection" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_update_collection_client_error(
         self, mock_get_client, register_collection_tools
     ):
@@ -274,8 +280,7 @@ class TestUpdateCollection:
         mock_get_client.return_value = mock_client
 
         result = register_collection_tools.tools["update_collection"](
-            collection_id="col123",
-            name="Updated Name"
+            collection_id="col123", name="Updated Name"
         )
 
         assert "Error updating collection" in result
@@ -285,7 +290,9 @@ class TestUpdateCollection:
 class TestDeleteCollection:
     """Tests for delete_collection tool."""
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_delete_collection_success(
         self, mock_get_client, register_collection_tools
     ):
@@ -297,9 +304,13 @@ class TestDeleteCollection:
         result = register_collection_tools.tools["delete_collection"]("col123")
 
         mock_client.delete_collection.assert_called_once_with("col123")
-        assert "Collection and all its documents deleted successfully" in result
+        assert (
+            "Collection and all its documents deleted successfully" in result
+        )
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_delete_collection_failure(
         self, mock_get_client, register_collection_tools
     ):
@@ -312,7 +323,9 @@ class TestDeleteCollection:
 
         assert "Failed to delete collection" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_delete_collection_client_error(
         self, mock_get_client, register_collection_tools
     ):
@@ -332,7 +345,9 @@ class TestDeleteCollection:
 class TestExportCollection:
     """Tests for export_collection tool."""
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_collection_success(
         self, mock_get_client, register_collection_tools
     ):
@@ -346,13 +361,14 @@ class TestExportCollection:
         result = register_collection_tools.tools["export_collection"]("col123")
 
         mock_client.export_collection.assert_called_once_with(
-            "col123",
-            "outline-markdown"
+            "col123", "outline-markdown"
         )
         assert "Export Operation" in result
         assert "complete" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_collection_custom_format(
         self, mock_get_client, register_collection_tools
     ):
@@ -364,14 +380,15 @@ class TestExportCollection:
         mock_get_client.return_value = mock_client
 
         result = register_collection_tools.tools["export_collection"](
-            "col123",
-            format="json"
+            "col123", format="json"
         )
 
         mock_client.export_collection.assert_called_once_with("col123", "json")
         assert "Export Operation" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_collection_failure(
         self, mock_get_client, register_collection_tools
     ):
@@ -384,7 +401,9 @@ class TestExportCollection:
 
         assert "Failed to start export operation" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_collection_client_error(
         self, mock_get_client, register_collection_tools
     ):
@@ -404,7 +423,9 @@ class TestExportCollection:
 class TestExportAllCollections:
     """Tests for export_all_collections tool."""
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_all_collections_success(
         self, mock_get_client, register_collection_tools
     ):
@@ -423,7 +444,9 @@ class TestExportAllCollections:
         assert "Export Operation" in result
         assert "complete" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_all_collections_custom_format(
         self, mock_get_client, register_collection_tools
     ):
@@ -441,7 +464,9 @@ class TestExportAllCollections:
         mock_client.export_all_collections.assert_called_once_with("html")
         assert "Export Operation" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_all_collections_failure(
         self, mock_get_client, register_collection_tools
     ):
@@ -454,7 +479,9 @@ class TestExportAllCollections:
 
         assert "Failed to start export operation" in result
 
-    @patch("mcp_outline.features.documents.collection_tools.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.collection_tools.get_outline_client"
+    )
     def test_export_all_collections_client_error(
         self, mock_get_client, register_collection_tools
     ):

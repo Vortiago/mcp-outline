@@ -1,6 +1,7 @@
 """
 Tests for document lifecycle tools.
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +18,7 @@ class MockMCP:
         def decorator(func):
             self.tools[func.__name__] = func
             return func
+
         return decorator
 
 
@@ -25,20 +27,20 @@ SAMPLE_DOCUMENT = {
     "id": "doc123",
     "title": "Test Document",
     "text": "Sample content",
-    "updatedAt": "2023-01-01T12:00:00Z"
+    "updatedAt": "2023-01-01T12:00:00Z",
 }
 
 SAMPLE_DOCUMENTS_LIST = [
     {
         "id": "doc1",
         "title": "Archived Doc 1",
-        "updatedAt": "2023-01-01T12:00:00Z"
+        "updatedAt": "2023-01-01T12:00:00Z",
     },
     {
         "id": "doc2",
         "title": "Archived Doc 2",
-        "updatedAt": "2023-01-02T12:00:00Z"
-    }
+        "updatedAt": "2023-01-02T12:00:00Z",
+    },
 ]
 
 
@@ -52,8 +54,9 @@ def mcp():
 def register_lifecycle_tools(mcp):
     """Fixture to register document lifecycle tools."""
     from mcp_outline.features.documents.document_lifecycle import (
-        register_tools
+        register_tools,
     )
+
     register_tools(mcp)
     return mcp
 
@@ -61,7 +64,9 @@ def register_lifecycle_tools(mcp):
 class TestArchiveDocument:
     """Tests for archive_document tool."""
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_archive_document_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -76,7 +81,9 @@ class TestArchiveDocument:
         assert "Document archived successfully" in result
         assert "Test Document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_archive_document_no_document_returned(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -89,7 +96,9 @@ class TestArchiveDocument:
 
         assert "Failed to archive document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_archive_document_client_error(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -105,7 +114,9 @@ class TestArchiveDocument:
         assert "Error archiving document" in result
         assert "API error" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_archive_document_unexpected_error(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -124,7 +135,9 @@ class TestArchiveDocument:
 class TestUnarchiveDocument:
     """Tests for unarchive_document tool."""
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_unarchive_document_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -139,7 +152,9 @@ class TestUnarchiveDocument:
         assert "Document unarchived successfully" in result
         assert "Test Document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_unarchive_document_no_document_returned(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -148,13 +163,13 @@ class TestUnarchiveDocument:
         mock_client.unarchive_document.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = register_lifecycle_tools.tools[
-            "unarchive_document"
-        ]("doc123")
+        result = register_lifecycle_tools.tools["unarchive_document"]("doc123")
 
         assert "Failed to unarchive document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_unarchive_document_client_error(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -165,9 +180,7 @@ class TestUnarchiveDocument:
         )
         mock_get_client.return_value = mock_client
 
-        result = register_lifecycle_tools.tools[
-            "unarchive_document"
-        ]("doc123")
+        result = register_lifecycle_tools.tools["unarchive_document"]("doc123")
 
         assert "Error unarchiving document" in result
         assert "API error" in result
@@ -176,7 +189,9 @@ class TestUnarchiveDocument:
 class TestDeleteDocument:
     """Tests for delete_document tool."""
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_delete_document_to_trash_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -190,13 +205,14 @@ class TestDeleteDocument:
 
         mock_client.get_document.assert_called_once_with("doc123")
         mock_client.post.assert_called_once_with(
-            "documents.delete",
-            {"id": "doc123"}
+            "documents.delete", {"id": "doc123"}
         )
         assert "Document moved to trash" in result
         assert "Test Document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_delete_document_to_trash_failure(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -210,7 +226,9 @@ class TestDeleteDocument:
 
         assert "Failed to move document to trash" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_delete_document_permanently_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -220,8 +238,7 @@ class TestDeleteDocument:
         mock_get_client.return_value = mock_client
 
         result = register_lifecycle_tools.tools["delete_document"](
-            "doc123",
-            permanent=True
+            "doc123", permanent=True
         )
 
         mock_client.permanently_delete_document.assert_called_once_with(
@@ -229,7 +246,9 @@ class TestDeleteDocument:
         )
         assert "Document permanently deleted" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_delete_document_permanently_failure(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -239,21 +258,20 @@ class TestDeleteDocument:
         mock_get_client.return_value = mock_client
 
         result = register_lifecycle_tools.tools["delete_document"](
-            "doc123",
-            permanent=True
+            "doc123", permanent=True
         )
 
         assert "Failed to permanently delete document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_delete_document_client_error(
         self, mock_get_client, register_lifecycle_tools
     ):
         """Test delete_document with client error."""
         mock_client = MagicMock()
-        mock_client.get_document.side_effect = OutlineClientError(
-            "API error"
-        )
+        mock_client.get_document.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
         result = register_lifecycle_tools.tools["delete_document"]("doc123")
@@ -265,7 +283,9 @@ class TestDeleteDocument:
 class TestRestoreDocument:
     """Tests for restore_document tool."""
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_restore_document_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -280,7 +300,9 @@ class TestRestoreDocument:
         assert "Document restored successfully" in result
         assert "Test Document" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_restore_document_no_document_returned(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -293,7 +315,9 @@ class TestRestoreDocument:
 
         assert "Failed to restore document from trash" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_restore_document_client_error(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -313,7 +337,9 @@ class TestRestoreDocument:
 class TestListArchivedDocuments:
     """Tests for list_archived_documents tool."""
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_list_archived_documents_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -322,16 +348,16 @@ class TestListArchivedDocuments:
         mock_client.post.return_value = {"data": SAMPLE_DOCUMENTS_LIST}
         mock_get_client.return_value = mock_client
 
-        result = register_lifecycle_tools.tools[
-            "list_archived_documents"
-        ]()
+        result = register_lifecycle_tools.tools["list_archived_documents"]()
 
         mock_client.post.assert_called_once_with("documents.archived")
         assert "Archived Documents" in result
         assert "Archived Doc 1" in result
         assert "Archived Doc 2" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_list_archived_documents_empty(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -340,13 +366,13 @@ class TestListArchivedDocuments:
         mock_client.post.return_value = {"data": []}
         mock_get_client.return_value = mock_client
 
-        result = register_lifecycle_tools.tools[
-            "list_archived_documents"
-        ]()
+        result = register_lifecycle_tools.tools["list_archived_documents"]()
 
         assert "archived documents" in result.lower()
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_list_archived_documents_client_error(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -355,9 +381,7 @@ class TestListArchivedDocuments:
         mock_client.post.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
-        result = register_lifecycle_tools.tools[
-            "list_archived_documents"
-        ]()
+        result = register_lifecycle_tools.tools["list_archived_documents"]()
 
         assert "Error listing archived documents" in result
         assert "API error" in result
@@ -366,7 +390,9 @@ class TestListArchivedDocuments:
 class TestListTrash:
     """Tests for list_trash tool."""
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_list_trash_success(
         self, mock_get_client, register_lifecycle_tools
     ):
@@ -382,10 +408,10 @@ class TestListTrash:
         assert "Archived Doc 1" in result
         assert "Archived Doc 2" in result
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
-    def test_list_trash_empty(
-        self, mock_get_client, register_lifecycle_tools
-    ):
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
+    def test_list_trash_empty(self, mock_get_client, register_lifecycle_tools):
         """Test list_trash with no documents in trash."""
         mock_client = MagicMock()
         mock_client.list_trash.return_value = []
@@ -395,7 +421,9 @@ class TestListTrash:
 
         assert "documents in trash" in result.lower()
 
-    @patch("mcp_outline.features.documents.document_lifecycle.get_outline_client")
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
     def test_list_trash_client_error(
         self, mock_get_client, register_lifecycle_tools
     ):
