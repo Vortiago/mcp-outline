@@ -37,42 +37,6 @@ Implement resource handlers to expose Outline data via MCP URIs:
 
 ---
 
-### 1.2 Add MCP Prompts Support
-**Complexity**: Moderate
-**Status**: Not Started
-
-Implement prompt handlers to provide reusable LLM interaction templates:
-
-- [ ] Implement `@mcp.prompt()` decorators in new `prompts/` module
-- [ ] Create `list_prompts()` handler
-- [ ] Create `get_prompt()` handler
-- [ ] Add prompt: **"create-meeting-notes"** with parameters:
-  - `meeting_title` (string)
-  - `date` (string)
-  - `attendees` (string, comma-separated)
-  - `collection_id` (optional string)
-- [ ] Add prompt: **"summarize-document"** with parameters:
-  - `document_id` (string)
-  - `style` (enum: brief|detailed|executive)
-- [ ] Add prompt: **"write-rfc"** with parameters:
-  - `title` (string)
-  - `problem` (string)
-  - `collection_id` (optional string)
-- [ ] Add prompt: **"create-weekly-report"** with parameters:
-  - `collection_id` (string)
-  - `week_start_date` (string)
-- [ ] Add prompt: **"brainstorm-structure"** with parameters:
-  - `topic` (string)
-  - `depth` (enum: outline|detailed|comprehensive)
-- [ ] Add comprehensive tests for all prompts
-- [ ] Update README with prompt examples
-
-**Benefits**:
-- Pre-built workflows for common tasks
-- Consistent formatting and structure
-- Reduced user friction for common operations
-
----
 
 ### 1.3 Add MCP Sampling Support
 **Complexity**: Complex
@@ -165,37 +129,6 @@ Replace synchronous `requests` library with async HTTP client:
 - Connection pooling for efficiency
 - Scalable for multiple concurrent requests
 
----
-
-### 2.3 Caching Layer
-**Complexity**: Complex
-**Status**: Not Started
-
-Implement Redis-based caching for frequently accessed data:
-
-- [ ] Add Redis dependency (optional, with graceful fallback)
-- [ ] Create `utils/cache.py` module
-- [ ] Implement cache interface (abstract class)
-- [ ] Implement Redis cache backend
-- [ ] Implement in-memory cache backend (fallback)
-- [ ] Add caching decorator for OutlineClient methods
-- [ ] Cache collection lists (TTL: 5 minutes)
-- [ ] Cache document metadata (TTL: 2 minutes)
-- [ ] Cache search results (TTL: 1 minute)
-- [ ] Implement cache invalidation on updates/deletes
-- [ ] Add cache statistics/monitoring
-- [ ] Add `CACHE_ENABLED` and `CACHE_TTL_*` env vars
-- [ ] Update docker-compose.yml with Redis service
-- [ ] Add cache-related tests
-- [ ] Document caching behavior in README
-
-**Benefits**:
-- Reduced API calls to Outline
-- Faster response times
-- Better rate limit management
-- Improved user experience
-
----
 
 ## Phase 3: API Coverage Expansion
 
@@ -448,7 +381,7 @@ Improve Docker infrastructure and automated builds:
   - [x] Update README with local setup instructions
   - [x] Enable local testing without paid Outline account
 
-- [ ] **Multi-Architecture Docker Builds** (from fork analysis)
+- [ ] **Multi-Architecture Docker Builds** 
   - [ ] Add GitHub Actions workflow for automated builds
   - [ ] Support AMD64 and ARM64 architectures
   - [ ] Publish to GitHub Container Registry (GHCR)
@@ -457,42 +390,16 @@ Improve Docker infrastructure and automated builds:
   - [ ] Add version tagging strategy (latest, semver, outline-version)
   - [ ] Update README with pre-built image usage
 
-- [ ] **Docker Image Signing** (from fork analysis)
-  - [ ] Add cosign-based image signing workflow
-  - [ ] Implement Sigstore/Fulcio for supply chain security
-  - [ ] Enable image verification for users
-  - [ ] Document signature verification process
-  - [ ] Add security best practices documentation
-
 **Benefits**:
 - Easy local testing without external dependencies
 - Multi-platform deployment support
 - Enhanced security and supply chain trust
 - Automated Docker image publishing
 
-**References**:
-- nipeharefa/mcp-outline fork: Multi-arch builds
-- TymekV/mcp-outline fork: Image signing with cosign
-- Analysis completed: 2025-11-06
-
-**Note on Integration Tests**:
-CI/CD integration tests were investigated but removed due to impossibility of automating API key creation in Outline. Outline does not provide any official mechanism for programmatic API key generation - all keys must be created manually through the web UI. Workarounds (database manipulation, browser automation) were deemed too fragile and risky for CI environments. The existing unit test suite with mocked API responses remains the primary testing strategy.
 
 ---
 
 ## Phase 5: Advanced Features (Future)
-
-### 5.1 Real-time Updates
-**Complexity**: Complex
-**Status**: Not Started
-
-- [ ] Implement WebSocket support for real-time updates
-- [ ] Add document change notifications
-- [ ] Add comment notifications
-- [ ] Create subscription management system
-- [ ] Handle connection lifecycle
-
----
 
 ### 5.2 Advanced Search
 **Complexity**: Moderate
@@ -504,30 +411,6 @@ CI/CD integration tests were investigated but removed due to impossibility of au
 - [ ] Add content type filtering
 - [ ] Implement faceted search results
 - [ ] Add search result ranking options
-
----
-
-### 5.3 Workflow Automation
-**Complexity**: Complex
-**Status**: Not Started
-
-- [ ] Create workflow definition system
-- [ ] Add webhook support for Outline events
-- [ ] Implement automation triggers
-- [ ] Add scheduled operations
-- [ ] Create workflow templates
-
----
-
-### 5.4 User & Team Management
-**Complexity**: Complex
-**Status**: Not Started
-
-- [ ] Add user listing and search tools
-- [ ] Add team management tools
-- [ ] Add group management tools
-- [ ] Add permission management tools
-- [ ] Add user invite/removal tools
 
 ---
 
@@ -549,11 +432,6 @@ CI/CD integration tests were investigated but removed due to impossibility of au
   - Research additional FastMCP context capabilities
   - Explore server-to-client requests
   - Investigate notification systems
-
-- [ ] **OpenAI MCP Integration** (March 2025):
-  - Test with ChatGPT desktop app
-  - Test with OpenAI Agents SDK
-  - Document OpenAI-specific considerations
 
 - [ ] **Security Enhancements**:
   - Audit for security vulnerabilities
@@ -578,12 +456,6 @@ Items are prioritized based on:
 2. **Complexity**: How difficult is implementation?
 3. **Dependencies**: What must be done first?
 4. **MCP Compliance**: Does this use core MCP features?
-
-### Complexity Levels
-
-- **Simple**: Well-defined, minimal dependencies, < 100 LOC
-- **Moderate**: Some complexity, may require research, 100-500 LOC
-- **Complex**: Significant complexity, multiple dependencies, > 500 LOC
 
 ### Success Metrics
 
