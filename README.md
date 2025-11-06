@@ -17,6 +17,7 @@ Currently implemented:
 - **Document Creation**: Create new documents in collections
 - **Document Editing**: Update document content and move documents
 - **Backlink Management**: View documents that link to a specific document
+- **Automatic Rate Limiting**: Smart handling of API rate limits with proactive waiting and automatic retry
 
 ## Add to Cursor with Docker
 
@@ -90,6 +91,16 @@ OUTLINE_API_KEY=your_outline_api_key_here
 # For self-hosted Outline
 # OUTLINE_API_URL=https://your-outline-instance.example.com/api
 ```
+
+### Rate Limiting
+
+The server automatically handles Outline API rate limits using a hybrid approach:
+
+- **Proactive Prevention**: Tracks `RateLimit-Remaining` and `RateLimit-Reset` headers from API responses and automatically waits when rate limits are exhausted before making new requests
+- **Reactive Retry**: If rate limits are still hit (e.g., due to concurrent requests), automatically retries with exponential backoff (1s, 2s, 4s intervals) up to 3 times
+- **Retry-After Header**: Respects the `Retry-After` header provided by the Outline API for optimal wait times
+
+No configuration is required - rate limiting is enabled by default and works transparently.
 
 ### Running the Server
 
