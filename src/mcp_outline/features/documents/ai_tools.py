@@ -58,22 +58,22 @@ def register_tools(mcp) -> None:
         document_id: Optional[str] = None,
     ) -> str:
         """
-              Queries document content using natural language questions.
+        Queries document content using natural language questions.
 
-              Use this tool when you need to:
-              - Find specific information across multiple documents
-              - Get direct answers to questions about document content
-              - Extract insights from your knowledge base
-              - Answer questions like "What is our vacation policy?"
-              - Answer "How do we onboard new clients?" and similar queries
+        Use this tool when you need to:
+        - Find specific information across multiple documents
+        - Get direct answers to questions about document content
+        - Extract insights from your knowledge base
+        - Answer questions like "What is our vacation policy?"
+        - Answer "How do we onboard new clients?" and similar queries
 
-              Args:
-                  question: The natural language question to ask
-                  collection_id: Optional collection to limit the search to
-                  document_id: Optional document to limit the search to
+        Args:
+            question: The natural language question to ask
+            collection_id: Optional collection to limit the search to
+            document_id: Optional document to limit the search to
 
-              Returns:
-                  AI-generated answer based on document content with sources
+        Returns:
+            AI-generated answer based on document content with sources
         """
         try:
             client = get_outline_client()

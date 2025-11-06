@@ -145,22 +145,22 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def delete_collection(collection_id: str) -> str:
         """
-                Permanently removes a collection and all its documents.
+        Permanently removes a collection and all its documents.
 
-                Use this tool when you need to:
-                - Remove an entire section of content
-                - Delete obsolete project collections
-                - Remove collections that are no longer needed
-                - Clean up workspace organization
+        Use this tool when you need to:
+        - Remove an entire section of content
+        - Delete obsolete project collections
+        - Remove collections that are no longer needed
+        - Clean up workspace organization
 
-                WARNING: This action cannot be undone and will delete all
-                documents within the collection.
+        WARNING: This action cannot be undone and will delete all
+        documents within the collection.
 
-                Args:
-                    collection_id: The collection ID to delete
+        Args:
+            collection_id: The collection ID to delete
 
-                Returns:
-                    Result message confirming deletion
+        Returns:
+            Result message confirming deletion
         """
         try:
             client = get_outline_client()

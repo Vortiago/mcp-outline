@@ -84,29 +84,29 @@ def register_tools(mcp) -> None:
         append: bool = False,
     ) -> str:
         """
-                Modifies an existing document's title or content.
+        Modifies an existing document's title or content.
 
-                IMPORTANT: This tool replaces the document content rather
-                than just adding to it.
-                To update a document with changed data, you need to first
-                read the document, add your changes to the content, and
-                then send the complete document with your changes.
+        IMPORTANT: This tool replaces the document content rather
+        than just adding to it.
+        To update a document with changed data, you need to first
+        read the document, add your changes to the content, and
+        then send the complete document with your changes.
 
-                Use this tool when you need to:
-                - Edit or update document content
-                - Change a document's title
-                - Append new content to an existing document
-                - Fix errors or add information to documents
+        Use this tool when you need to:
+        - Edit or update document content
+        - Change a document's title
+        - Append new content to an existing document
+        - Fix errors or add information to documents
 
-                Args:
-                    document_id: The document ID to update
-                    title: New title (if None, keeps existing title)
-                    text: New content (if None, keeps existing content)
-                    append: If True, adds text to the end of document
-                        instead of replacing
+        Args:
+            document_id: The document ID to update
+            title: New title (if None, keeps existing title)
+            text: New content (if None, keeps existing content)
+            append: If True, adds text to the end of document
+                instead of replacing
 
-                Returns:
-                    Result message confirming update
+        Returns:
+            Result message confirming update
         """
         try:
             client = get_outline_client()

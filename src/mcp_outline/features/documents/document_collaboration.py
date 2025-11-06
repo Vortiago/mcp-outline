@@ -193,20 +193,20 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     def get_document_backlinks(document_id: str) -> str:
         """
-                Finds all documents that link to a specific document.
+        Finds all documents that link to a specific document.
 
-                Use this tool when you need to:
-                - Discover references to a document across the workspace
-                - Identify dependencies between documents
-                - Find documents related to a specific document
-                - Understand document relationships and connections
+        Use this tool when you need to:
+        - Discover references to a document across the workspace
+        - Identify dependencies between documents
+        - Find documents related to a specific document
+        - Understand document relationships and connections
 
-                Args:
-                    document_id: The document ID to find backlinks for
+        Args:
+            document_id: The document ID to find backlinks for
 
-                Returns:
-                    Formatted string listing all documents that link to
-                    the specified document
+        Returns:
+            Formatted string listing all documents that link to
+            the specified document
         """
         try:
             client = get_outline_client()
