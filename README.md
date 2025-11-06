@@ -23,6 +23,44 @@ Currently implemented:
 
 We recommend running this python MCP server using Docker to avoid having to install dependencies on your machine.
 
+### Option 1: Use Pre-built Image (Recommended)
+
+1. Install and run Docker (or Docker Desktop)
+2. Pull the pre-built image:
+   ```bash
+   docker pull ghcr.io/vortiago/mcp-outline:latest
+   ```
+3. In Cursor, go to the "MCP Servers" tab and click "Add Server"
+   ```json
+   {
+     "mcpServers": {
+       "mcp-outline": {
+         "command": "docker",
+         "args": [
+           "run",
+           "-i",
+           "--rm",
+           "--init",
+           "-e",
+           "DOCKER_CONTAINER=true",
+           "-e",
+           "OUTLINE_API_KEY",
+           "-e",
+           "OUTLINE_API_URL",
+           "ghcr.io/vortiago/mcp-outline:latest"
+         ],
+         "env": {
+           "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
+           "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>",
+           "MCP_TRANSPORT": "stdio"
+         }
+       }
+     }
+   }
+   ```
+
+### Option 2: Build from Source
+
 1. Install and run Docker (or Docker Desktop)
 2. Build the Docker image `docker buildx build -t mcp-outline .`
 3. In Cursor, go to the "MCP Servers" tab and click "Add Server"
@@ -177,7 +215,7 @@ For local testing without a paid Outline account, you can run a complete develop
    ```
 
 3. **Access Outline**:
-   - Open http://localhost:3000 in your browser
+   - Open http://localhost:32110 in your browser
    - Login with `admin@example.com` / `admin`
 
 4. **Generate API key**:
