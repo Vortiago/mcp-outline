@@ -52,6 +52,12 @@ This MCP server bridges AI assistants with Outline's document management platfor
 - Raises `OutlineError` for API failures
 - Tools catch exceptions and return error strings
 
+**Rate Limiting**:
+- Tracks `RateLimit-Remaining` and `RateLimit-Reset` headers, waits proactively when exhausted
+- Automatic retry on HTTP 429 with exponential backoff (1s, 2s, 4s)
+- Respects `Retry-After` header
+- Enabled by default, no configuration required
+
 ## Implementation Patterns
 
 ### Module Structure

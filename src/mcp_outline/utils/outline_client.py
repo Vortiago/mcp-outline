@@ -5,9 +5,13 @@ A simple client for making requests to the Outline API.
 """
 
 import os
+import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 class OutlineError(Exception):
@@ -42,11 +46,61 @@ class OutlineClient:
         if not self.api_key:
             raise OutlineError("Missing API key. Set OUTLINE_API_KEY env var.")
 
+        # Rate limit tracking
+        self._rate_limit_remaining: Optional[int] = None
+        self._rate_limit_reset: Optional[int] = None
+
+        # Setup session with retry strategy for reactive rate limiting
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            status_forcelist=[429, 500, 502, 503, 504],
+            backoff_factor=1,
+            respect_retry_after_header=True,
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
+    def _wait_if_rate_limited(self) -> None:
+        """
+        Proactively wait if we know we're rate limited.
+
+        Uses stored rate limit headers to sleep until reset time if needed.
+        """
+        if self._rate_limit_remaining == 0 and self._rate_limit_reset:
+            # Calculate wait time until reset
+            now = datetime.now().timestamp()
+            wait_seconds = max(0, self._rate_limit_reset - now)
+
+            if wait_seconds > 0:
+                # Add small buffer to account for clock skew
+                time.sleep(wait_seconds + 0.1)
+
+    def _update_rate_limits(self, response: requests.Response) -> None:
+        """
+        Parse and store rate limit headers from API response.
+
+        Args:
+            response: The HTTP response object
+        """
+        if "RateLimit-Remaining" in response.headers:
+            self._rate_limit_remaining = int(
+                response.headers["RateLimit-Remaining"]
+            )
+
+        if "RateLimit-Reset" in response.headers:
+            self._rate_limit_reset = int(response.headers["RateLimit-Reset"])
+
     def post(
         self, endpoint: str, data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Make a POST request to the Outline API.
+
+        Implements proactive rate limiting by checking stored rate limit
+        headers before making requests, and reactive rate limiting via
+        urllib3 automatic retry with exponential backoff.
 
         Args:
             endpoint: The API endpoint to call.
@@ -58,6 +112,9 @@ class OutlineClient:
         Raises:
             OutlineError: If the request fails.
         """
+        # Proactive: wait if we know we're rate limited
+        self._wait_if_rate_limited()
+
         url = f"{self.api_url}/{endpoint}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -66,7 +123,11 @@ class OutlineClient:
         }
 
         try:
-            response = requests.post(url, headers=headers, json=data or {})
+            response = self.session.post(url, headers=headers, json=data or {})
+
+            # Update rate limit state from response headers
+            self._update_rate_limits(response)
+
             # Raise exception for 4XX/5XX responses
             response.raise_for_status()
             return response.json()
