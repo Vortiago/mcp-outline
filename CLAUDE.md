@@ -12,26 +12,6 @@ This MCP server bridges AI assistants with Outline's document management platfor
 
 ## Architecture
 
-### Project Structure
-
-```
-src/mcp_outline/
-├── server.py                        # MCP server entry point
-├── features/documents/              # Feature modules
-│   ├── document_search.py           # Search and discovery
-│   ├── document_reading.py          # Reading and export
-│   ├── document_content.py          # Create and update
-│   ├── document_organization.py     # Moving documents
-│   ├── document_lifecycle.py        # Archive/delete/restore
-│   ├── document_collaboration.py    # Comments and backlinks
-│   ├── collection_tools.py          # Collection management
-│   └── ai_tools.py                  # AI-powered features
-└── utils/
-    └── outline_client.py            # REST API client
-
-tests/                               # Test suite
-```
-
 ### Tool Categories
 
 - **Search**: Find documents, collections, hierarchies
@@ -187,17 +167,6 @@ with patch('module.OutlineClient') as mock_client:
     # Test tool behavior
 ```
 
-### Development Commands
-
-```bash
-uv pip install -e ".[dev]"              # Install
-mcp dev src/mcp_outline/server.py      # Run with MCP Inspector
-uv run pytest tests/                    # Test
-uv run ruff format .                    # Format
-uv run pyright src/                     # Type check
-docker buildx build -t mcp-outline .    # Docker build
-```
-
 ### Configuration
 
 `.env` file:
@@ -221,9 +190,3 @@ OUTLINE_API_URL=<custom_url>     # Optional
 **Tree Formatting**: Recursive formatting with indentation for hierarchies
 
 **Document ID Resolution**: `get_document_id_from_title` for user-friendly lookups
-
-## Resources
-
-- Outline API: https://www.getoutline.com/developers
-- MCP Spec: https://modelcontextprotocol.io
-- Project: https://github.com/Vortiago/mcp-outline
