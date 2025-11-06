@@ -137,26 +137,32 @@ class TestOutlineClient:
         """Test proactive waiting when rate limit is exhausted."""
         client = OutlineClient()
 
-        # Set rate limit state to exhausted with reset in near future
-        client._rate_limit_remaining = 0
-        client._rate_limit_reset = int((datetime.now().timestamp() + 0.5))
-
         # Mock the response
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {}
         mock_response.json.return_value = {"data": {"test": "value"}}
 
+        # Use a fixed future timestamp to avoid timing issues
+        future_reset = int(datetime.now().timestamp() + 10)
+
         with patch.object(
             client.session, "post", return_value=mock_response
         ) as mock_post:
-            with patch("time.sleep") as mock_sleep:
+            with patch(
+                "mcp_outline.utils.outline_client.time.sleep"
+            ) as mock_sleep:
+                # Set rate limit state to exhausted with reset in future
+                client._rate_limit_remaining = 0
+                client._rate_limit_reset = future_reset
+
                 client.post("test_endpoint")
 
-                # Verify sleep was called with appropriate time
+                # Verify sleep was called
                 assert mock_sleep.call_count == 1
                 sleep_time = mock_sleep.call_args[0][0]
-                assert 0.1 < sleep_time < 1.0
+                # Should sleep for ~10 seconds + 0.1 buffer
+                assert 9 < sleep_time < 12
 
     def test_no_wait_when_rate_limit_available(self):
         """Test no waiting when rate limit has remaining requests."""
@@ -175,7 +181,9 @@ class TestOutlineClient:
         with patch.object(
             client.session, "post", return_value=mock_response
         ) as mock_post:
-            with patch("time.sleep") as mock_sleep:
+            with patch(
+                "mcp_outline.utils.outline_client.time.sleep"
+            ) as mock_sleep:
                 client.post("test_endpoint")
 
                 # Verify sleep was NOT called
