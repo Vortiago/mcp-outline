@@ -1,0 +1,84 @@
+services:
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    container_name: outline-main
+    env_file: ./docker.env
+    expose:
+      - 3000
+    volumes:
+      - ./volumes/outline:/var/lib/outline/data
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - outline
+      - intranet
+
+  outline-mcp:
+    build:
+      context: ./mcp-outline
+    container_name: outline-mcp-server
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"  # Bind only to localhost for security
+    environment:
+      - OUTLINE_API_KEY=${OUTLINE_API_KEY}
+      - OUTLINE_API_URL=http://outline:3000/api  # Internal Docker network URL
+      - MCP_TRANSPORT=sse  # Use HTTP transport for Docker deployment
+    volumes:
+      - ./volumes/mcp-logs:/app/logs
+    depends_on:
+      - outline
+    networks:
+      - outline  # Same network as Outline for internal communication
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.socket().connect(('localhost', 3001))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis
+    env_file: ./docker.env
+    container_name: outline-redis
+    expose:
+      - "6379"
+    volumes:
+      - ./volumes/redis.conf:/redis.conf
+      - ./volumes/redis:/data
+    command: ["redis-server", "/redis.conf"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    networks:
+      - outline
+
+  postgres:
+    image: postgres
+    container_name: outline-postgres
+    env_file: ./docker.env
+    expose:
+      - "5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "outline", "-U", "outline"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - outline
+
+networks:
+  intranet:
+    external: true
+  outline:
+    driver: bridge

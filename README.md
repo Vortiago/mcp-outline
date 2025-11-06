@@ -46,7 +46,8 @@ We recommend running this python MCP server using Docker to avoid having to inst
          ],
          "env": {
            "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
-           "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>"
+           "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>",
+           "MCP_TRANSPORT": "stdio"
          }
        }
      }
@@ -114,6 +115,42 @@ mcp dev src/mcp_outline/server.py
 # Install in Claude Desktop (if available)
 mcp install src/mcp_outline/server.py --name "Document Outline Assistant"
 ```
+
+### Transport Mode Configuration
+
+The MCP Outline server supports two transport modes:
+
+- **`stdio`** (default): Standard input/output for direct process communication
+- **`sse`**: HTTP Server-Sent Events for web-based communication
+
+#### Configuring Transport Mode
+
+Set the `MCP_TRANSPORT` environment variable to choose your transport mode:
+
+```bash
+# For stdio mode (default - backward compatible)
+export MCP_TRANSPORT=stdio
+mcp-outline
+
+# For HTTP/SSE mode (useful for Docker deployments)
+export MCP_TRANSPORT=sse
+mcp-outline
+```
+
+#### Docker HTTP Transport
+
+For Docker deployments, use SSE transport to enable HTTP endpoints:
+
+```yaml
+environment:
+  - MCP_TRANSPORT=sse  # Enables HTTP transport on port 3001
+  - OUTLINE_API_KEY=your_api_key
+  - OUTLINE_API_URL=https://your-outline-instance.com/api
+```
+
+When using `MCP_TRANSPORT=sse`, the server will start on port 3001 with the following endpoints:
+- `/sse` - Server-Sent Events endpoint for MCP communication
+- `/messages/` - HTTP message endpoint (requires session_id parameter)
 
 When running the MCP Inspector, go to Tools > Click on a tool > it appears on the right side so that you can query it.
 ![MCP Inspector](./docs/mcp_inspector_guide.png)
