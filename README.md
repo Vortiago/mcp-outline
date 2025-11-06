@@ -173,7 +173,7 @@ For local testing without a paid Outline account, you can run a complete develop
 
 2. **Start all services**:
    ```bash
-   docker compose -f docker-compose.dev.yml up -d
+   docker compose up -d
    ```
 
 3. **Access Outline**:
@@ -187,7 +187,7 @@ For local testing without a paid Outline account, you can run a complete develop
 
 5. **Restart MCP server**:
    ```bash
-   docker compose -f docker-compose.dev.yml restart mcp-outline
+   docker compose restart mcp-outline
    ```
 
 6. **Test MCP server**:
@@ -202,7 +202,7 @@ The development environment includes:
 - **PostgreSQL** - Database
 - **Redis** - Cache
 
-All data persists in Docker volumes. To reset: `docker compose -f docker-compose.dev.yml down -v`
+All data persists in Docker volumes. To reset: `docker compose down -v`
 
 ## Usage Examples
 

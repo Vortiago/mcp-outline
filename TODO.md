@@ -442,7 +442,7 @@ Expand test coverage and quality:
 Improve Docker infrastructure and automated builds:
 
 - [x] **Local Development Environment** ✓ COMPLETED
-  - [x] Create docker-compose.dev.yml with self-hosted Outline
+  - [x] Update docker-compose.yml with self-hosted Outline
   - [x] Add Dex OIDC authentication provider
   - [x] Add configuration examples (config/outline.env.example)
   - [x] Update README with local setup instructions
