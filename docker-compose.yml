@@ -5,7 +5,7 @@
 #   1. Copy config/outline.env.example to config/outline.env
 #   2. Generate secrets: openssl rand -hex 32 (do this twice for SECRET_KEY and UTILS_SECRET)
 #   3. docker compose up -d
-#   4. Open http://localhost:3000 and login with admin@example.com / admin
+#   4. Open http://localhost:32110 and login with admin@example.com / admin
 #   5. Go to Settings -> API Keys and create a token
 #   6. Add token to .env as OUTLINE_API_KEY=<your-token>
 #   7. docker compose restart mcp-outline
@@ -19,7 +19,7 @@ services:
     ports:
       - "127.0.0.1:5556:5556"
     volumes:
-      - ./config/dex-config.yaml:/etc/dex/config.yaml:ro
+      - ./config/dex-config.yaml:/etc/dex/config.docker.yaml:ro
     networks:
       - outline
     restart: unless-stopped
@@ -64,7 +64,7 @@ services:
     container_name: outline
     env_file: ./config/outline.env
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:32110:3000"
     volumes:
       - outline-data:/var/lib/outline/data
     depends_on:
@@ -76,6 +76,8 @@ services:
         condition: service_started
     networks:
       - outline
+    extra_hosts:
+      - "localhost:host-gateway"
     restart: unless-stopped
 
   # MCP Outline Server

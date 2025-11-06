@@ -17,7 +17,8 @@ staticClients:
     secret: outline-secret
     name: 'Outline Wiki'
     redirectURIs:
-      - 'http://localhost:3000/auth/oidc.callback'
+      - 'http://localhost:32110/auth/oidc.callback'
+      - 'http://127.0.0.1:32110/auth/oidc.callback'
 
 # Enable password-based authentication for development
 enablePasswordDB: true
@@ -27,8 +28,8 @@ enablePasswordDB: true
 staticPasswords:
   - email: "admin@example.com"
     # Password: admin
-    # Generated with: echo admin | htpasswd -BinC 10 admin | cut -d: -f2
-    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    # Generated with: python3 -c "import bcrypt; print(bcrypt.hashpw(b'admin', bcrypt.gensalt(rounds=10)).decode())"
+    hash: "$2b$10$59LuHO8hz2psioX2nH6dw.wvkQxL4NX6qrUeUZj5XAT9YhQzCME1G"
     username: "admin"
     userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
   - email: "user@example.com"
@@ -46,5 +47,5 @@ oauth2:
 
 # Logging configuration
 logger:
-  level: "info"
+  level: "debug"
   format: "text"
