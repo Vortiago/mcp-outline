@@ -155,6 +155,55 @@ When using `MCP_TRANSPORT=sse`, the server will start on port 3001 with the foll
 When running the MCP Inspector, go to Tools > Click on a tool > it appears on the right side so that you can query it.
 ![MCP Inspector](./docs/mcp_inspector_guide.png)
 
+## Local Development with Self-Hosted Outline
+
+For local testing without a paid Outline account, you can run a complete development environment with self-hosted Outline using Docker Compose.
+
+### Quick Start
+
+1. **Generate security keys**:
+   ```bash
+   # Copy the example configuration
+   cp config/outline.env.example config/outline.env
+
+   # Generate two unique secrets and add them to config/outline.env
+   openssl rand -hex 32  # Use for SECRET_KEY
+   openssl rand -hex 32  # Use for UTILS_SECRET
+   ```
+
+2. **Start all services**:
+   ```bash
+   docker compose -f docker-compose.dev.yml up -d
+   ```
+
+3. **Access Outline**:
+   - Open http://localhost:3000 in your browser
+   - Login with `admin@example.com` / `admin`
+
+4. **Generate API key**:
+   - Go to Settings → API Keys
+   - Create a new token
+   - Add to `.env` file: `OUTLINE_API_KEY=<your-token>`
+
+5. **Restart MCP server**:
+   ```bash
+   docker compose -f docker-compose.dev.yml restart mcp-outline
+   ```
+
+6. **Test MCP server**:
+   ```bash
+   npx @modelcontextprotocol/inspector http://localhost:3001/sse
+   ```
+
+The development environment includes:
+- **Outline** (localhost:3000) - Document management
+- **MCP Server** (localhost:3001) - MCP Outline server
+- **Dex** (localhost:5556) - OIDC authentication
+- **PostgreSQL** - Database
+- **Redis** - Cache
+
+All data persists in Docker volumes. To reset: `docker compose -f docker-compose.dev.yml down -v`
+
 ## Usage Examples
 
 ### Search for Documents

@@ -175,3 +175,9 @@ cython_debug/
 .aider*
 repomix-output.xml
 docs/external
+
+# Docker & local development
+volumes/              # Docker volume data (postgres, redis, outline, etc.)
+docker.env            # Docker environment file with secrets
+config/*.env          # Configuration files with secrets (keep .example files)
+!config/*.env.example # But keep example files

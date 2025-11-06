@@ -435,6 +435,51 @@ Expand test coverage and quality:
 
 ---
 
+### 4.4 Docker & CI/CD Infrastructure
+**Complexity**: Moderate
+**Status**: Partially Complete
+
+Improve Docker infrastructure and automated builds:
+
+- [x] **Local Development Environment** ✓ COMPLETED
+  - [x] Create docker-compose.dev.yml with self-hosted Outline
+  - [x] Add Dex OIDC authentication provider
+  - [x] Add configuration examples (config/outline.env.example)
+  - [x] Update README with local setup instructions
+  - [x] Enable local testing without paid Outline account
+
+- [ ] **Multi-Architecture Docker Builds** (from fork analysis)
+  - [ ] Add GitHub Actions workflow for automated builds
+  - [ ] Support AMD64 and ARM64 architectures
+  - [ ] Publish to GitHub Container Registry (GHCR)
+  - [ ] Use QEMU for cross-platform compilation
+  - [ ] Enable deployment on Apple Silicon, Raspberry Pi, ARM servers
+  - [ ] Add version tagging strategy (latest, semver, outline-version)
+  - [ ] Update README with pre-built image usage
+
+- [ ] **Docker Image Signing** (from fork analysis)
+  - [ ] Add cosign-based image signing workflow
+  - [ ] Implement Sigstore/Fulcio for supply chain security
+  - [ ] Enable image verification for users
+  - [ ] Document signature verification process
+  - [ ] Add security best practices documentation
+
+**Benefits**:
+- Easy local testing without external dependencies
+- Multi-platform deployment support
+- Enhanced security and supply chain trust
+- Automated Docker image publishing
+
+**References**:
+- nipeharefa/mcp-outline fork: Multi-arch builds
+- TymekV/mcp-outline fork: Image signing with cosign
+- Analysis completed: 2025-11-06
+
+**Note on Integration Tests**:
+CI/CD integration tests were investigated but removed due to impossibility of automating API key creation in Outline. Outline does not provide any official mechanism for programmatic API key generation - all keys must be created manually through the web UI. Workarounds (database manipulation, browser automation) were deemed too fragile and risky for CI environments. The existing unit test suite with mocked API responses remains the primary testing strategy.
+
+---
+
 ## Phase 5: Advanced Features (Future)
 
 ### 5.1 Real-time Updates

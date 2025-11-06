@@ -1,0 +1,116 @@
+# Docker Compose configuration for local development
+# Includes: Outline + MCP Server + Dex (OIDC) + PostgreSQL + Redis
+#
+# Quick Start:
+#   1. Copy config/outline.env.example to config/outline.env
+#   2. Generate secrets: openssl rand -hex 32 (do this twice for SECRET_KEY and UTILS_SECRET)
+#   3. docker compose -f docker-compose.dev.yml up -d
+#   4. Open http://localhost:3000 and login with admin@example.com / admin
+#   5. Go to Settings -> API Keys and create a token
+#   6. Add token to .env as OUTLINE_API_KEY=<your-token>
+#   7. docker compose -f docker-compose.dev.yml restart mcp-outline
+
+services:
+  # Dex - OpenID Connect authentication provider for development
+  dex:
+    image: ghcr.io/dexidp/dex:v2.37.0
+    container_name: outline-dev-dex
+    ports:
+      - "127.0.0.1:5556:5556"
+    volumes:
+      - ./config/dex-config.yaml:/etc/dex/config.yaml:ro
+    networks:
+      - outline-dev
+    restart: unless-stopped
+
+  # PostgreSQL - Database for Outline
+  postgres:
+    image: postgres:15-alpine
+    container_name: outline-dev-postgres
+    environment:
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: outline
+      POSTGRES_DB: outline
+    volumes:
+      - outline-dev-postgres-data:/var/lib/postgresql/data
+    networks:
+      - outline-dev
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "outline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis - Cache and session management
+  redis:
+    image: redis:7-alpine
+    container_name: outline-dev-redis
+    volumes:
+      - outline-dev-redis-data:/data
+    networks:
+      - outline-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Outline - Document management platform
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:0.78.0
+    container_name: outline-dev
+    env_file: ./config/outline.env
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - outline-dev-data:/var/lib/outline/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dex:
+        condition: service_started
+    networks:
+      - outline-dev
+    restart: unless-stopped
+
+  # MCP Outline Server
+  mcp-outline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: outline-dev-mcp
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
+      - OUTLINE_API_URL=http://outline:3000/api
+      - MCP_TRANSPORT=sse
+    depends_on:
+      - outline
+    networks:
+      - outline-dev
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.socket().connect(('localhost', 3001))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  outline-dev:
+    driver: bridge
+
+volumes:
+  outline-dev-postgres-data:
+  outline-dev-redis-data:
+  outline-dev-data:
