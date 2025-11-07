@@ -54,8 +54,8 @@ jobs:
             type=ref,event=branch
             # Tag with PR number for PRs
             type=ref,event=pr
-            # Tag with commit SHA
-            type=sha,prefix={{branch}}-
+            # Tag with commit SHA (short form)
+            type=sha,format=short
 
       - name: Build Docker image
         uses: docker/build-push-action@v5
