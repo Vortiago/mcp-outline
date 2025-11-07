@@ -12,8 +12,12 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 
+# Get host from environment variable, default to 127.0.0.1
+# Use 0.0.0.0 for Docker containers to allow external connections
+host = os.getenv("MCP_HOST", "127.0.0.1")
+
 # Create a FastMCP server instance with a name and port configuration
-mcp = FastMCP("Document Outline", port=3001)
+mcp = FastMCP("Document Outline", host=host, port=3001)
 
 # Register all features
 register_all(mcp)

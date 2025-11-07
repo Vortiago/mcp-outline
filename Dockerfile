@@ -43,6 +43,7 @@ COPY --chown=appuser:appgroup --from=uv /app /app
 # Set environment
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app
+ENV MCP_HOST=0.0.0.0
 
 # Switch to non-root user
 USER appuser:appgroup

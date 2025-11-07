@@ -60,7 +60,7 @@ Run the MCP server using Docker to avoid installing dependencies on your machine
          "env": {
            "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
            "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>",
-           "MCP_TRANSPORT": "stdio"
+           "MCP_TRANSPORT": "sse"
          }
        }
      }
@@ -93,7 +93,7 @@ Run the MCP server using Docker to avoid installing dependencies on your machine
          "env": {
            "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
            "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>",
-           "MCP_TRANSPORT": "stdio"
+           "MCP_TRANSPORT": "sse"
          }
        }
      }
@@ -187,16 +187,23 @@ mcp-outline
 
 For Docker deployments, use SSE transport to enable HTTP endpoints:
 
+```bash
+docker run -p 3001:3001 --env-file .env -e MCP_TRANSPORT=sse mcp-outline
+```
+
+Or in docker-compose.yml:
 ```yaml
 environment:
-  - MCP_TRANSPORT=sse  # Enables HTTP transport on port 3001
+  - MCP_TRANSPORT=sse
   - OUTLINE_API_KEY=your_api_key
   - OUTLINE_API_URL=https://your-outline-instance.com/api
 ```
 
-When using `MCP_TRANSPORT=sse`, the server will start on port 3001 with the following endpoints:
-- `/sse` - Server-Sent Events endpoint for MCP communication
-- `/messages/` - HTTP message endpoint (requires session_id parameter)
+**SSE Endpoint**: Connect to `http://localhost:3001/sse` (not root path)
+
+**Environment Variables**:
+- `MCP_TRANSPORT`: `stdio` (default) or `sse`
+- `MCP_HOST`: Bind address (default: `127.0.0.1` for local, `0.0.0.0` in Docker)
 
 When running the MCP Inspector, go to Tools > Click on a tool > it appears on the right side so that you can query it.
 ![MCP Inspector](./docs/mcp_inspector_guide.png)
