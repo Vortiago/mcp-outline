@@ -1,0 +1,51 @@
+# Dex OpenID Connect Provider Configuration
+# This provides authentication for local Outline development
+
+issuer: http://localhost:5556/dex
+
+storage:
+  type: sqlite3
+  config:
+    file: /tmp/dex.db
+
+web:
+  http: 0.0.0.0:5556
+
+# OAuth2 clients that can request tokens from Dex
+staticClients:
+  - id: outline
+    secret: outline-secret
+    name: 'Outline Wiki'
+    redirectURIs:
+      - 'http://localhost:32110/auth/oidc.callback'
+      - 'http://127.0.0.1:32110/auth/oidc.callback'
+
+# Enable password-based authentication for development
+enablePasswordDB: true
+
+# Static users for development (pre-configured admin account)
+# Password is hashed with bcrypt
+staticPasswords:
+  - email: "admin@example.com"
+    # Password: admin
+    # Generated with: python3 -c "import bcrypt; print(bcrypt.hashpw(b'admin', bcrypt.gensalt(rounds=10)).decode())"
+    hash: "$2b$10$59LuHO8hz2psioX2nH6dw.wvkQxL4NX6qrUeUZj5XAT9YhQzCME1G"
+    username: "admin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+  - email: "user@example.com"
+    # Password: user
+    hash: "$2a$10$DYY8A5a4z4kJ.XJ8nCw8h.vZJZGDqZlFLXjHLqBwYKvR5xXQQR5he"
+    username: "user"
+    userID: "41331323-6f44-45e6-b3b9-465c8c5e3fe4"
+
+# OAuth2 configuration
+oauth2:
+  # Skip approval screen for streamlined development experience
+  skipApprovalScreen: true
+  # Token expiration times
+  responseTypes: ["code", "token", "id_token"]
+
+# Logging configuration
+logger:
+  level: "debug"
+  format: "text"

@@ -1,84 +1,119 @@
-services:
-  outline:
-    image: docker.getoutline.com/outlinewiki/outline:latest
-    container_name: outline-main
-    env_file: ./docker.env
-    expose:
-      - 3000
-    volumes:
-      - ./volumes/outline:/var/lib/outline/data
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - outline
-      - intranet
+# Docker Compose configuration for MCP Outline Server
+# Includes: Outline + MCP Server + Dex (OIDC) + PostgreSQL + Redis
+#
+# Quick Start:
+#   1. Copy config/outline.env.example to config/outline.env
+#   2. Generate secrets: openssl rand -hex 32 (do this twice for SECRET_KEY and UTILS_SECRET)
+#   3. docker compose up -d
+#   4. Open http://localhost:32110 and login with admin@example.com / admin
+#   5. Go to Settings -> API Keys and create a token
+#   6. Add token to .env as OUTLINE_API_KEY=<your-token>
+#   7. docker compose restart mcp-outline
 
-  outline-mcp:
-    build:
-      context: ./mcp-outline
-    container_name: outline-mcp-server
-    restart: unless-stopped
+services:
+  # Dex - OpenID Connect authentication provider
+  # Required: Outline has no built-in authentication
+  dex:
+    image: ghcr.io/dexidp/dex:v2.37.0
+    container_name: outline-dex
     ports:
-      - "127.0.0.1:3001:3001"  # Bind only to localhost for security
-    environment:
-      - OUTLINE_API_KEY=${OUTLINE_API_KEY}
-      - OUTLINE_API_URL=http://outline:3000/api  # Internal Docker network URL
-      - MCP_TRANSPORT=sse  # Use HTTP transport for Docker deployment
+      - "127.0.0.1:5556:5556"
     volumes:
-      - ./volumes/mcp-logs:/app/logs
+      - ./config/dex-config.yaml:/etc/dex/config.docker.yaml:ro
+    networks:
+      - outline
+    restart: unless-stopped
+
+  # PostgreSQL - Database for Outline
+  postgres:
+    image: postgres:15-alpine
+    container_name: outline-postgres
+    environment:
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: outline
+      POSTGRES_DB: outline
+    volumes:
+      - outline-postgres-data:/var/lib/postgresql/data
+    networks:
+      - outline
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "outline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis - Cache and session management
+  redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    volumes:
+      - outline-redis-data:/data
+    networks:
+      - outline
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Outline - Document management platform
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:0.78.0
+    container_name: outline
+    env_file: ./config/outline.env
+    ports:
+      - "127.0.0.1:32110:3000"
+    volumes:
+      - outline-data:/var/lib/outline/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dex:
+        condition: service_started
+    networks:
+      - outline
+    extra_hosts:
+      - "localhost:host-gateway"
+    restart: unless-stopped
+
+  # MCP Outline Server
+  mcp-outline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: outline-mcp
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
+      - OUTLINE_API_URL=http://outline:3000/api
+      - MCP_TRANSPORT=sse
     depends_on:
       - outline
     networks:
-      - outline  # Same network as Outline for internal communication
+      - outline
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; socket.socket().connect(('localhost', 3001))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-  redis:
-    image: redis
-    env_file: ./docker.env
-    container_name: outline-redis
-    expose:
-      - "6379"
-    volumes:
-      - ./volumes/redis.conf:/redis.conf
-      - ./volumes/redis:/data
-    command: ["redis-server", "/redis.conf"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 30s
-      retries: 3
-    networks:
-      - outline
-
-  postgres:
-    image: postgres
-    container_name: outline-postgres
-    env_file: ./docker.env
-    expose:
-      - "5432"
-    volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-d", "outline", "-U", "outline"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    networks:
-      - outline
-
 networks:
-  intranet:
-    external: true
   outline:
     driver: bridge
+
+volumes:
+  outline-postgres-data:
+  outline-redis-data:
+  outline-data:
