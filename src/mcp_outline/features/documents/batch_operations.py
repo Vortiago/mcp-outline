@@ -117,7 +117,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    async def batch_archive_documents(document_ids: List[str]) -> str:
+    def batch_archive_documents(document_ids: List[str]) -> str:
         """
         Archives multiple documents in a single batch operation.
 
@@ -183,7 +183,9 @@ def register_tools(mcp) -> None:
                 except Exception as e:
                     results.append(
                         _create_result_entry(
-                            doc_id, "failed", error=f"Unexpected error: {str(e)}"
+                            doc_id,
+                            "failed",
+                            error=f"Unexpected error: {str(e)}",
                         )
                     )
                     failed += 1
@@ -198,7 +200,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    async def batch_move_documents(
+    def batch_move_documents(
         document_ids: List[str],
         collection_id: Optional[str] = None,
         parent_document_id: Optional[str] = None,
@@ -272,7 +274,9 @@ def register_tools(mcp) -> None:
                     else:
                         results.append(
                             _create_result_entry(
-                                doc_id, "failed", error="Failed to move document"
+                                doc_id,
+                                "failed",
+                                error="Failed to move document",
                             )
                         )
                         failed += 1
@@ -285,7 +289,9 @@ def register_tools(mcp) -> None:
                 except Exception as e:
                     results.append(
                         _create_result_entry(
-                            doc_id, "failed", error=f"Unexpected error: {str(e)}"
+                            doc_id,
+                            "failed",
+                            error=f"Unexpected error: {str(e)}",
                         )
                     )
                     failed += 1
@@ -300,7 +306,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    async def batch_delete_documents(
+    def batch_delete_documents(
         document_ids: List[str], permanent: bool = False
     ) -> str:
         """
@@ -394,7 +400,9 @@ def register_tools(mcp) -> None:
                 except Exception as e:
                     results.append(
                         _create_result_entry(
-                            doc_id, "failed", error=f"Unexpected error: {str(e)}"
+                            doc_id,
+                            "failed",
+                            error=f"Unexpected error: {str(e)}",
                         )
                     )
                     failed += 1
@@ -410,9 +418,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    async def batch_update_documents(
-        updates: List[Dict[str, Any]]
-    ) -> str:
+    def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
         """
         Updates multiple documents with different changes.
 
@@ -489,7 +495,9 @@ def register_tools(mcp) -> None:
                     else:
                         results.append(
                             _create_result_entry(
-                                doc_id, "failed", error="Failed to update document"
+                                doc_id,
+                                "failed",
+                                error="Failed to update document",
                             )
                         )
                         failed += 1
@@ -502,7 +510,9 @@ def register_tools(mcp) -> None:
                 except Exception as e:
                     results.append(
                         _create_result_entry(
-                            doc_id, "failed", error=f"Unexpected error: {str(e)}"
+                            doc_id,
+                            "failed",
+                            error=f"Unexpected error: {str(e)}",
                         )
                     )
                     failed += 1
@@ -517,9 +527,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    async def batch_create_documents(
-        documents: List[Dict[str, Any]]
-    ) -> str:
+    def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
         """
         Creates multiple documents in a single batch operation.
 
@@ -645,7 +653,7 @@ def register_tools(mcp) -> None:
 
             # Add created IDs section if any succeeded
             if created_ids:
-                result_text += f"\n\nCreated Document IDs:\n"
+                result_text += "\n\nCreated Document IDs:\n"
                 for doc_id in created_ids:
                     result_text += f"  - {doc_id}\n"
 
