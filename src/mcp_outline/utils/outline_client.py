@@ -56,9 +56,7 @@ class OutlineClient:
         # Initialize class-level connection pool if not exists
         if OutlineClient._client_pool is None:
             # Configure connection pooling
-            max_connections = int(
-                os.getenv("OUTLINE_MAX_CONNECTIONS", "100")
-            )
+            max_connections = int(os.getenv("OUTLINE_MAX_CONNECTIONS", "100"))
             max_keepalive = int(os.getenv("OUTLINE_MAX_KEEPALIVE", "20"))
             timeout = float(os.getenv("OUTLINE_TIMEOUT", "30.0"))
             connect_timeout = float(
@@ -263,7 +261,9 @@ class OutlineClient:
         Returns:
             List of document nodes in the collection.
         """
-        response = await self.post("collections.documents", {"id": collection_id})
+        response = await self.post(
+            "collections.documents", {"id": collection_id}
+        )
         return response.get("data", [])
 
     async def list_documents(
@@ -454,7 +454,9 @@ class OutlineClient:
         Returns:
             FileOperation data that can be queried for progress
         """
-        response = await self.post("collections.export_all", {"format": format})
+        response = await self.post(
+            "collections.export_all", {"format": format}
+        )
         return response.get("data", {})
 
     async def answer_question(

@@ -130,7 +130,9 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    async def get_comment(comment_id: str, include_anchor_text: bool = False) -> str:
+    async def get_comment(
+        comment_id: str, include_anchor_text: bool = False
+    ) -> str:
         """
         Retrieves a specific comment by its ID.
 

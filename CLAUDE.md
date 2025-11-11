@@ -217,6 +217,32 @@ OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
 - Catch exceptions, return error strings
 - Follow KISS principle
 
+### Pre-Commit Checks
+
+**IMPORTANT**: Before committing, run all CI checks locally to ensure they pass:
+
+```bash
+# 1. Install dev dependencies
+pip install -e ".[dev]"
+
+# 2. Format code
+ruff format .
+
+# 3. Check formatting
+ruff format --check .
+
+# 4. Lint code
+ruff check .
+
+# 5. Type check
+pyright src/
+
+# 6. Run tests
+pytest tests/ -v --cov=src/mcp_outline
+```
+
+These checks mirror the GitHub Actions CI workflow and must pass before pushing. Commits that fail CI checks will block PR merges.
+
 ## Common Patterns
 
 **Pagination**: Use `offset` and `limit` parameters for large result sets

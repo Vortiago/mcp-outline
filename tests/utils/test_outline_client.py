@@ -81,7 +81,9 @@ class TestOutlineClient:
         data = {"param": "value"}
 
         with patch.object(
-            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
         ) as mock_post:
             result = await client.post("test_endpoint", data)
 
@@ -132,7 +134,9 @@ class TestOutlineClient:
         mock_response.json.return_value = {"data": {"test": "value"}}
 
         with patch.object(
-            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
         ):
             await client.post("test_endpoint")
 
@@ -152,7 +156,9 @@ class TestOutlineClient:
         mock_response.json.return_value = {"data": {"test": "value"}}
 
         with patch.object(
-            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
         ):
             with patch(
                 "mcp_outline.utils.outline_client.asyncio.sleep"
@@ -186,7 +192,9 @@ class TestOutlineClient:
         mock_response.json.return_value = {"data": {"test": "value"}}
 
         with patch.object(
-            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
         ):
             with patch(
                 "mcp_outline.utils.outline_client.asyncio.sleep"
@@ -205,12 +213,10 @@ class TestOutlineClient:
         mock_response_429 = MagicMock()
         mock_response_429.status_code = 429
         mock_response_429.headers = {"Retry-After": "1000"}
-        mock_response_429.raise_for_status.side_effect = (
-            httpx.HTTPStatusError(
-                "Too Many Requests",
-                request=MagicMock(),
-                response=mock_response_429,
-            )
+        mock_response_429.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Too Many Requests",
+            request=MagicMock(),
+            response=mock_response_429,
         )
 
         mock_response_success = MagicMock()
@@ -239,7 +245,9 @@ class TestOutlineClient:
         mock_response.json.return_value = {"data": {"test": "value"}}
 
         with patch.object(
-            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
         ):
             await client.post("test_endpoint")
 

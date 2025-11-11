@@ -145,7 +145,9 @@ class TestDocumentReadingTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_reading_tools.tools["export_document"]("doc123")
+        result = await register_reading_tools.tools["export_document"](
+            "doc123"
+        )
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -170,7 +172,9 @@ class TestDocumentReadingTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_reading_tools.tools["export_document"]("doc123")
+        result = await register_reading_tools.tools["export_document"](
+            "doc123"
+        )
 
         # Verify result contains default message
         assert "No content available" in result
@@ -189,7 +193,9 @@ class TestDocumentReadingTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_reading_tools.tools["export_document"]("doc123")
+        result = await register_reading_tools.tools["export_document"](
+            "doc123"
+        )
 
         # Verify error is handled and returned
         assert "Error exporting document" in result

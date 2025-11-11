@@ -78,7 +78,9 @@ def register_tools(mcp) -> None:
         """
         try:
             client = await get_outline_client()
-            collection = await client.create_collection(name, description, color)
+            collection = await client.create_collection(
+                name, description, color
+            )
 
             if not collection:
                 return "Failed to create collection."
@@ -205,7 +207,9 @@ def register_tools(mcp) -> None:
         """
         try:
             client = await get_outline_client()
-            file_operation = await client.export_collection(collection_id, format)
+            file_operation = await client.export_collection(
+                collection_id, format
+            )
 
             if not file_operation:
                 return "Failed to start export operation."

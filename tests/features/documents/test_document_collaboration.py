@@ -146,9 +146,9 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_collaboration_tools.tools["list_document_comments"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "list_document_comments"
+        ]("doc123")
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -180,9 +180,9 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_collaboration_tools.tools["list_document_comments"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "list_document_comments"
+        ]("doc123")
 
         # Verify result contains expected message
         assert "No comments found" in result
@@ -201,7 +201,9 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_collaboration_tools.tools["get_comment"]("comment1")
+        result = await register_collaboration_tools.tools["get_comment"](
+            "comment1"
+        )
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -248,9 +250,9 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_collaboration_tools.tools["get_document_backlinks"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "get_document_backlinks"
+        ]("doc123")
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -278,9 +280,9 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_collaboration_tools.tools["get_document_backlinks"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "get_document_backlinks"
+        ]("doc123")
 
         # Verify result contains expected message
         assert "No documents link to this document" in result
@@ -299,9 +301,9 @@ class TestDocumentCollaborationTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_collaboration_tools.tools["get_document_backlinks"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "get_document_backlinks"
+        ]("doc123")
 
         # Verify error is handled and returned
         assert "Error retrieving backlinks" in result

@@ -152,7 +152,9 @@ class TestAskAIAboutDocuments:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    async def test_ask_ai_with_document_id(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_with_document_id(
+        self, mock_get_client, register_ai_tools
+    ):
         """Test ask_ai_about_documents with document_id specified."""
         mock_client = AsyncMock()
         mock_client.answer_question.return_value = (
@@ -171,7 +173,9 @@ class TestAskAIAboutDocuments:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    async def test_ask_ai_with_both_ids(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_with_both_ids(
+        self, mock_get_client, register_ai_tools
+    ):
         """Test ask_ai_about_documents with both IDs specified."""
         mock_client = AsyncMock()
         mock_client.answer_question.return_value = (
@@ -192,7 +196,9 @@ class TestAskAIAboutDocuments:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    async def test_ask_ai_no_answer_found(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_no_answer_found(
+        self, mock_get_client, register_ai_tools
+    ):
         """Test ask_ai_about_documents when no answer is found."""
         mock_client = AsyncMock()
         mock_client.answer_question.return_value = SAMPLE_AI_RESPONSE_NO_ANSWER
@@ -206,7 +212,9 @@ class TestAskAIAboutDocuments:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    async def test_ask_ai_not_enabled(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_not_enabled(
+        self, mock_get_client, register_ai_tools
+    ):
         """Test ask_ai_about_documents when AI is not enabled."""
         mock_client = AsyncMock()
         mock_client.answer_question.return_value = SAMPLE_AI_RESPONSE_NO_SEARCH
@@ -223,7 +231,9 @@ class TestAskAIAboutDocuments:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    async def test_ask_ai_client_error(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_client_error(
+        self, mock_get_client, register_ai_tools
+    ):
         """Test ask_ai_about_documents with client error."""
         mock_client = AsyncMock()
         mock_client.answer_question.side_effect = OutlineClientError(
@@ -240,7 +250,9 @@ class TestAskAIAboutDocuments:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    async def test_ask_ai_unexpected_error(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_unexpected_error(
+        self, mock_get_client, register_ai_tools
+    ):
         """Test ask_ai_about_documents with unexpected error."""
         mock_client = AsyncMock()
         mock_client.answer_question.side_effect = ValueError(

@@ -76,7 +76,9 @@ def register_tools(mcp) -> None:
         """
         try:
             client = await get_outline_client()
-            response = await client.post("documents.export", {"id": document_id})
+            response = await client.post(
+                "documents.export", {"id": document_id}
+            )
             return response.get("data", "No content available")
         except OutlineClientError as e:
             return f"Error exporting document: {str(e)}"

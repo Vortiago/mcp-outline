@@ -311,7 +311,9 @@ class TestDeleteCollection:
         mock_client.delete_collection.return_value = True
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["delete_collection"]("col123")
+        result = await register_collection_tools.tools["delete_collection"](
+            "col123"
+        )
 
         mock_client.delete_collection.assert_called_once_with("col123")
         assert (
@@ -330,7 +332,9 @@ class TestDeleteCollection:
         mock_client.delete_collection.return_value = False
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["delete_collection"]("col123")
+        result = await register_collection_tools.tools["delete_collection"](
+            "col123"
+        )
 
         assert "Failed to delete collection" in result
 
@@ -348,7 +352,9 @@ class TestDeleteCollection:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["delete_collection"]("col123")
+        result = await register_collection_tools.tools["delete_collection"](
+            "col123"
+        )
 
         assert "Error deleting collection" in result
         assert "API error" in result
@@ -371,7 +377,9 @@ class TestExportCollection:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_collection"]("col123")
+        result = await register_collection_tools.tools["export_collection"](
+            "col123"
+        )
 
         mock_client.export_collection.assert_called_once_with(
             "col123", "outline-markdown"
@@ -412,7 +420,9 @@ class TestExportCollection:
         mock_client.export_collection.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_collection"]("col123")
+        result = await register_collection_tools.tools["export_collection"](
+            "col123"
+        )
 
         assert "Failed to start export operation" in result
 
@@ -430,7 +440,9 @@ class TestExportCollection:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_collection"]("col123")
+        result = await register_collection_tools.tools["export_collection"](
+            "col123"
+        )
 
         assert "Error exporting collection" in result
         assert "API error" in result
@@ -453,7 +465,9 @@ class TestExportAllCollections:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_all_collections"]()
+        result = await register_collection_tools.tools[
+            "export_all_collections"
+        ]()
 
         mock_client.export_all_collections.assert_called_once_with(
             "outline-markdown"
@@ -475,9 +489,9 @@ class TestExportAllCollections:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_all_collections"](
-            format="html"
-        )
+        result = await register_collection_tools.tools[
+            "export_all_collections"
+        ](format="html")
 
         mock_client.export_all_collections.assert_called_once_with("html")
         assert "Export Operation" in result
@@ -494,7 +508,9 @@ class TestExportAllCollections:
         mock_client.export_all_collections.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_all_collections"]()
+        result = await register_collection_tools.tools[
+            "export_all_collections"
+        ]()
 
         assert "Failed to start export operation" in result
 
@@ -512,7 +528,9 @@ class TestExportAllCollections:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_collection_tools.tools["export_all_collections"]()
+        result = await register_collection_tools.tools[
+            "export_all_collections"
+        ]()
 
         assert "Error exporting collections" in result
         assert "API error" in result

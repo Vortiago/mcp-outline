@@ -144,7 +144,9 @@ class TestBatchArchiveDocuments:
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
 
-        result = await register_batch_tools.tools["batch_archive_documents"]([])
+        result = await register_batch_tools.tools["batch_archive_documents"](
+            []
+        )
 
         assert "Error: No document IDs provided" in result
 
@@ -403,7 +405,9 @@ class TestBatchUpdateDocuments:
             {"id": "doc3", "title": "Title 3", "text": "Content 3"},
         ]
 
-        result = await register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](
+            updates
+        )
 
         assert "Total: 3" in result
         assert "Succeeded: 3" in result
@@ -426,7 +430,9 @@ class TestBatchUpdateDocuments:
 
         updates = [{"id": "doc1", "text": "Appended content", "append": True}]
 
-        result = await register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](
+            updates
+        )
 
         assert "Succeeded: 1" in result
         call_args = mock_client.post.call_args[0]
@@ -445,7 +451,9 @@ class TestBatchUpdateDocuments:
 
         updates = [{"title": "No ID"}]
 
-        result = await register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](
+            updates
+        )
 
         assert "Failed: 1" in result
         assert "Missing document ID" in result
@@ -470,7 +478,9 @@ class TestBatchUpdateDocuments:
             {"id": "doc2", "title": "Title 2"},
         ]
 
-        result = await register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](
+            updates
+        )
 
         assert "Total: 2" in result
         assert "Succeeded: 1" in result

@@ -76,7 +76,9 @@ class TestArchiveDocument:
         mock_client.archive_document.return_value = SAMPLE_DOCUMENT
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["archive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["archive_document"](
+            "doc123"
+        )
 
         mock_client.archive_document.assert_called_once_with("doc123")
         assert "Document archived successfully" in result
@@ -94,7 +96,9 @@ class TestArchiveDocument:
         mock_client.archive_document.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["archive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["archive_document"](
+            "doc123"
+        )
 
         assert "Failed to archive document" in result
 
@@ -112,7 +116,9 @@ class TestArchiveDocument:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["archive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["archive_document"](
+            "doc123"
+        )
 
         assert "Error archiving document" in result
         assert "API error" in result
@@ -131,7 +137,9 @@ class TestArchiveDocument:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["archive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["archive_document"](
+            "doc123"
+        )
 
         assert "Unexpected error" in result
 
@@ -151,7 +159,9 @@ class TestUnarchiveDocument:
         mock_client.unarchive_document.return_value = SAMPLE_DOCUMENT
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["unarchive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["unarchive_document"](
+            "doc123"
+        )
 
         mock_client.unarchive_document.assert_called_once_with("doc123")
         assert "Document unarchived successfully" in result
@@ -169,7 +179,9 @@ class TestUnarchiveDocument:
         mock_client.unarchive_document.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["unarchive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["unarchive_document"](
+            "doc123"
+        )
 
         assert "Failed to unarchive document" in result
 
@@ -187,7 +199,9 @@ class TestUnarchiveDocument:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["unarchive_document"]("doc123")
+        result = await register_lifecycle_tools.tools["unarchive_document"](
+            "doc123"
+        )
 
         assert "Error unarchiving document" in result
         assert "API error" in result
@@ -209,7 +223,9 @@ class TestDeleteDocument:
         mock_client.post.return_value = {"success": True}
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["delete_document"]("doc123")
+        result = await register_lifecycle_tools.tools["delete_document"](
+            "doc123"
+        )
 
         mock_client.get_document.assert_called_once_with("doc123")
         mock_client.post.assert_called_once_with(
@@ -231,7 +247,9 @@ class TestDeleteDocument:
         mock_client.post.return_value = {"success": False}
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["delete_document"]("doc123")
+        result = await register_lifecycle_tools.tools["delete_document"](
+            "doc123"
+        )
 
         assert "Failed to move document to trash" in result
 
@@ -286,7 +304,9 @@ class TestDeleteDocument:
         mock_client.get_document.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["delete_document"]("doc123")
+        result = await register_lifecycle_tools.tools["delete_document"](
+            "doc123"
+        )
 
         assert "Error deleting document" in result
         assert "API error" in result
@@ -307,7 +327,9 @@ class TestRestoreDocument:
         mock_client.restore_document.return_value = SAMPLE_DOCUMENT
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["restore_document"]("doc123")
+        result = await register_lifecycle_tools.tools["restore_document"](
+            "doc123"
+        )
 
         mock_client.restore_document.assert_called_once_with("doc123")
         assert "Document restored successfully" in result
@@ -325,7 +347,9 @@ class TestRestoreDocument:
         mock_client.restore_document.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["restore_document"]("doc123")
+        result = await register_lifecycle_tools.tools["restore_document"](
+            "doc123"
+        )
 
         assert "Failed to restore document from trash" in result
 
@@ -343,7 +367,9 @@ class TestRestoreDocument:
         )
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["restore_document"]("doc123")
+        result = await register_lifecycle_tools.tools["restore_document"](
+            "doc123"
+        )
 
         assert "Error restoring document" in result
         assert "API error" in result
@@ -364,7 +390,9 @@ class TestListArchivedDocuments:
         mock_client.post.return_value = {"data": SAMPLE_DOCUMENTS_LIST}
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["list_archived_documents"]()
+        result = await register_lifecycle_tools.tools[
+            "list_archived_documents"
+        ]()
 
         mock_client.post.assert_called_once_with("documents.archived")
         assert "Archived Documents" in result
@@ -383,7 +411,9 @@ class TestListArchivedDocuments:
         mock_client.post.return_value = {"data": []}
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["list_archived_documents"]()
+        result = await register_lifecycle_tools.tools[
+            "list_archived_documents"
+        ]()
 
         assert "archived documents" in result.lower()
 
@@ -399,7 +429,9 @@ class TestListArchivedDocuments:
         mock_client.post.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
-        result = await register_lifecycle_tools.tools["list_archived_documents"]()
+        result = await register_lifecycle_tools.tools[
+            "list_archived_documents"
+        ]()
 
         assert "Error listing archived documents" in result
         assert "API error" in result
@@ -431,7 +463,9 @@ class TestListTrash:
     @patch(
         "mcp_outline.features.documents.document_lifecycle.get_outline_client"
     )
-    async def test_list_trash_empty(self, mock_get_client, register_lifecycle_tools):
+    async def test_list_trash_empty(
+        self, mock_get_client, register_lifecycle_tools
+    ):
         """Test list_trash with no documents in trash."""
         mock_client = AsyncMock()
         mock_client.list_trash.return_value = []

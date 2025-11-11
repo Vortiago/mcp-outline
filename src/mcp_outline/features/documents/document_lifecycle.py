@@ -88,7 +88,9 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    async def delete_document(document_id: str, permanent: bool = False) -> str:
+    async def delete_document(
+        document_id: str, permanent: bool = False
+    ) -> str:
         """
         Moves a document to trash or permanently deletes it.
 
@@ -128,7 +130,9 @@ def register_tools(mcp) -> None:
                 doc_title = document.get("title", "Untitled")
 
                 # Move to trash (using the regular delete endpoint)
-                response = await client.post("documents.delete", {"id": document_id})
+                response = await client.post(
+                    "documents.delete", {"id": document_id}
+                )
 
                 # Check for successful response
                 if response.get("success", False):

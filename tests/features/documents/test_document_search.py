@@ -169,7 +169,9 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_search_tools.tools["search_documents"]("test query")
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
@@ -215,7 +217,9 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_search_tools.tools["search_documents"]("test query")
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
 
         # Verify error is handled and returned
         assert "Error searching documents" in result
@@ -284,9 +288,9 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_search_tools.tools["get_document_id_from_title"](
-            "Exact Match"
-        )
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Exact Match")
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
@@ -309,9 +313,9 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool with title that doesn't exactly match
-        result = await register_search_tools.tools["get_document_id_from_title"](
-            "Test Doc"
-        )
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Test Doc")
 
         # Verify result contains expected information
         assert "Best match" in result
@@ -329,9 +333,9 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = await register_search_tools.tools["get_document_id_from_title"](
-            "Nonexistent"
-        )
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Nonexistent")
 
         # Verify result contains expected information
         assert "No documents found" in result
