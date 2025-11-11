@@ -59,7 +59,6 @@ class TestBatchArchiveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_archive_all_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -85,7 +84,6 @@ class TestBatchArchiveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_archive_all_failures(
         self, mock_get_client, register_batch_tools
     ):
@@ -109,7 +107,6 @@ class TestBatchArchiveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_archive_partial_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -136,7 +133,6 @@ class TestBatchArchiveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_archive_empty_list(
         self, mock_get_client, register_batch_tools
     ):
@@ -151,7 +147,6 @@ class TestBatchArchiveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_archive_single_document(
         self, mock_get_client, register_batch_tools
     ):
@@ -174,7 +169,6 @@ class TestBatchArchiveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_archive_no_document_returned(
         self, mock_get_client, register_batch_tools
     ):
@@ -197,7 +191,6 @@ class TestBatchMoveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_move_all_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -220,7 +213,6 @@ class TestBatchMoveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_move_no_destination(
         self, mock_get_client, register_batch_tools
     ):
@@ -235,7 +227,6 @@ class TestBatchMoveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_move_with_parent(
         self, mock_get_client, register_batch_tools
     ):
@@ -259,7 +250,6 @@ class TestBatchMoveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_move_partial_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -284,7 +274,6 @@ class TestBatchMoveDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_move_empty_list(
         self, mock_get_client, register_batch_tools
     ):
@@ -302,7 +291,6 @@ class TestBatchDeleteDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_delete_to_trash_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -326,7 +314,6 @@ class TestBatchDeleteDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_delete_permanent_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -346,7 +333,6 @@ class TestBatchDeleteDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_delete_partial_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -370,7 +356,6 @@ class TestBatchDeleteDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_delete_empty_list(
         self, mock_get_client, register_batch_tools
     ):
@@ -386,7 +371,6 @@ class TestBatchUpdateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_update_all_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -403,9 +387,7 @@ class TestBatchUpdateDocuments:
             {"id": "doc3", "title": "Title 3", "text": "Content 3"},
         ]
 
-        result = register_batch_tools.tools["batch_update_documents"](
-            updates
-        )
+        result = register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Total: 3" in result
         assert "Succeeded: 3" in result
@@ -415,7 +397,6 @@ class TestBatchUpdateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_update_with_append(
         self, mock_get_client, register_batch_tools
     ):
@@ -428,9 +409,7 @@ class TestBatchUpdateDocuments:
 
         updates = [{"id": "doc1", "text": "Appended content", "append": True}]
 
-        result = register_batch_tools.tools["batch_update_documents"](
-            updates
-        )
+        result = register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Succeeded: 1" in result
         call_args = mock_client.post.call_args[0]
@@ -439,7 +418,6 @@ class TestBatchUpdateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_update_missing_id(
         self, mock_get_client, register_batch_tools
     ):
@@ -449,9 +427,7 @@ class TestBatchUpdateDocuments:
 
         updates = [{"title": "No ID"}]
 
-        result = register_batch_tools.tools["batch_update_documents"](
-            updates
-        )
+        result = register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Failed: 1" in result
         assert "Missing document ID" in result
@@ -459,7 +435,6 @@ class TestBatchUpdateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_update_partial_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -476,9 +451,7 @@ class TestBatchUpdateDocuments:
             {"id": "doc2", "title": "Title 2"},
         ]
 
-        result = register_batch_tools.tools["batch_update_documents"](
-            updates
-        )
+        result = register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Total: 2" in result
         assert "Succeeded: 1" in result
@@ -488,7 +461,6 @@ class TestBatchUpdateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_update_empty_list(
         self, mock_get_client, register_batch_tools
     ):
@@ -504,7 +476,6 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_create_all_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -542,7 +513,6 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_create_missing_title(
         self, mock_get_client, register_batch_tools
     ):
@@ -562,7 +532,6 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_create_missing_collection_id(
         self, mock_get_client, register_batch_tools
     ):
@@ -582,7 +551,6 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_create_with_parent(
         self, mock_get_client, register_batch_tools
     ):
@@ -612,7 +580,6 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_create_partial_success(
         self, mock_get_client, register_batch_tools
     ):
@@ -645,7 +612,6 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    
     def test_batch_create_empty_list(
         self, mock_get_client, register_batch_tools
     ):
@@ -679,9 +645,7 @@ class TestHelperFunctions:
             _create_result_entry,
         )
 
-        result = _create_result_entry(
-            "doc123", "failed", error="Not found"
-        )
+        result = _create_result_entry("doc123", "failed", error="Not found")
 
         assert result["id"] == "doc123"
         assert result["status"] == "failed"

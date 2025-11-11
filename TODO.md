@@ -380,7 +380,7 @@ Improve Docker infrastructure and automated builds:
   - [x] Update README with local setup instructions
   - [x] Enable local testing without paid Outline account
 
-- [ ] **Multi-Architecture Docker Builds** 
+- [ ] **Multi-Architecture Docker Builds**
   - [ ] Add GitHub Actions workflow for automated builds
   - [ ] Support AMD64 and ARM64 architectures
   - [ ] Publish to GitHub Container Registry (GHCR)

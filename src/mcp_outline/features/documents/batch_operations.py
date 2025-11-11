@@ -631,9 +631,7 @@ def register_tools(mcp) -> None:
 
                 except OutlineClientError as e:
                     results.append(
-                        _create_result_entry(
-                            "unknown", "failed", error=str(e)
-                        )
+                        _create_result_entry("unknown", "failed", error=str(e))
                     )
                     failed += 1
                 except Exception as e:
