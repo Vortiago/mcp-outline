@@ -3,6 +3,7 @@ from typing import Optional
 
 from mcp_outline.features.documents import (
     ai_tools,
+    batch_operations,
     collection_tools,
     document_collaboration,
     document_content,
@@ -33,3 +34,4 @@ def register(
     document_collaboration.register_tools(mcp)
     collection_tools.register_tools(mcp)
     ai_tools.register_tools(mcp)
+    batch_operations.register_tools(mcp)
