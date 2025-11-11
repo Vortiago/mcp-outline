@@ -35,9 +35,9 @@ This MCP server bridges AI assistants with Outline's document management platfor
 
 ### API Client
 
-`OutlineClient` in `utils/outline_client.py` handles REST API interactions:
+`OutlineClient` in `utils/outline_client.py` handles async REST API interactions:
 
-**Operations**:
+**Operations** (all async):
 - Documents: get, search, create, update, move, archive, delete, restore
 - Collections: list, create, update, delete, export
 - Comments: create, list, get
@@ -46,15 +46,27 @@ This MCP server bridges AI assistants with Outline's document management platfor
 **Configuration**:
 - `OUTLINE_API_KEY` (required)
 - `OUTLINE_API_URL` (optional, defaults to https://app.getoutline.com/api)
+- `OUTLINE_MAX_CONNECTIONS` (optional, default: 100) - Maximum concurrent connections
+- `OUTLINE_MAX_KEEPALIVE` (optional, default: 20) - Maximum idle connections in pool
+- `OUTLINE_TIMEOUT` (optional, default: 30.0) - Request timeout in seconds
+- `OUTLINE_CONNECT_TIMEOUT` (optional, default: 5.0) - Connection timeout in seconds
 - Authentication via Bearer token
+
+**Connection Pooling**:
+- Uses httpx with class-level connection pool
+- Shared across all OutlineClient instances
+- Automatic connection reuse for better performance
+- Configurable limits via environment variables
 
 **Error Handling**:
 - Raises `OutlineError` for API failures
 - Tools catch exceptions and return error strings
+- Supports httpx exceptions (RequestError, HTTPStatusError, TimeoutException)
 
 **Rate Limiting**:
 - Tracks `RateLimit-Remaining` and `RateLimit-Reset` headers, waits proactively when exhausted
-- Automatic retry on HTTP 429 with exponential backoff (1s, 2s, 4s)
+- Uses asyncio.Lock for thread-safe rate limiting in concurrent scenarios
+- Automatic handling of HTTP 429 responses
 - Respects `Retry-After` header
 - Enabled by default, no configuration required
 
@@ -96,8 +108,8 @@ def register_tools(mcp):
             Formatted search results
         """
         try:
-            client = OutlineClient()
-            result = client.search_documents(query, collection_id)
+            client = await get_outline_client()
+            result = await client.search_documents(query, collection_id)
             return _format_search_results(result)
         except Exception as e:
             return f"Error: {str(e)}"
@@ -107,13 +119,10 @@ def register_tools(mcp):
 
 **Client Method** (if new endpoint needed):
 ```python
-def new_operation(self, param: str) -> dict:
+async def new_operation(self, param: str) -> dict:
     """Docstring describing operation."""
-    url = f"{self.base_url}/endpoint"
-    response = requests.post(url, headers=self.headers, json={"param": param})
-    if response.status_code != 200:
-        raise OutlineError(f"Error: {response.status_code}", response)
-    return response.json().get("data", {})
+    response = await self.post("endpoint", {"param": param})
+    return response.get("data", {})
 ```
 
 **Tool Function**:
@@ -122,8 +131,8 @@ def new_operation(self, param: str) -> dict:
 async def new_tool_name(param: str) -> str:
     """Clear description."""
     try:
-        client = OutlineClient()
-        result = client.new_operation(param)
+        client = await get_outline_client()
+        result = await client.new_operation(param)
         return _format_result(result)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -146,16 +155,23 @@ async def new_tool_name(param: str) -> str:
 
 ```python
 # In OutlineClient methods
-if response.status_code != 200:
-    raise OutlineError(
-        f"Operation failed: {response.status_code}",
-        response
-    )
+try:
+    response = await self._client_pool.post(url, headers=headers, json=data)
+    response.raise_for_status()
+    return response.json()
+except httpx.HTTPStatusError as e:
+    if e.response.status_code == 429:
+        raise OutlineError(f"Rate limited")
+    raise OutlineError(f"HTTP {e.response.status_code}: {e.response.text}")
+except httpx.TimeoutException as e:
+    raise OutlineError(f"Request timeout: {str(e)}")
+except httpx.RequestError as e:
+    raise OutlineError(f"API request failed: {str(e)}")
 
 # In tool functions
 try:
-    client = OutlineClient()
-    result = client.operation()
+    client = await get_outline_client()
+    result = await client.operation()
     return format_result(result)
 except OutlineError as e:
     return f"Outline API error: {str(e)}"
@@ -165,27 +181,39 @@ except Exception as e:
 
 ### Testing
 
-Mock `OutlineClient` in tests:
+Mock `OutlineClient` in async tests:
 
 ```python
-with patch('module.OutlineClient') as mock_client:
-    mock_client.return_value.method.return_value = {"data": "value"}
-    # Test tool behavior
+@pytest.mark.asyncio
+async def test_tool():
+    with patch('module.get_outline_client') as mock_get_client:
+        mock_client = AsyncMock()
+        mock_client.method.return_value = {"data": "value"}
+        mock_get_client.return_value = mock_client
+
+        result = await tool_function("param")
+        assert "expected" in result
 ```
 
 ### Configuration
 
 `.env` file:
 ```bash
-OUTLINE_API_KEY=<your_key>       # Required
-OUTLINE_API_URL=<custom_url>     # Optional
+OUTLINE_API_KEY=<your_key>                 # Required
+OUTLINE_API_URL=<custom_url>               # Optional
+OUTLINE_MAX_CONNECTIONS=100                # Optional - Max connections
+OUTLINE_MAX_KEEPALIVE=20                   # Optional - Max keepalive
+OUTLINE_TIMEOUT=30.0                       # Optional - Request timeout
+OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
 ```
 
 ### Critical Requirements
 
 - No stdout/stderr logging (MCP uses stdio)
 - Tools return strings, not dicts
-- Use `async def` for tool functions
+- Use `async def` for ALL tool functions
+- Use `await` for ALL client method calls
+- Always use `await get_outline_client()` to get client instance
 - Catch exceptions, return error strings
 - Follow KISS principle
 

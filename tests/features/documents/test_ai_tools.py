@@ -2,7 +2,7 @@
 Tests for AI-powered document tools.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -107,18 +107,19 @@ class TestAIAnswerFormatter:
 class TestAskAIAboutDocuments:
     """Tests for ask_ai_about_documents tool."""
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_about_documents_success(
+    async def test_ask_ai_about_documents_success(
         self, mock_get_client, register_ai_tools
     ):
         """Test ask_ai_about_documents tool success case."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.return_value = (
             SAMPLE_AI_RESPONSE_WITH_ANSWER
         )
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?"
         )
 
@@ -128,18 +129,19 @@ class TestAskAIAboutDocuments:
         assert "vacation policy allows 15 days" in result
         assert "Employee Handbook" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_with_collection_id(
+    async def test_ask_ai_with_collection_id(
         self, mock_get_client, register_ai_tools
     ):
         """Test ask_ai_about_documents with collection_id specified."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.return_value = (
             SAMPLE_AI_RESPONSE_WITH_ANSWER
         )
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?", collection_id="col123"
         )
 
@@ -148,16 +150,17 @@ class TestAskAIAboutDocuments:
         )
         assert "vacation policy" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_with_document_id(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_with_document_id(self, mock_get_client, register_ai_tools):
         """Test ask_ai_about_documents with document_id specified."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.return_value = (
             SAMPLE_AI_RESPONSE_WITH_ANSWER
         )
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?", document_id="doc123"
         )
 
@@ -166,16 +169,17 @@ class TestAskAIAboutDocuments:
         )
         assert "vacation policy" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_with_both_ids(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_with_both_ids(self, mock_get_client, register_ai_tools):
         """Test ask_ai_about_documents with both IDs specified."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.return_value = (
             SAMPLE_AI_RESPONSE_WITH_ANSWER
         )
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?",
             collection_id="col123",
             document_id="doc456",
@@ -186,27 +190,29 @@ class TestAskAIAboutDocuments:
         )
         assert "vacation policy" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_no_answer_found(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_no_answer_found(self, mock_get_client, register_ai_tools):
         """Test ask_ai_about_documents when no answer is found."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.return_value = SAMPLE_AI_RESPONSE_NO_ANSWER
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?"
         )
 
         assert "No answer was found" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_not_enabled(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_not_enabled(self, mock_get_client, register_ai_tools):
         """Test ask_ai_about_documents when AI is not enabled."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.return_value = SAMPLE_AI_RESPONSE_NO_SEARCH
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?"
         )
 
@@ -215,32 +221,34 @@ class TestAskAIAboutDocuments:
             or "no relevant information" in result
         )
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_client_error(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_client_error(self, mock_get_client, register_ai_tools):
         """Test ask_ai_about_documents with client error."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.side_effect = OutlineClientError(
             "API error"
         )
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?"
         )
 
         assert "Error getting answer" in result
         assert "API error" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
-    def test_ask_ai_unexpected_error(self, mock_get_client, register_ai_tools):
+    async def test_ask_ai_unexpected_error(self, mock_get_client, register_ai_tools):
         """Test ask_ai_about_documents with unexpected error."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.answer_question.side_effect = ValueError(
             "Unexpected error"
         )
         mock_get_client.return_value = mock_client
 
-        result = register_ai_tools.tools["ask_ai_about_documents"](
+        result = await register_ai_tools.tools["ask_ai_about_documents"](
             question="What is the vacation policy?"
         )
 

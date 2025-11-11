@@ -2,7 +2,7 @@
 Tests for document reading tools.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -88,20 +88,21 @@ class TestDocumentReadingFormatters:
 class TestDocumentReadingTools:
     """Tests for document reading tools."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_reading.get_outline_client"
     )
-    def test_read_document_success(
+    async def test_read_document_success(
         self, mock_get_client, register_reading_tools
     ):
         """Test read_document tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.get_document.return_value = SAMPLE_DOCUMENT
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_reading_tools.tools["read_document"]("doc123")
+        result = await register_reading_tools.tools["read_document"]("doc123")
 
         # Verify client was called correctly
         mock_client.get_document.assert_called_once_with("doc123")
@@ -110,39 +111,41 @@ class TestDocumentReadingTools:
         assert "# Test Document" in result
         assert "This is a test document with some content." in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_reading.get_outline_client"
     )
-    def test_read_document_client_error(
+    async def test_read_document_client_error(
         self, mock_get_client, register_reading_tools
     ):
         """Test read_document tool with client error."""
         # Set up mock client to raise an error
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.get_document.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_reading_tools.tools["read_document"]("doc123")
+        result = await register_reading_tools.tools["read_document"]("doc123")
 
         # Verify error is handled and returned
         assert "Error reading document" in result
         assert "API error" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_reading.get_outline_client"
     )
-    def test_export_document_success(
+    async def test_export_document_success(
         self, mock_get_client, register_reading_tools
     ):
         """Test export_document tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_EXPORT_RESPONSE
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_reading_tools.tools["export_document"]("doc123")
+        result = await register_reading_tools.tools["export_document"]("doc123")
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -153,38 +156,40 @@ class TestDocumentReadingTools:
         assert "# Test Document" in result
         assert "This is a test document with some content." in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_reading.get_outline_client"
     )
-    def test_export_document_empty_response(
+    async def test_export_document_empty_response(
         self, mock_get_client, register_reading_tools
     ):
         """Test export_document tool with empty response."""
         # Set up mock client with empty response
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_reading_tools.tools["export_document"]("doc123")
+        result = await register_reading_tools.tools["export_document"]("doc123")
 
         # Verify result contains default message
         assert "No content available" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_reading.get_outline_client"
     )
-    def test_export_document_client_error(
+    async def test_export_document_client_error(
         self, mock_get_client, register_reading_tools
     ):
         """Test export_document tool with client error."""
         # Set up mock client to raise an error
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_reading_tools.tools["export_document"]("doc123")
+        result = await register_reading_tools.tools["export_document"]("doc123")
 
         # Verify error is handled and returned
         assert "Error exporting document" in result

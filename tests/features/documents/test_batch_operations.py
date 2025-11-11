@@ -2,7 +2,7 @@
 Tests for batch operations tools.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -56,14 +56,15 @@ def register_batch_tools(mcp):
 class TestBatchArchiveDocuments:
     """Tests for batch_archive_documents tool."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_archive_all_success(
+    async def test_batch_archive_all_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_archive_documents with all successes."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.archive_document.side_effect = [
             {"id": "doc1", "title": "Document 1"},
             {"id": "doc2", "title": "Document 2"},
@@ -71,7 +72,7 @@ class TestBatchArchiveDocuments:
         ]
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_archive_documents"](
+        result = await register_batch_tools.tools["batch_archive_documents"](
             ["doc1", "doc2", "doc3"]
         )
 
@@ -81,20 +82,21 @@ class TestBatchArchiveDocuments:
         assert "✓" in result
         assert mock_client.archive_document.call_count == 3
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_archive_all_failures(
+    async def test_batch_archive_all_failures(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_archive_documents with all failures."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.archive_document.side_effect = OutlineClientError(
             "API error"
         )
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_archive_documents"](
+        result = await register_batch_tools.tools["batch_archive_documents"](
             ["doc1", "doc2", "doc3"]
         )
 
@@ -104,14 +106,15 @@ class TestBatchArchiveDocuments:
         assert "✗" in result
         assert "API error" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_archive_partial_success(
+    async def test_batch_archive_partial_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_archive_documents with mixed results."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.archive_document.side_effect = [
             {"id": "doc1", "title": "Document 1"},
             OutlineClientError("Not found"),
@@ -119,7 +122,7 @@ class TestBatchArchiveDocuments:
         ]
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_archive_documents"](
+        result = await register_batch_tools.tools["batch_archive_documents"](
             ["doc1", "doc2", "doc3"]
         )
 
@@ -130,35 +133,37 @@ class TestBatchArchiveDocuments:
         assert "Document 3" in result
         assert "Not found" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_archive_empty_list(
+    async def test_batch_archive_empty_list(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_archive_documents with empty list."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_archive_documents"]([])
+        result = await register_batch_tools.tools["batch_archive_documents"]([])
 
         assert "Error: No document IDs provided" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_archive_single_document(
+    async def test_batch_archive_single_document(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_archive_documents with single document."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.archive_document.return_value = {
             "id": "doc1",
             "title": "Single Document",
         }
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_archive_documents"](
+        result = await register_batch_tools.tools["batch_archive_documents"](
             ["doc1"]
         )
 
@@ -166,18 +171,19 @@ class TestBatchArchiveDocuments:
         assert "Succeeded: 1" in result
         assert "Failed: 0" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_archive_no_document_returned(
+    async def test_batch_archive_no_document_returned(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_archive_documents when API returns None."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.archive_document.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_archive_documents"](
+        result = await register_batch_tools.tools["batch_archive_documents"](
             ["doc1"]
         )
 
@@ -188,20 +194,21 @@ class TestBatchArchiveDocuments:
 class TestBatchMoveDocuments:
     """Tests for batch_move_documents tool."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_move_all_success(
+    async def test_batch_move_all_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_move_documents with all successes."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {
             "data": {"id": "doc1", "title": "Moved Doc"}
         }
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_move_documents"](
+        result = await register_batch_tools.tools["batch_move_documents"](
             ["doc1", "doc2"], collection_id="col123"
         )
 
@@ -210,34 +217,36 @@ class TestBatchMoveDocuments:
         assert "Failed: 0" in result
         assert mock_client.post.call_count == 2
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_move_no_destination(
+    async def test_batch_move_no_destination(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_move_documents without collection or parent."""
-        result = register_batch_tools.tools["batch_move_documents"](
+        result = await register_batch_tools.tools["batch_move_documents"](
             ["doc1", "doc2"]
         )
 
         assert "Error" in result
         assert "collection_id or parent_document_id" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_move_with_parent(
+    async def test_batch_move_with_parent(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_move_documents with parent document."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {
             "data": {"id": "doc1", "title": "Moved Doc"}
         }
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_move_documents"](
+        result = await register_batch_tools.tools["batch_move_documents"](
             ["doc1"], parent_document_id="parent123"
         )
 
@@ -247,14 +256,15 @@ class TestBatchMoveDocuments:
         assert call_args[0] == "documents.move"
         assert call_args[1]["parentDocumentId"] == "parent123"
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_move_partial_success(
+    async def test_batch_move_partial_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_move_documents with mixed results."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = [
             {"data": {"id": "doc1", "title": "Doc 1"}},
             OutlineClientError("Permission denied"),
@@ -262,7 +272,7 @@ class TestBatchMoveDocuments:
         ]
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_move_documents"](
+        result = await register_batch_tools.tools["batch_move_documents"](
             ["doc1", "doc2", "doc3"], collection_id="col123"
         )
 
@@ -271,14 +281,15 @@ class TestBatchMoveDocuments:
         assert "Failed: 1" in result
         assert "Permission denied" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_move_empty_list(
+    async def test_batch_move_empty_list(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_move_documents with empty list."""
-        result = register_batch_tools.tools["batch_move_documents"](
+        result = await register_batch_tools.tools["batch_move_documents"](
             [], collection_id="col123"
         )
 
@@ -288,14 +299,15 @@ class TestBatchMoveDocuments:
 class TestBatchDeleteDocuments:
     """Tests for batch_delete_documents tool."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_delete_to_trash_success(
+    async def test_batch_delete_to_trash_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_delete_documents moving to trash."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.get_document.side_effect = [
             {"id": "doc1", "title": "Document 1"},
             {"id": "doc2", "title": "Document 2"},
@@ -303,7 +315,7 @@ class TestBatchDeleteDocuments:
         mock_client.post.return_value = {"success": True}
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_delete_documents"](
+        result = await register_batch_tools.tools["batch_delete_documents"](
             ["doc1", "doc2"], permanent=False
         )
 
@@ -311,18 +323,19 @@ class TestBatchDeleteDocuments:
         assert "Succeeded: 2" in result
         assert "Failed: 0" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_delete_permanent_success(
+    async def test_batch_delete_permanent_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_delete_documents with permanent deletion."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.permanently_delete_document.return_value = True
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_delete_documents"](
+        result = await register_batch_tools.tools["batch_delete_documents"](
             ["doc1", "doc2"], permanent=True
         )
 
@@ -330,14 +343,15 @@ class TestBatchDeleteDocuments:
         assert "Succeeded: 2" in result
         assert mock_client.permanently_delete_document.call_count == 2
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_delete_partial_success(
+    async def test_batch_delete_partial_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_delete_documents with mixed results."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.get_document.side_effect = [
             {"id": "doc1", "title": "Document 1"},
             OutlineClientError("Not found"),
@@ -345,7 +359,7 @@ class TestBatchDeleteDocuments:
         mock_client.post.return_value = {"success": True}
         mock_get_client.return_value = mock_client
 
-        result = register_batch_tools.tools["batch_delete_documents"](
+        result = await register_batch_tools.tools["batch_delete_documents"](
             ["doc1", "doc2"], permanent=False
         )
 
@@ -353,14 +367,15 @@ class TestBatchDeleteDocuments:
         assert "Succeeded: 1" in result
         assert "Failed: 1" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_delete_empty_list(
+    async def test_batch_delete_empty_list(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_delete_documents with empty list."""
-        result = register_batch_tools.tools["batch_delete_documents"]([])
+        result = await register_batch_tools.tools["batch_delete_documents"]([])
 
         assert "Error: No document IDs provided" in result
 
@@ -368,14 +383,15 @@ class TestBatchDeleteDocuments:
 class TestBatchUpdateDocuments:
     """Tests for batch_update_documents tool."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_update_all_success(
+    async def test_batch_update_all_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_update_documents with all successes."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {
             "data": {"id": "doc1", "title": "Updated Title"}
         }
@@ -387,21 +403,22 @@ class TestBatchUpdateDocuments:
             {"id": "doc3", "title": "Title 3", "text": "Content 3"},
         ]
 
-        result = register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Total: 3" in result
         assert "Succeeded: 3" in result
         assert "Failed: 0" in result
         assert mock_client.post.call_count == 3
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_update_with_append(
+    async def test_batch_update_with_append(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_update_documents with append flag."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {
             "data": {"id": "doc1", "title": "Document"}
         }
@@ -409,37 +426,39 @@ class TestBatchUpdateDocuments:
 
         updates = [{"id": "doc1", "text": "Appended content", "append": True}]
 
-        result = register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Succeeded: 1" in result
         call_args = mock_client.post.call_args[0]
         assert call_args[1]["append"] is True
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_update_missing_id(
+    async def test_batch_update_missing_id(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_update_documents with missing document ID."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
 
         updates = [{"title": "No ID"}]
 
-        result = register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Failed: 1" in result
         assert "Missing document ID" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_update_partial_success(
+    async def test_batch_update_partial_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_update_documents with mixed results."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = [
             {"data": {"id": "doc1", "title": "Updated"}},
             OutlineClientError("Permission denied"),
@@ -451,21 +470,22 @@ class TestBatchUpdateDocuments:
             {"id": "doc2", "title": "Title 2"},
         ]
 
-        result = register_batch_tools.tools["batch_update_documents"](updates)
+        result = await register_batch_tools.tools["batch_update_documents"](updates)
 
         assert "Total: 2" in result
         assert "Succeeded: 1" in result
         assert "Failed: 1" in result
         assert "Permission denied" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_update_empty_list(
+    async def test_batch_update_empty_list(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_update_documents with empty list."""
-        result = register_batch_tools.tools["batch_update_documents"]([])
+        result = await register_batch_tools.tools["batch_update_documents"]([])
 
         assert "Error: No updates provided" in result
 
@@ -473,14 +493,15 @@ class TestBatchUpdateDocuments:
 class TestBatchCreateDocuments:
     """Tests for batch_create_documents tool."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_create_all_success(
+    async def test_batch_create_all_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_create_documents with all successes."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = [
             {"data": {"id": "new1", "title": "Document 1"}},
             {"data": {"id": "new2", "title": "Document 2"}},
@@ -498,7 +519,7 @@ class TestBatchCreateDocuments:
             },
         ]
 
-        result = register_batch_tools.tools["batch_create_documents"](
+        result = await register_batch_tools.tools["batch_create_documents"](
             documents
         )
 
@@ -510,52 +531,55 @@ class TestBatchCreateDocuments:
         assert "new3" in result
         assert mock_client.post.call_count == 3
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_create_missing_title(
+    async def test_batch_create_missing_title(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_create_documents with missing title."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
 
         documents = [{"collection_id": "col1"}]
 
-        result = register_batch_tools.tools["batch_create_documents"](
+        result = await register_batch_tools.tools["batch_create_documents"](
             documents
         )
 
         assert "Failed: 1" in result
         assert "Missing required field: title" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_create_missing_collection_id(
+    async def test_batch_create_missing_collection_id(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_create_documents with missing collection_id."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
 
         documents = [{"title": "Document"}]
 
-        result = register_batch_tools.tools["batch_create_documents"](
+        result = await register_batch_tools.tools["batch_create_documents"](
             documents
         )
 
         assert "Failed: 1" in result
         assert "Missing required field: collection_id" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_create_with_parent(
+    async def test_batch_create_with_parent(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_create_documents with parent document."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {
             "data": {"id": "new1", "title": "Child Doc"}
         }
@@ -569,7 +593,7 @@ class TestBatchCreateDocuments:
             }
         ]
 
-        result = register_batch_tools.tools["batch_create_documents"](
+        result = await register_batch_tools.tools["batch_create_documents"](
             documents
         )
 
@@ -577,14 +601,15 @@ class TestBatchCreateDocuments:
         call_args = mock_client.post.call_args[0]
         assert call_args[1]["parentDocumentId"] == "parent123"
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_create_partial_success(
+    async def test_batch_create_partial_success(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_create_documents with mixed results."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = [
             {"data": {"id": "new1", "title": "Doc 1"}},
             OutlineClientError("Quota exceeded"),
@@ -598,7 +623,7 @@ class TestBatchCreateDocuments:
             {"title": "Doc 3", "collection_id": "col1"},
         ]
 
-        result = register_batch_tools.tools["batch_create_documents"](
+        result = await register_batch_tools.tools["batch_create_documents"](
             documents
         )
 
@@ -609,14 +634,15 @@ class TestBatchCreateDocuments:
         assert "new1" in result
         assert "new3" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
-    def test_batch_create_empty_list(
+    async def test_batch_create_empty_list(
         self, mock_get_client, register_batch_tools
     ):
         """Test batch_create_documents with empty list."""
-        result = register_batch_tools.tools["batch_create_documents"]([])
+        result = await register_batch_tools.tools["batch_create_documents"]([])
 
         assert "Error: No documents provided" in result
 

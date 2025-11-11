@@ -77,7 +77,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def list_document_comments(
+    async def list_document_comments(
         document_id: str,
         include_anchor_text: bool = False,
         limit: int = 25,
@@ -110,7 +110,7 @@ def register_tools(mcp) -> None:
             optional anchor text
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
             data = {
                 "documentId": document_id,
                 "includeAnchorText": include_anchor_text,
@@ -118,7 +118,7 @@ def register_tools(mcp) -> None:
                 "offset": offset,
             }
 
-            response = client.post("comments.list", data)
+            response = await client.post("comments.list", data)
             comments = response.get("data", [])
             pagination = response.get("pagination", {})
 
@@ -130,7 +130,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def get_comment(comment_id: str, include_anchor_text: bool = False) -> str:
+    async def get_comment(comment_id: str, include_anchor_text: bool = False) -> str:
         """
         Retrieves a specific comment by its ID.
 
@@ -149,8 +149,8 @@ def register_tools(mcp) -> None:
             Formatted string with the comment content and metadata
         """
         try:
-            client = get_outline_client()
-            response = client.post(
+            client = await get_outline_client()
+            response = await client.post(
                 "comments.info",
                 {"id": comment_id, "includeAnchorText": include_anchor_text},
             )
@@ -191,7 +191,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def get_document_backlinks(document_id: str) -> str:
+    async def get_document_backlinks(document_id: str) -> str:
         """
         Finds all documents that link to a specific document.
 
@@ -209,8 +209,8 @@ def register_tools(mcp) -> None:
             the specified document
         """
         try:
-            client = get_outline_client()
-            response = client.post(
+            client = await get_outline_client()
+            response = await client.post(
                 "documents.list", {"backlinkDocumentId": document_id}
             )
             documents = response.get("data", [])

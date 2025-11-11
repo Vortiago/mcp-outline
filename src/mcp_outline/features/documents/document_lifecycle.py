@@ -20,7 +20,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def archive_document(document_id: str) -> str:
+    async def archive_document(document_id: str) -> str:
         """
         Archives a document to remove it from active use while preserving it.
 
@@ -41,8 +41,8 @@ def register_tools(mcp) -> None:
             Result message confirming archival
         """
         try:
-            client = get_outline_client()
-            document = client.archive_document(document_id)
+            client = await get_outline_client()
+            document = await client.archive_document(document_id)
 
             if not document:
                 return "Failed to archive document."
@@ -56,7 +56,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def unarchive_document(document_id: str) -> str:
+    async def unarchive_document(document_id: str) -> str:
         """
         Restores a previously archived document to active status.
 
@@ -73,8 +73,8 @@ def register_tools(mcp) -> None:
             Result message confirming restoration
         """
         try:
-            client = get_outline_client()
-            document = client.unarchive_document(document_id)
+            client = await get_outline_client()
+            document = await client.unarchive_document(document_id)
 
             if not document:
                 return "Failed to unarchive document."
@@ -88,7 +88,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def delete_document(document_id: str, permanent: bool = False) -> str:
+    async def delete_document(document_id: str, permanent: bool = False) -> str:
         """
         Moves a document to trash or permanently deletes it.
 
@@ -114,21 +114,21 @@ def register_tools(mcp) -> None:
             Result message confirming deletion
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             if permanent:
-                success = client.permanently_delete_document(document_id)
+                success = await client.permanently_delete_document(document_id)
                 if success:
                     return "Document permanently deleted."
                 else:
                     return "Failed to permanently delete document."
             else:
                 # First get the document details for the success message
-                document = client.get_document(document_id)
+                document = await client.get_document(document_id)
                 doc_title = document.get("title", "Untitled")
 
                 # Move to trash (using the regular delete endpoint)
-                response = client.post("documents.delete", {"id": document_id})
+                response = await client.post("documents.delete", {"id": document_id})
 
                 # Check for successful response
                 if response.get("success", False):
@@ -142,7 +142,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def restore_document(document_id: str) -> str:
+    async def restore_document(document_id: str) -> str:
         """
         Recovers a document from the trash back to active status.
 
@@ -159,8 +159,8 @@ def register_tools(mcp) -> None:
             Result message confirming restoration
         """
         try:
-            client = get_outline_client()
-            document = client.restore_document(document_id)
+            client = await get_outline_client()
+            document = await client.restore_document(document_id)
 
             if not document:
                 return "Failed to restore document from trash."
@@ -174,7 +174,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def list_archived_documents() -> str:
+    async def list_archived_documents() -> str:
         """
         Displays all documents that have been archived.
 
@@ -188,8 +188,8 @@ def register_tools(mcp) -> None:
             Formatted string containing list of archived documents
         """
         try:
-            client = get_outline_client()
-            response = client.post("documents.archived")
+            client = await get_outline_client()
+            response = await client.post("documents.archived")
             from mcp_outline.features.documents.document_search import (
                 _format_documents_list,
             )
@@ -202,7 +202,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def list_trash() -> str:
+    async def list_trash() -> str:
         """
         Displays all documents currently in the trash.
 
@@ -216,8 +216,8 @@ def register_tools(mcp) -> None:
             Formatted string containing list of documents in trash
         """
         try:
-            client = get_outline_client()
-            documents = client.list_trash()
+            client = await get_outline_client()
+            documents = await client.list_trash()
             from mcp_outline.features.documents.document_search import (
                 _format_documents_list,
             )

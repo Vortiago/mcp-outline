@@ -21,7 +21,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def create_document(
+    async def create_document(
         title: str,
         collection_id: str,
         text: str = "",
@@ -49,7 +49,7 @@ def register_tools(mcp) -> None:
             Result message with the new document ID
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             data = {
                 "title": title,
@@ -61,7 +61,7 @@ def register_tools(mcp) -> None:
             if parent_document_id:
                 data["parentDocumentId"] = parent_document_id
 
-            response = client.post("documents.create", data)
+            response = await client.post("documents.create", data)
             document = response.get("data", {})
 
             if not document:
@@ -77,7 +77,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def update_document(
+    async def update_document(
         document_id: str,
         title: Optional[str] = None,
         text: Optional[str] = None,
@@ -109,7 +109,7 @@ def register_tools(mcp) -> None:
             Result message confirming update
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             # Only include fields that are being updated
             data: Dict[str, Any] = {"id": document_id}
@@ -121,7 +121,7 @@ def register_tools(mcp) -> None:
                 data["text"] = text
                 data["append"] = append
 
-            response = client.post("documents.update", data)
+            response = await client.post("documents.update", data)
             document = response.get("data", {})
 
             if not document:
@@ -136,7 +136,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def add_comment(
+    async def add_comment(
         document_id: str, text: str, parent_comment_id: Optional[str] = None
     ) -> str:
         """
@@ -157,14 +157,14 @@ def register_tools(mcp) -> None:
             Result message with the new comment ID
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             data = {"documentId": document_id, "text": text}
 
             if parent_comment_id:
                 data["parentCommentId"] = parent_comment_id
 
-            response = client.post("comments.create", data)
+            response = await client.post("comments.create", data)
             comment = response.get("data", {})
 
             if not comment:

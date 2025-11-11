@@ -113,7 +113,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def search_documents(
+    async def search_documents(
         query: str, collection_id: Optional[str] = None
     ) -> str:
         """
@@ -145,8 +145,8 @@ def register_tools(mcp) -> None:
             contexts
         """
         try:
-            client = get_outline_client()
-            results = client.search_documents(query, collection_id)
+            client = await get_outline_client()
+            results = await client.search_documents(query, collection_id)
             return _format_search_results(results)
         except OutlineClientError as e:
             return f"Error searching documents: {str(e)}"
@@ -154,7 +154,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error during search: {str(e)}"
 
     @mcp.tool()
-    def list_collections() -> str:
+    async def list_collections() -> str:
         """
         Retrieves and displays all available collections in the workspace.
 
@@ -168,8 +168,8 @@ def register_tools(mcp) -> None:
             Formatted string containing collection names, IDs, and descriptions
         """
         try:
-            client = get_outline_client()
-            collections = client.list_collections()
+            client = await get_outline_client()
+            collections = await client.list_collections()
             return _format_collections(collections)
         except OutlineClientError as e:
             return f"Error listing collections: {str(e)}"
@@ -177,7 +177,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error listing collections: {str(e)}"
 
     @mcp.tool()
-    def get_collection_structure(collection_id: str) -> str:
+    async def get_collection_structure(collection_id: str) -> str:
         """
         Retrieves the hierarchical document structure of a collection.
 
@@ -194,8 +194,8 @@ def register_tools(mcp) -> None:
             Formatted string showing the hierarchical structure of documents
         """
         try:
-            client = get_outline_client()
-            docs = client.get_collection_documents(collection_id)
+            client = await get_outline_client()
+            docs = await client.get_collection_documents(collection_id)
             return _format_collection_documents(docs)
         except OutlineClientError as e:
             return f"Error getting collection structure: {str(e)}"
@@ -203,7 +203,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def get_document_id_from_title(
+    async def get_document_id_from_title(
         query: str, collection_id: Optional[str] = None
     ) -> str:
         """
@@ -230,8 +230,8 @@ def register_tools(mcp) -> None:
             Document ID if found, or best match information
         """
         try:
-            client = get_outline_client()
-            results = client.search_documents(query, collection_id)
+            client = await get_outline_client()
+            results = await client.search_documents(query, collection_id)
 
             if not results:
                 return f"No documents found matching '{query}'"

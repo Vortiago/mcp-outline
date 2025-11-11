@@ -1,17 +1,16 @@
 """
 Client for interacting with Outline API.
 
-A simple client for making requests to the Outline API.
+An async client for making requests to the Outline API with connection
+pooling and rate limiting.
 """
 
+import asyncio
 import os
-import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import httpx
 
 
 class OutlineError(Exception):
@@ -21,7 +20,11 @@ class OutlineError(Exception):
 
 
 class OutlineClient:
-    """Simple client for Outline API services."""
+    """Async client for Outline API services with connection pooling."""
+
+    # Class-level connection pool shared across all instances
+    _client_pool: ClassVar[Optional[httpx.AsyncClient]] = None
+    _rate_limit_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
 
     def __init__(
         self, api_key: Optional[str] = None, api_url: Optional[str] = None
@@ -50,19 +53,58 @@ class OutlineClient:
         self._rate_limit_remaining: Optional[int] = None
         self._rate_limit_reset: Optional[int] = None
 
-        # Setup session with retry strategy for reactive rate limiting
-        self.session = requests.Session()
-        retry_strategy = Retry(
-            total=3,
-            status_forcelist=[429, 500, 502, 503, 504],
-            backoff_factor=1,
-            respect_retry_after_header=True,
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session.mount("http://", adapter)
-        self.session.mount("https://", adapter)
+        # Initialize class-level connection pool if not exists
+        if OutlineClient._client_pool is None:
+            # Configure connection pooling
+            max_connections = int(
+                os.getenv("OUTLINE_MAX_CONNECTIONS", "100")
+            )
+            max_keepalive = int(os.getenv("OUTLINE_MAX_KEEPALIVE", "20"))
+            timeout = float(os.getenv("OUTLINE_TIMEOUT", "30.0"))
+            connect_timeout = float(
+                os.getenv("OUTLINE_CONNECT_TIMEOUT", "5.0")
+            )
 
-    def _wait_if_rate_limited(self) -> None:
+            limits = httpx.Limits(
+                max_keepalive_connections=max_keepalive,
+                max_connections=max_connections,
+                keepalive_expiry=30.0,
+            )
+
+            timeout_config = httpx.Timeout(
+                connect=connect_timeout,
+                read=timeout,
+                write=10.0,
+                pool=5.0,
+            )
+
+            OutlineClient._client_pool = httpx.AsyncClient(
+                limits=limits,
+                timeout=timeout_config,
+                follow_redirects=True,
+            )
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        # Note: Don't close the shared pool here
+        pass
+
+    @classmethod
+    async def close_pool(cls):
+        """
+        Close the shared connection pool.
+
+        Should be called on application shutdown.
+        """
+        if cls._client_pool:
+            await cls._client_pool.aclose()
+            cls._client_pool = None
+
+    async def _wait_if_rate_limited(self) -> None:
         """
         Proactively wait if we know we're rate limited.
 
@@ -75,9 +117,9 @@ class OutlineClient:
 
             if wait_seconds > 0:
                 # Add small buffer to account for clock skew
-                time.sleep(wait_seconds + 0.1)
+                await asyncio.sleep(wait_seconds + 0.1)
 
-    def _update_rate_limits(self, response: requests.Response) -> None:
+    def _update_rate_limits(self, response: httpx.Response) -> None:
         """
         Parse and store rate limit headers from API response.
 
@@ -92,15 +134,14 @@ class OutlineClient:
         if "RateLimit-Reset" in response.headers:
             self._rate_limit_reset = int(response.headers["RateLimit-Reset"])
 
-    def post(
+    async def post(
         self, endpoint: str, data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Make a POST request to the Outline API.
+        Make an async POST request to the Outline API.
 
         Implements proactive rate limiting by checking stored rate limit
-        headers before making requests, and reactive rate limiting via
-        urllib3 automatic retry with exponential backoff.
+        headers before making requests, with automatic retry on 429.
 
         Args:
             endpoint: The API endpoint to call.
@@ -112,8 +153,9 @@ class OutlineClient:
         Raises:
             OutlineError: If the request fails.
         """
-        # Proactive: wait if we know we're rate limited
-        self._wait_if_rate_limited()
+        # Proactive: wait if we know we're rate limited (with lock)
+        async with self._rate_limit_lock:
+            await self._wait_if_rate_limited()
 
         url = f"{self.api_url}/{endpoint}"
         headers = {
@@ -122,8 +164,13 @@ class OutlineClient:
             "Accept": "application/json",
         }
 
+        if self._client_pool is None:
+            raise OutlineError("Client pool not initialized")
+
         try:
-            response = self.session.post(url, headers=headers, json=data or {})
+            response = await self._client_pool.post(
+                url, headers=headers, json=data or {}
+            )
 
             # Update rate limit state from response headers
             self._update_rate_limits(response)
@@ -131,20 +178,33 @@ class OutlineClient:
             # Raise exception for 4XX/5XX responses
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.RequestException as e:
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                # Rate limited - provide helpful error
+                retry_after = e.response.headers.get("Retry-After", "unknown")
+                raise OutlineError(
+                    f"Rate limited. Retry after: {retry_after} seconds"
+                )
+            raise OutlineError(
+                f"HTTP {e.response.status_code}: {e.response.text}"
+            )
+        except httpx.TimeoutException as e:
+            raise OutlineError(f"Request timeout: {str(e)}")
+        except httpx.RequestError as e:
             raise OutlineError(f"API request failed: {str(e)}")
 
-    def auth_info(self) -> Dict[str, Any]:
+    async def auth_info(self) -> Dict[str, Any]:
         """
         Verify authentication and get user information.
 
         Returns:
             Dict containing user and team information.
         """
-        response = self.post("auth.info")
+        response = await self.post("auth.info")
         return response.get("data", {})
 
-    def get_document(self, document_id: str) -> Dict[str, Any]:
+    async def get_document(self, document_id: str) -> Dict[str, Any]:
         """
         Get a document by ID.
 
@@ -154,10 +214,10 @@ class OutlineClient:
         Returns:
             Document information.
         """
-        response = self.post("documents.info", {"id": document_id})
+        response = await self.post("documents.info", {"id": document_id})
         return response.get("data", {})
 
-    def search_documents(
+    async def search_documents(
         self, query: str, collection_id: Optional[str] = None, limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
@@ -175,10 +235,10 @@ class OutlineClient:
         if collection_id:
             data["collectionId"] = collection_id
 
-        response = self.post("documents.search", data)
+        response = await self.post("documents.search", data)
         return response.get("data", [])
 
-    def list_collections(self, limit: int = 20) -> List[Dict[str, Any]]:
+    async def list_collections(self, limit: int = 20) -> List[Dict[str, Any]]:
         """
         List all available collections.
 
@@ -188,10 +248,10 @@ class OutlineClient:
         Returns:
             List of collections
         """
-        response = self.post("collections.list", {"limit": limit})
+        response = await self.post("collections.list", {"limit": limit})
         return response.get("data", [])
 
-    def get_collection_documents(
+    async def get_collection_documents(
         self, collection_id: str
     ) -> List[Dict[str, Any]]:
         """
@@ -203,10 +263,10 @@ class OutlineClient:
         Returns:
             List of document nodes in the collection.
         """
-        response = self.post("collections.documents", {"id": collection_id})
+        response = await self.post("collections.documents", {"id": collection_id})
         return response.get("data", [])
 
-    def list_documents(
+    async def list_documents(
         self, collection_id: Optional[str] = None, limit: int = 20
     ) -> List[Dict[str, Any]]:
         """
@@ -223,10 +283,10 @@ class OutlineClient:
         if collection_id:
             data["collectionId"] = collection_id
 
-        response = self.post("documents.list", data)
+        response = await self.post("documents.list", data)
         return response.get("data", [])
 
-    def archive_document(self, document_id: str) -> Dict[str, Any]:
+    async def archive_document(self, document_id: str) -> Dict[str, Any]:
         """
         Archive a document by ID.
 
@@ -236,10 +296,10 @@ class OutlineClient:
         Returns:
             The archived document data.
         """
-        response = self.post("documents.archive", {"id": document_id})
+        response = await self.post("documents.archive", {"id": document_id})
         return response.get("data", {})
 
-    def unarchive_document(self, document_id: str) -> Dict[str, Any]:
+    async def unarchive_document(self, document_id: str) -> Dict[str, Any]:
         """
         Unarchive a document by ID.
 
@@ -249,10 +309,10 @@ class OutlineClient:
         Returns:
             The unarchived document data.
         """
-        response = self.post("documents.unarchive", {"id": document_id})
+        response = await self.post("documents.unarchive", {"id": document_id})
         return response.get("data", {})
 
-    def list_trash(self, limit: int = 25) -> List[Dict[str, Any]]:
+    async def list_trash(self, limit: int = 25) -> List[Dict[str, Any]]:
         """
         List documents in the trash.
 
@@ -262,12 +322,12 @@ class OutlineClient:
         Returns:
             List of documents in trash
         """
-        response = self.post(
+        response = await self.post(
             "documents.list", {"limit": limit, "deleted": True}
         )
         return response.get("data", [])
 
-    def restore_document(self, document_id: str) -> Dict[str, Any]:
+    async def restore_document(self, document_id: str) -> Dict[str, Any]:
         """
         Restore a document from trash.
 
@@ -277,10 +337,10 @@ class OutlineClient:
         Returns:
             The restored document data.
         """
-        response = self.post("documents.restore", {"id": document_id})
+        response = await self.post("documents.restore", {"id": document_id})
         return response.get("data", {})
 
-    def permanently_delete_document(self, document_id: str) -> bool:
+    async def permanently_delete_document(self, document_id: str) -> bool:
         """
         Permanently delete a document by ID.
 
@@ -290,13 +350,13 @@ class OutlineClient:
         Returns:
             Success status.
         """
-        response = self.post(
+        response = await self.post(
             "documents.delete", {"id": document_id, "permanent": True}
         )
         return response.get("success", False)
 
     # Collection management methods
-    def create_collection(
+    async def create_collection(
         self, name: str, description: str = "", color: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -315,10 +375,10 @@ class OutlineClient:
         if color:
             data["color"] = color
 
-        response = self.post("collections.create", data)
+        response = await self.post("collections.create", data)
         return response.get("data", {})
 
-    def update_collection(
+    async def update_collection(
         self,
         collection_id: str,
         name: Optional[str] = None,
@@ -348,10 +408,10 @@ class OutlineClient:
         if color is not None:
             data["color"] = color
 
-        response = self.post("collections.update", data)
+        response = await self.post("collections.update", data)
         return response.get("data", {})
 
-    def delete_collection(self, collection_id: str) -> bool:
+    async def delete_collection(self, collection_id: str) -> bool:
         """
         Delete a collection and all its documents.
 
@@ -361,10 +421,10 @@ class OutlineClient:
         Returns:
             Success status
         """
-        response = self.post("collections.delete", {"id": collection_id})
+        response = await self.post("collections.delete", {"id": collection_id})
         return response.get("success", False)
 
-    def export_collection(
+    async def export_collection(
         self, collection_id: str, format: str = "outline-markdown"
     ) -> Dict[str, Any]:
         """
@@ -377,12 +437,12 @@ class OutlineClient:
         Returns:
             FileOperation data that can be queried for progress
         """
-        response = self.post(
+        response = await self.post(
             "collections.export", {"id": collection_id, "format": format}
         )
         return response.get("data", {})
 
-    def export_all_collections(
+    async def export_all_collections(
         self, format: str = "outline-markdown"
     ) -> Dict[str, Any]:
         """
@@ -394,10 +454,10 @@ class OutlineClient:
         Returns:
             FileOperation data that can be queried for progress
         """
-        response = self.post("collections.export_all", {"format": format})
+        response = await self.post("collections.export_all", {"format": format})
         return response.get("data", {})
 
-    def answer_question(
+    async def answer_question(
         self,
         query: str,
         collection_id: Optional[str] = None,
@@ -422,5 +482,5 @@ class OutlineClient:
         if document_id:
             data["documentId"] = document_id
 
-        response = self.post("documents.answerQuestion", data)
+        response = await self.post("documents.answerQuestion", data)
         return response

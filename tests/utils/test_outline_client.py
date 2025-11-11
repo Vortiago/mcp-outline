@@ -4,11 +4,10 @@ Tests for the Outline API client.
 
 import os
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
-import requests
-from requests.adapters import HTTPAdapter
 
 from mcp_outline.utils.outline_client import OutlineClient, OutlineError
 
@@ -43,13 +42,15 @@ class TestOutlineClient:
         else:
             os.environ.pop("OUTLINE_API_URL", None)
 
-    def test_init_from_env_variables(self):
+    @pytest.mark.asyncio
+    async def test_init_from_env_variables(self):
         """Test initialization from environment variables."""
         client = OutlineClient()
         assert client.api_key == MOCK_API_KEY
         assert client.api_url == MOCK_API_URL
 
-    def test_init_from_arguments(self):
+    @pytest.mark.asyncio
+    async def test_init_from_arguments(self):
         """Test initialization from constructor arguments."""
         custom_key = "custom_key"
         custom_url = "https://custom.outline.com/api"
@@ -58,14 +59,16 @@ class TestOutlineClient:
         assert client.api_key == custom_key
         assert client.api_url == custom_url
 
-    def test_init_missing_api_key(self):
+    @pytest.mark.asyncio
+    async def test_init_missing_api_key(self):
         """Test error when API key is missing."""
         os.environ.pop("OUTLINE_API_KEY", None)
 
         with pytest.raises(OutlineError):
             OutlineClient(api_key=None)
 
-    def test_post_request(self):
+    @pytest.mark.asyncio
+    async def test_post_request(self):
         """Test POST request method."""
         # Setup mock response
         mock_response = MagicMock()
@@ -78,9 +81,9 @@ class TestOutlineClient:
         data = {"param": "value"}
 
         with patch.object(
-            client.session, "post", return_value=mock_response
+            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
         ) as mock_post:
-            result = client.post("test_endpoint", data)
+            result = await client.post("test_endpoint", data)
 
             # Verify request was made correctly
             mock_post.assert_called_once_with(
@@ -95,7 +98,8 @@ class TestOutlineClient:
 
             assert result == {"data": {"test": "value"}}
 
-    def test_error_handling(self):
+    @pytest.mark.asyncio
+    async def test_error_handling(self):
         """Test error handling for request exceptions."""
         # Setup mock to raise an exception
         error_msg = "Connection error"
@@ -104,16 +108,17 @@ class TestOutlineClient:
         client = OutlineClient()
 
         with patch.object(
-            client.session,
+            client._client_pool,
             "post",
-            side_effect=requests.exceptions.RequestException(error_msg),
+            new=AsyncMock(side_effect=httpx.RequestError(error_msg)),
         ):
             with pytest.raises(OutlineError) as exc_info:
-                client.post("test_endpoint")
+                await client.post("test_endpoint")
 
             assert "API request failed" in str(exc_info.value)
 
-    def test_rate_limit_headers_parsed(self):
+    @pytest.mark.asyncio
+    async def test_rate_limit_headers_parsed(self):
         """Test that rate limit headers are parsed and stored."""
         client = OutlineClient()
 
@@ -126,14 +131,17 @@ class TestOutlineClient:
         }
         mock_response.json.return_value = {"data": {"test": "value"}}
 
-        with patch.object(client.session, "post", return_value=mock_response):
-            client.post("test_endpoint")
+        with patch.object(
+            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+        ):
+            await client.post("test_endpoint")
 
         # Verify headers were parsed
         assert client._rate_limit_remaining == 4
         assert client._rate_limit_reset == 1234567890
 
-    def test_proactive_wait_when_rate_limited(self):
+    @pytest.mark.asyncio
+    async def test_proactive_wait_when_rate_limited(self):
         """Test proactive waiting when rate limit is exhausted."""
         client = OutlineClient()
 
@@ -143,16 +151,18 @@ class TestOutlineClient:
         mock_response.headers = {}
         mock_response.json.return_value = {"data": {"test": "value"}}
 
-        with patch.object(client.session, "post", return_value=mock_response):
+        with patch.object(
+            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+        ):
             with patch(
-                "mcp_outline.utils.outline_client.time.sleep"
+                "mcp_outline.utils.outline_client.asyncio.sleep"
             ) as mock_sleep:
                 # Set rate limit state to exhausted with reset in near future
                 # Do this inside the patch context to ensure timing is correct
                 client._rate_limit_remaining = 0
                 client._rate_limit_reset = int(datetime.now().timestamp() + 10)
 
-                client.post("test_endpoint")
+                await client.post("test_endpoint")
 
                 # Verify sleep was called
                 assert mock_sleep.call_count == 1
@@ -160,7 +170,8 @@ class TestOutlineClient:
                 # Should sleep for ~10 seconds + 0.1 buffer
                 assert 9 < sleep_time < 12
 
-    def test_no_wait_when_rate_limit_available(self):
+    @pytest.mark.asyncio
+    async def test_no_wait_when_rate_limit_available(self):
         """Test no waiting when rate limit has remaining requests."""
         client = OutlineClient()
 
@@ -174,16 +185,19 @@ class TestOutlineClient:
         mock_response.headers = {}
         mock_response.json.return_value = {"data": {"test": "value"}}
 
-        with patch.object(client.session, "post", return_value=mock_response):
+        with patch.object(
+            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+        ):
             with patch(
-                "mcp_outline.utils.outline_client.time.sleep"
+                "mcp_outline.utils.outline_client.asyncio.sleep"
             ) as mock_sleep:
-                client.post("test_endpoint")
+                await client.post("test_endpoint")
 
                 # Verify sleep was NOT called
                 mock_sleep.assert_not_called()
 
-    def test_retry_on_429_status(self):
+    @pytest.mark.asyncio
+    async def test_retry_on_429_status(self):
         """Test automatic retry on 429 rate limit response."""
         client = OutlineClient()
 
@@ -192,7 +206,11 @@ class TestOutlineClient:
         mock_response_429.status_code = 429
         mock_response_429.headers = {"Retry-After": "1000"}
         mock_response_429.raise_for_status.side_effect = (
-            requests.exceptions.HTTPError(response=mock_response_429)
+            httpx.HTTPStatusError(
+                "Too Many Requests",
+                request=MagicMock(),
+                response=mock_response_429,
+            )
         )
 
         mock_response_success = MagicMock()
@@ -201,15 +219,16 @@ class TestOutlineClient:
         mock_response_success.json.return_value = {"data": {"test": "value"}}
 
         with patch.object(
-            client.session,
+            client._client_pool,
             "post",
-            side_effect=[mock_response_success],
+            new=AsyncMock(side_effect=[mock_response_success]),
         ):
             # Should succeed after retry
-            result = client.post("test_endpoint")
+            result = await client.post("test_endpoint")
             assert result == {"data": {"test": "value"}}
 
-    def test_rate_limit_headers_missing(self):
+    @pytest.mark.asyncio
+    async def test_rate_limit_headers_missing(self):
         """Test handling when rate limit headers are not present."""
         client = OutlineClient()
 
@@ -219,23 +238,23 @@ class TestOutlineClient:
         mock_response.headers = {}
         mock_response.json.return_value = {"data": {"test": "value"}}
 
-        with patch.object(client.session, "post", return_value=mock_response):
-            client.post("test_endpoint")
+        with patch.object(
+            client._client_pool, "post", new=AsyncMock(return_value=mock_response)
+        ):
+            await client.post("test_endpoint")
 
         # Verify rate limit state remains None
         assert client._rate_limit_remaining is None
         assert client._rate_limit_reset is None
 
-    def test_session_configured_with_retry(self):
-        """Test that client session is configured with retry strategy."""
+    @pytest.mark.asyncio
+    async def test_session_configured_with_retry(self):
+        """Test that client pool is configured with httpx AsyncClient."""
         client = OutlineClient()
 
-        # Verify session has adapters mounted
-        assert "http://" in client.session.adapters
-        assert "https://" in client.session.adapters
+        # Verify client pool is an httpx.AsyncClient
+        assert isinstance(client._client_pool, httpx.AsyncClient)
 
-        # Verify adapter has retry configuration
-        adapter = client.session.adapters["https://"]
-        assert isinstance(adapter, HTTPAdapter)
-        assert adapter.max_retries.total == 3
-        assert 429 in adapter.max_retries.status_forcelist
+        # Verify transport exists
+        transport = client._client_pool._transport
+        assert transport is not None

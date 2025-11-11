@@ -55,7 +55,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def create_collection(
+    async def create_collection(
         name: str, description: str = "", color: Optional[str] = None
     ) -> str:
         """
@@ -77,8 +77,8 @@ def register_tools(mcp) -> None:
                 Result message with the new collection ID
         """
         try:
-            client = get_outline_client()
-            collection = client.create_collection(name, description, color)
+            client = await get_outline_client()
+            collection = await client.create_collection(name, description, color)
 
             if not collection:
                 return "Failed to create collection."
@@ -96,7 +96,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def update_collection(
+    async def update_collection(
         collection_id: str,
         name: Optional[str] = None,
         description: Optional[str] = None,
@@ -121,13 +121,13 @@ def register_tools(mcp) -> None:
             Result message confirming update
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             # Make sure at least one field is being updated
             if name is None and description is None and color is None:
                 return "Error: You must specify at least one field to update."
 
-            collection = client.update_collection(
+            collection = await client.update_collection(
                 collection_id, name, description, color
             )
 
@@ -143,7 +143,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def delete_collection(collection_id: str) -> str:
+    async def delete_collection(collection_id: str) -> str:
         """
         Permanently removes a collection and all its documents.
 
@@ -163,8 +163,8 @@ def register_tools(mcp) -> None:
             Result message confirming deletion
         """
         try:
-            client = get_outline_client()
-            success = client.delete_collection(collection_id)
+            client = await get_outline_client()
+            success = await client.delete_collection(collection_id)
 
             if success:
                 return "Collection and all its documents deleted successfully."
@@ -176,7 +176,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def export_collection(
+    async def export_collection(
         collection_id: str, format: str = "outline-markdown"
     ) -> str:
         """
@@ -204,8 +204,8 @@ def register_tools(mcp) -> None:
             Information about the export operation and how to access the file
         """
         try:
-            client = get_outline_client()
-            file_operation = client.export_collection(collection_id, format)
+            client = await get_outline_client()
+            file_operation = await client.export_collection(collection_id, format)
 
             if not file_operation:
                 return "Failed to start export operation."
@@ -217,7 +217,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def export_all_collections(format: str = "outline-markdown") -> str:
+    async def export_all_collections(format: str = "outline-markdown") -> str:
         """
         Exports the entire workspace content to a downloadable file.
 
@@ -242,8 +242,8 @@ def register_tools(mcp) -> None:
             Information about the export operation and how to access the file
         """
         try:
-            client = get_outline_client()
-            file_operation = client.export_all_collections(format)
+            client = await get_outline_client()
+            file_operation = await client.export_all_collections(format)
 
             if not file_operation:
                 return "Failed to start export operation."
