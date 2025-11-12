@@ -165,7 +165,10 @@ class TestDocumentSearchTools:
         """Test search_documents tool success case."""
         # Set up mock client
         mock_client = AsyncMock()
-        mock_client.search_documents.return_value = SAMPLE_SEARCH_RESULTS
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 25, "offset": 0},
+        }
         mock_get_client.return_value = mock_client
 
         # Call the tool
@@ -175,7 +178,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
-            "test query", None
+            "test query", None, 25, 0
         )
 
         # Verify result contains expected information
@@ -190,7 +193,10 @@ class TestDocumentSearchTools:
         """Test search_documents tool with collection filter."""
         # Set up mock client
         mock_client = AsyncMock()
-        mock_client.search_documents.return_value = SAMPLE_SEARCH_RESULTS
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 25, "offset": 0},
+        }
         mock_get_client.return_value = mock_client
 
         # Call the tool
@@ -200,7 +206,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
-            "test query", "coll1"
+            "test query", "coll1", 25, 0
         )
 
     @pytest.mark.asyncio
@@ -278,9 +284,10 @@ class TestDocumentSearchTools:
     ):
         """Test get_document_id_from_title tool with exact match."""
         # Search results with exact title match
-        exact_match_results = [
-            {"document": {"id": "doc1", "title": "Exact Match"}}
-        ]
+        exact_match_results = {
+            "data": [{"document": {"id": "doc1", "title": "Exact Match"}}],
+            "pagination": {"limit": 25, "offset": 0},
+        }
 
         # Set up mock client
         mock_client = AsyncMock()
@@ -309,7 +316,10 @@ class TestDocumentSearchTools:
         """Test get_document_id_from_title tool with best match (non-exact)."""
         # Set up mock client
         mock_client = AsyncMock()
-        mock_client.search_documents.return_value = SAMPLE_SEARCH_RESULTS
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 25, "offset": 0},
+        }
         mock_get_client.return_value = mock_client
 
         # Call the tool with title that doesn't exactly match
@@ -329,7 +339,10 @@ class TestDocumentSearchTools:
         """Test get_document_id_from_title tool with no results."""
         # Set up mock client
         mock_client = AsyncMock()
-        mock_client.search_documents.return_value = []
+        mock_client.search_documents.return_value = {
+            "data": [],
+            "pagination": {"limit": 25, "offset": 0},
+        }
         mock_get_client.return_value = mock_client
 
         # Call the tool
@@ -340,3 +353,111 @@ class TestDocumentSearchTools:
         # Verify result contains expected information
         assert "No documents found" in result
         assert "Nonexistent" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_with_pagination_params(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test search_documents tool with custom pagination parameters."""
+        # Set up mock client
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 10, "offset": 20},
+        }
+        mock_get_client.return_value = mock_client
+
+        # Call the tool with custom pagination
+        result = await register_search_tools.tools["search_documents"](
+            "test query", None, 10, 20
+        )
+
+        # Verify client was called with pagination params
+        mock_client.search_documents.assert_called_once_with(
+            "test query", None, 10, 20
+        )
+
+        # Verify pagination info in output
+        assert "Showing results 21-22" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_full_page_shows_more_available(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test that full page of results shows 'more available' hint."""
+        # Create a full page of results (limit == result count)
+        full_page_results = [
+            {
+                "document": {"id": f"doc{i}", "title": f"Document {i}"},
+                "context": f"Context {i}",
+            }
+            for i in range(1, 26)  # 25 results
+        ]
+
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": full_page_results,
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        # Call the tool
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
+
+        # Verify it suggests more results may be available
+        assert "More results may be available" in result
+        assert "offset=25" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_partial_page_no_hint(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test that partial page doesn't show 'more available' hint."""
+        # Only 2 results when limit is 25
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,  # Only 2 results
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        # Call the tool
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
+
+        # Verify it doesn't suggest more results
+        assert "More results may be available" not in result
+
+
+class TestDocumentSearchPaginationFormatters:
+    """Tests for pagination in search result formatters."""
+
+    def test_format_search_results_with_pagination(self):
+        """Test formatting search results with pagination metadata."""
+        pagination = {"limit": 25, "offset": 0}
+        result = _format_search_results(SAMPLE_SEARCH_RESULTS, pagination)
+
+        assert "Showing results 1-2" in result
+        assert "# Search Results" in result
+
+    def test_format_search_results_with_offset_pagination(self):
+        """Test formatting search results with non-zero offset."""
+        pagination = {"limit": 10, "offset": 20}
+        result = _format_search_results(SAMPLE_SEARCH_RESULTS, pagination)
+
+        assert "Showing results 21-22" in result
+
+    def test_format_search_results_no_pagination(self):
+        """Test formatting search results without pagination metadata."""
+        result = _format_search_results(SAMPLE_SEARCH_RESULTS, None)
+
+        # Should not show pagination info
+        assert "Showing results" not in result
+        # But should still show results
+        assert "Test Document 1" in result

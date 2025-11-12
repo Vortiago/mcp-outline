@@ -216,25 +216,34 @@ class OutlineClient:
         return response.get("data", {})
 
     async def search_documents(
-        self, query: str, collection_id: Optional[str] = None, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+        self,
+        query: str,
+        collection_id: Optional[str] = None,
+        limit: int = 25,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
         """
         Search for documents using keywords.
 
         Args:
             query: Search terms
             collection_id: Optional collection to search within
-            limit: Maximum number of results to return
+            limit: Maximum number of results to return (default: 25)
+            offset: Number of results to skip for pagination (default: 0)
 
         Returns:
-            List of matching documents with context
+            Dict containing 'data' (list of results) and 'pagination' metadata
         """
-        data: Dict[str, Any] = {"query": query, "limit": limit}
+        data: Dict[str, Any] = {
+            "query": query,
+            "limit": limit,
+            "offset": offset,
+        }
         if collection_id:
             data["collectionId"] = collection_id
 
         response = await self.post("documents.search", data)
-        return response.get("data", [])
+        return response
 
     async def list_collections(self, limit: int = 20) -> List[Dict[str, Any]]:
         """
