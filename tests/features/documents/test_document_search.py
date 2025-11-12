@@ -461,3 +461,261 @@ class TestDocumentSearchPaginationFormatters:
         assert "Showing results" not in result
         # But should still show results
         assert "Test Document 1" in result
+
+
+class TestDocumentSearchEdgeCases:
+    """Tests for edge cases and error handling in search functionality."""
+
+    def test_format_search_results_with_empty_pagination_dict(self):
+        """Test formatter handles empty pagination dict gracefully."""
+        # Empty pagination dict (no limit or offset keys)
+        # Empty dict is falsy in Python, so treated like None
+        pagination = {}
+        result = _format_search_results(SAMPLE_SEARCH_RESULTS, pagination)
+
+        # Empty dict should be treated like None (no pagination info shown)
+        assert "Showing results" not in result
+        # But should still show results
+        assert "Test Document 1" in result
+
+    def test_format_search_results_with_partial_pagination_keys(self):
+        """Test formatter handles missing pagination keys."""
+        # Only limit, no offset
+        pagination = {"limit": 10}
+        result = _format_search_results(SAMPLE_SEARCH_RESULTS, pagination)
+
+        # Should use default offset=0
+        assert "Showing results 1-2" in result
+
+        # Only offset, no limit
+        pagination = {"offset": 20}
+        result = _format_search_results(SAMPLE_SEARCH_RESULTS, pagination)
+
+        # Should use default limit=25
+        assert "Showing results 21-22" in result
+
+    def test_format_search_results_empty_results_with_pagination(self):
+        """Test formatter handles empty results with pagination metadata."""
+        pagination = {"limit": 25, "offset": 100}
+        result = _format_search_results([], pagination)
+
+        # Should show "no results" message, not crash
+        assert "No documents found" in result
+        # Should not show pagination info for empty results
+        assert "Showing results" not in result
+
+    def test_format_search_results_single_result_with_pagination(self):
+        """Test formatter handles single result correctly."""
+        single_result = [
+            {
+                "document": {"id": "doc1", "title": "Single Document"},
+                "context": "Only one result",
+            }
+        ]
+        pagination = {"limit": 25, "offset": 0}
+        result = _format_search_results(single_result, pagination)
+
+        # Should show range 1-1
+        assert "Showing results 1-1" in result
+        assert "Single Document" in result
+        # Should not suggest more results (1 != 25)
+        assert "More results may be available" not in result
+
+    def test_format_search_results_with_zero_ranking(self):
+        """Test formatter handles zero relevance ranking."""
+        results_with_zero_ranking = [
+            {
+                "document": {"id": "doc1", "title": "Zero Rank Doc"},
+                "ranking": 0.0,
+                "context": "Zero relevance",
+            }
+        ]
+        result = _format_search_results(results_with_zero_ranking)
+
+        # Should format 0.0 correctly
+        assert "Relevance: 0.00" in result
+        assert "Zero Rank Doc" in result
+
+    def test_format_search_results_with_negative_ranking(self):
+        """Test formatter handles negative relevance ranking."""
+        results_with_negative_ranking = [
+            {
+                "document": {"id": "doc1", "title": "Negative Rank Doc"},
+                "ranking": -1.5,
+                "context": "Negative relevance",
+            }
+        ]
+        result = _format_search_results(results_with_negative_ranking)
+
+        # Should format negative value correctly
+        assert "Relevance: -1.50" in result
+        assert "Negative Rank Doc" in result
+
+    def test_format_search_results_with_high_precision_ranking(self):
+        """Test formatter rounds ranking to 2 decimal places."""
+        results_with_precise_ranking = [
+            {
+                "document": {"id": "doc1", "title": "Precise Rank Doc"},
+                "ranking": 1.23456789,
+                "context": "High precision",
+            }
+        ]
+        result = _format_search_results(results_with_precise_ranking)
+
+        # Should round to 2 decimals
+        assert "Relevance: 1.23" in result
+        assert "1.23456789" not in result
+
+    def test_format_search_results_missing_document_fields(self):
+        """Test formatter handles missing document fields gracefully."""
+        results_with_missing_fields = [
+            {
+                "document": {},  # Empty document
+                "context": "Some context",
+            }
+        ]
+        result = _format_search_results(results_with_missing_fields)
+
+        # Should use default values
+        assert "Untitled" in result
+        assert "Some context" in result
+
+    def test_format_search_results_missing_context_and_ranking(self):
+        """Test formatter handles missing optional fields."""
+        results_without_optional_fields = [
+            {"document": {"id": "doc1", "title": "Basic Doc"}}
+            # No context or ranking
+        ]
+        result = _format_search_results(results_without_optional_fields)
+
+        # Should still display document
+        assert "Basic Doc" in result
+        assert "doc1" in result
+        # Should not have Relevance or Context lines
+        assert "Relevance:" not in result
+        assert "Context:" not in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_missing_pagination_in_response(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test tool handles API response without pagination key."""
+        # API returns data but no pagination key
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS
+            # No "pagination" key
+        }
+        mock_get_client.return_value = mock_client
+
+        # Should not crash
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
+
+        # Should still show results
+        assert "Test Document 1" in result
+        # Should not show pagination info (since pagination key is missing)
+        assert "Showing results" not in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_empty_response_data(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test tool handles empty data array in response."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": [],
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
+
+        # Should show no results message
+        assert "No documents found" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_malformed_response(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test tool handles completely malformed API response."""
+        mock_client = AsyncMock()
+        # Response missing "data" key entirely
+        mock_client.search_documents.return_value = {}
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
+
+        # Should handle gracefully with empty results
+        assert "No documents found" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_with_very_high_offset(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test tool handles offset beyond available results."""
+        # High offset but no results (offset past end of data)
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": [],
+            "pagination": {"limit": 25, "offset": 1000},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["search_documents"](
+            "test query", None, 25, 1000
+        )
+
+        # Should handle gracefully
+        assert "No documents found" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_document_id_from_title_malformed_response(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_document_id_from_title handles malformed response."""
+        mock_client = AsyncMock()
+        # Response missing "data" key
+        mock_client.search_documents.return_value = {}
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Some Title")
+
+        # Should handle gracefully
+        assert "No documents found" in result
+        assert "Some Title" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_document_id_from_title_missing_document_fields(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_document_id_from_title handles missing document fields."""
+        mock_client = AsyncMock()
+        # Result with empty document object
+        mock_client.search_documents.return_value = {
+            "data": [{"document": {}}],  # Empty document, no id or title
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Some Title")
+
+        # Should handle gracefully with defaults
+        assert "Best match" in result
+        assert "unknown" in result  # Default id
+        assert "Untitled" in result  # Default title

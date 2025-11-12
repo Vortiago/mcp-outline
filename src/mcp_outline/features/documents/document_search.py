@@ -45,11 +45,12 @@ def _format_search_results(
         title = document.get("title", "Untitled")
         doc_id = document.get("id", "")
         context = result.get("context", "")
-        ranking = result.get("ranking", "")
 
         output += f"## {i}. {title}\n"
         output += f"ID: {doc_id}\n"
-        if ranking:
+        # Show ranking if present (including 0.0)
+        if "ranking" in result:
+            ranking = result["ranking"]
             output += f"Relevance: {ranking:.2f}\n"
         if context:
             output += f"Context: {context}\n"
