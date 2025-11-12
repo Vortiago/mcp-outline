@@ -437,6 +437,26 @@ Improve Docker infrastructure and automated builds:
   - **Priority**: MEDIUM - Verify client support first
   - **Next Steps**: Test elicitation support in target clients before implementing
   - **Security**: Never request PII, credentials, or secrets (MCP spec requirement)
+  - **Implementation Strategy**: Use try/except with graceful fallback; check `ctx.session.client_params.capabilities` if needed
+
+  **Tools to Enhance with Elicitation** (Priority Order):
+
+  **High Priority - Destructive Operation Confirmations:**
+  - [ ] `delete_document` (when `permanent=True`) - Elicit boolean confirmation: "⚠️ Permanently delete '{title}'? This cannot be undone."
+  - [ ] `delete_collection` - Elicit boolean confirmation: "⚠️ Delete collection '{name}' and ALL its documents? This cannot be undone."
+  - [ ] `batch_delete_documents` (when `permanent=True`) - Elicit boolean confirmation with preview: "⚠️ Permanently delete {count} documents? This cannot be undone."
+
+  **Medium Priority - Ambiguity Resolution:**
+  - [ ] `get_document_id_from_title` - When multiple exact matches, elicit selection from list of matching documents
+  - [ ] `move_document` - If collection_id not provided, elicit target collection selection from list
+  - [ ] `batch_move_documents` - Elicit confirmation with preview: "Move {count} documents to collection '{target}'?"
+
+  **Lower Priority - Progressive Input & Validation:**
+  - [ ] `create_collection` - Optional wizard mode: elicit name → description → color step-by-step
+  - [ ] `export_collection` - If format not provided, elicit format selection (outline-markdown, json, html)
+  - [ ] `export_all_collections` - Elicit confirmation: "Export entire workspace ({count} collections)? This may take time."
+  - [ ] `archive_document` - Elicit confirmation for important/recently-edited documents
+  - [ ] `update_document` - If major changes detected, elicit confirmation to prevent accidental overwrites
 
 - [ ] **MCP Context Features**:
   - Research additional FastMCP context capabilities
