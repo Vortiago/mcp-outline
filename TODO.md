@@ -37,21 +37,6 @@ Implement resource handlers to expose Outline data via MCP URIs:
 
 ---
 
-
-### 1.3 Add MCP Sampling Support
-**Status**: ❌ REJECTED - Not appropriate for this server
-
-**Rationale**:
-- `ctx.sample()` is useful for pre-filtering large datasets before returning to calling LLM
-- However, Outline's result sets are manageable sizes
-- The calling LLM already handles content enhancement, summarization, categorization
-- Would add unnecessary complexity, latency, and circular LLM invocation patterns
-- No clear workflow benefit for document management operations
-
-**Note**: If future use cases emerge requiring intelligent pre-filtering of large result sets, reconsider in Phase 5+
-
----
-
 ## Phase 2: Transport & Performance Upgrades
 
 ### 2.1 Streamable HTTP Transport (2025-03-26 Spec)
@@ -79,33 +64,6 @@ Update to the new Streamable HTTP transport specification:
 
 ---
 
-### 2.2 Async HTTP Client Migration
-**Complexity**: Moderate
-**Status**: Not Started
-
-Replace synchronous `requests` library with async HTTP client:
-
-- [ ] Choose async HTTP library: `httpx` (recommended) or `aiohttp`
-- [ ] Update requirements in pyproject.toml
-- [ ] Refactor OutlineClient to use async methods:
-  - [ ] Convert all HTTP methods to async (get, post, delete, etc.)
-  - [ ] Add async context manager support (`async with OutlineClient()`)
-  - [ ] Implement connection pooling
-  - [ ] Add configurable timeout settings
-- [ ] Update all tool functions to await OutlineClient calls
-- [ ] Add connection lifecycle management
-- [ ] Configure connection pool size and limits
-- [ ] Update all tests to use async patterns
-- [ ] Run performance benchmarks (async vs sync)
-- [ ] Update README with async usage examples
-
-**Benefits**:
-- True async operations (non-blocking)
-- Better performance under load
-- Connection pooling for efficiency
-- Scalable for multiple concurrent requests
-
-
 ## Phase 3: API Coverage Expansion
 
 ### 3.1 Document Features
@@ -132,71 +90,10 @@ Replace synchronous `requests` library with async HTTP client:
   - [ ] Add tests
   - ❌ Do NOT implement `restore_document_revision` - too risky for automation
 
-**Rejected (see analysis):**
-- ❌ **Favorites/Stars** - Personal metadata, not content operations
-- ❌ **File Attachments** - Complex binary handling, unclear workflow benefit
-
 **Benefits**:
 - Core workflow automation (templates)
 - Proper handling of large result sets (pagination)
 - Focus on content operations, not UI feature parity
-
----
-
-### 3.2 Collaboration Features
-**Status**: Not Started
-
-**Low Priority (Phase 4/5):**
-- [ ] **Activity Context** (read-only, if clear workflow emerges):
-  - [ ] Add tool: `get_document_editors` - Recent editors for ownership context
-  - [ ] Add OutlineClient method
-  - [ ] Add tests
-
-**Rejected (see analysis):**
-- ❌ **Sharing & Permissions** - Security-sensitive, user should control manually
-- ❌ **User Mentions** - Already supported in comment text with @username syntax
-- ❌ **Subscriptions** - Personal notification preferences, not content operations
-- ❌ **Activity Tracking** (viewers/logs) - Information overload, privacy concerns
-
-**Benefits**:
-- Minimal ownership context if needed
-- Avoids security-sensitive operations
-- Keeps MCP server focused on content automation
-
----
-
-### 3.3 Batch Operations
-**Complexity**: Moderate
-**Status**: ✅ Completed
-
-Implement batch operations for efficiency:
-
-- [x] Create `features/documents/batch_operations.py` module
-- [x] Add tool: **`batch_create_documents`**
-  - Takes: List of document specifications
-  - Returns: List of created document IDs
-  - Handles partial failures gracefully
-- [x] Add tool: **`batch_move_documents`**
-  - Takes: List of document IDs, target collection ID
-  - Returns: Success/failure status for each
-- [x] Add tool: **`batch_archive_documents`**
-  - Takes: List of document IDs
-  - Returns: Archive status for each
-- [x] Add tool: **`batch_update_documents`**
-  - Takes: List of document IDs with updates
-  - Returns: Update status for each
-- [x] Add tool: **`batch_delete_documents`**
-  - Takes: List of document IDs, permanent flag
-  - Returns: Deletion status for each
-- [x] Implement rate limit awareness (leverages existing OutlineClient)
-- [x] Add comprehensive tests with partial failure scenarios
-- [x] Document batch operation limits and best practices (in tool docstrings)
-
-**Benefits**:
-- Efficient bulk operations
-- Reduced API calls
-- Better rate limit management
-- Time savings for large-scale operations
 
 ---
 
@@ -325,13 +222,6 @@ Expand test coverage and quality:
 
 Improve Docker infrastructure and automated builds:
 
-- [x] **Local Development Environment** ✓ COMPLETED
-  - [x] Update docker-compose.yml with self-hosted Outline
-  - [x] Add Dex OIDC authentication provider
-  - [x] Add configuration examples (config/outline.env.example)
-  - [x] Update README with local setup instructions
-  - [x] Enable local testing without paid Outline account
-
 - [ ] **Multi-Architecture Docker Builds**
   - [ ] Add GitHub Actions workflow for automated builds
   - [ ] Support AMD64 and ARM64 architectures
@@ -385,22 +275,6 @@ Improve Docker infrastructure and automated builds:
   - **Next Steps**: Verify FastMCP version, create output models, refactor formatters to return dicts
   - **Example**: `async def search_documents() -> list[SearchResult]:` instead of `-> str`
 
-- [ ] **Structured Input Requests / Elicitation** (June 2025 MCP spec):
-  - **Status**: ⚠️ Very limited use cases - Most proposals rejected
-  - **API**: FastMCP v2.10.0+ `ctx.elicit()` method
-  - **Client Support**: ✅ VS Code Insiders, MCP C# SDK | ❌ LangChain | ⚠️ Claude Desktop/Code
-
-  **Appropriate Use Cases Only (Phase 4/5 - Low Priority):**
-  - [ ] `get_document_id_from_title` - When >10 exact matches, elicit user selection (rare edge case)
-  - [ ] `search_documents` - When results highly ambiguous and context insufficient (rare edge case)
-
-  **Rejected Approaches:**
-  - ❌ Security confirmations (delete/archive) - Use API key permissions & client-side controls
-  - ❌ Preview confirmations (batch operations) - Breaks automation workflow
-  - ❌ Wizards (create_collection, export) - Wrong pattern for MCP servers
-  - ❌ Subjective confirmations (important docs, major changes) - LLM decides from context
-  - ❌ Missing parameter elicitation (collection selection) - Return structured data, let LLM choose
-
 - [ ] **MCP Context Features**:
   - Research additional FastMCP context capabilities
   - Explore server-to-client requests
@@ -414,12 +288,6 @@ Improve Docker infrastructure and automated builds:
 
 ---
 
-## Completed Items
-
-None yet - this is a fresh roadmap!
-
----
-
 ## Notes
 
 ### Prioritization Criteria
@@ -429,16 +297,3 @@ Items are prioritized based on:
 2. **Complexity**: How difficult is implementation?
 3. **Dependencies**: What must be done first?
 4. **MCP Compliance**: Does this use core MCP features?
-
-### Success Metrics
-
-- All core MCP features (Resources, Prompts, Sampling) implemented
-- Transport upgraded to Streamable HTTP
-- Documentation site live
-- Test coverage > 95%
-- Performance benchmarks established
-- Community adoption and feedback
-
----
-
-Last Updated: 2025-11-06
