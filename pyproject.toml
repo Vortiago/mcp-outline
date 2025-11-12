@@ -56,6 +56,11 @@ extend-exclude = ["docs"]
 select = ["E", "F", "I"]
 
 [tool.setuptools_scm]
+# Use tags for versioning (requires annotated or lightweight tags)
+# Version format: vX.Y.Z or X.Y.Z
+# For dev versions: X.Y.Z.devN+gHASH
+fallback_version = "0.0.0"
+local_scheme = "no-local-version"  # Clean versions for PyPI
 
 [tool.pyright]
 exclude = [
