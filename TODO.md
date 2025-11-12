@@ -39,40 +39,16 @@ Implement resource handlers to expose Outline data via MCP URIs:
 
 
 ### 1.3 Add MCP Sampling Support
-**Complexity**: Complex
-**Status**: Not Started
+**Status**: ❌ REJECTED - Not appropriate for this server
 
-Implement LLM sampling via `ctx.sample()` for AI-powered enhancements:
+**Rationale**:
+- `ctx.sample()` is useful for pre-filtering large datasets before returning to calling LLM
+- However, Outline's result sets are manageable sizes
+- The calling LLM already handles content enhancement, summarization, categorization
+- Would add unnecessary complexity, latency, and circular LLM invocation patterns
+- No clear workflow benefit for document management operations
 
-- [ ] Update FastMCP to ensure sampling support is available
-- [ ] Create `ai_enhancements/` module for AI-powered tools
-- [ ] Add tool: **`suggest_document_title`**
-  - Takes: document_content (string), context (optional string)
-  - Uses: ctx.sample() to generate 3-5 title suggestions
-  - Returns: List of suggested titles with rationale
-- [ ] Add tool: **`enhance_document_content`**
-  - Takes: document_id (string), enhancement_type (enum: clarity|grammar|structure|all)
-  - Uses: ctx.sample() to suggest improvements
-  - Returns: Detailed suggestions with examples
-- [ ] Add tool: **`auto_categorize_document`**
-  - Takes: document_id (string)
-  - Uses: ctx.sample() to analyze content and suggest collections/tags
-  - Returns: Recommended collection and reasoning
-- [ ] Add tool: **`generate_document_summary`**
-  - Takes: document_id (string), length (enum: short|medium|long)
-  - Uses: ctx.sample() to create summary
-  - Returns: Formatted summary
-- [ ] Add tool: **`suggest_related_documents`**
-  - Takes: document_id (string), limit (optional int)
-  - Uses: ctx.sample() to analyze and find semantically related docs
-  - Returns: List of related documents with relevance scores
-- [ ] Add comprehensive tests (mock ctx.sample())
-- [ ] Update README with sampling examples
-
-**Benefits**:
-- AI-powered content enhancement
-- Intelligent document organization
-- Automated summarization and categorization
+**Note**: If future use cases emerge requiring intelligent pre-filtering of large result sets, reconsider in Phase 5+
 
 ---
 
@@ -134,7 +110,6 @@ Replace synchronous `requests` library with async HTTP client:
 
 ### 3.1 Document Features
 **Status**: Not Started
-**Note**: See PHASE3_ANALYSIS.md for design rationale
 
 **High Priority:**
 - [ ] **Templates**:
@@ -170,7 +145,6 @@ Replace synchronous `requests` library with async HTTP client:
 
 ### 3.2 Collaboration Features
 **Status**: Not Started
-**Note**: See PHASE3_ANALYSIS.md for design rationale
 
 **Low Priority (Phase 4/5):**
 - [ ] **Activity Context** (read-only, if clear workflow emerges):
@@ -378,16 +352,22 @@ Improve Docker infrastructure and automated builds:
 
 ## Phase 5: Advanced Features (Future)
 
-### 5.2 Advanced Search
-**Complexity**: Moderate
+### 5.2 Enhanced Search Parameters
+**Complexity**: Low-Moderate
 **Status**: Not Started
 
-- [ ] Add date range filters to search
-- [ ] Add author filtering
-- [ ] Add tag filtering
-- [ ] Add content type filtering
-- [ ] Implement faceted search results
-- [ ] Add search result ranking options
+**Note**: These are just parameter additions to existing `search_documents` tool, not a separate phase
+
+- [ ] Add optional parameters to `search_documents` tool:
+  - [ ] `date_from`, `date_to` - Date range filtering
+  - [ ] `author` - Filter by document author
+  - [ ] `tags` - Filter by tags
+  - [ ] `sort_by` - Ranking options (relevance, date, title)
+- [ ] Update OutlineClient.search_documents() to pass filters to API
+- [ ] Update formatter to show applied filters
+- [ ] Add tests for filtered searches
+
+**Do NOT implement**: Separate tools for each filter type - just enhance existing tool
 
 ---
 
@@ -406,25 +386,20 @@ Improve Docker infrastructure and automated builds:
   - **Example**: `async def search_documents() -> list[SearchResult]:` instead of `-> str`
 
 - [ ] **Structured Input Requests / Elicitation** (June 2025 MCP spec):
-  - **Status**: ⚠️ Researched - Client compatibility required
+  - **Status**: ⚠️ Very limited use cases - Most proposals rejected
   - **API**: FastMCP v2.10.0+ `ctx.elicit()` method
-  - **What**: Runtime structured user input (human-in-the-loop)
-  - **Client Support**: ✅ VS Code Insiders, MCP C# SDK | ❌ LangChain | ⚠️ Claude Desktop/Code (unknown)
-  - **Implementation**: Use try/except with graceful fallback; check `ctx.session.client_params.capabilities`
-  - **Security**: Never request PII, credentials, or secrets
+  - **Client Support**: ✅ VS Code Insiders, MCP C# SDK | ❌ LangChain | ⚠️ Claude Desktop/Code
 
-  **Tools to Enhance:**
-  - [ ] `delete_document` (permanent=True) - Boolean confirm
-  - [ ] `delete_collection` - Boolean confirm
-  - [ ] `batch_delete_documents` (permanent=True) - Boolean confirm
-  - [ ] `get_document_id_from_title` - Multi-match selection
-  - [ ] `move_document` - Collection selection if missing
-  - [ ] `batch_move_documents` - Preview confirm
-  - [ ] `create_collection` - Optional step-by-step wizard
-  - [ ] `export_collection` - Format selection if missing
-  - [ ] `export_all_collections` - Workspace export confirm
-  - [ ] `archive_document` - Confirm for important docs
-  - [ ] `update_document` - Confirm major changes
+  **Appropriate Use Cases Only (Phase 4/5 - Low Priority):**
+  - [ ] `get_document_id_from_title` - When >10 exact matches, elicit user selection (rare edge case)
+  - [ ] `search_documents` - When results highly ambiguous and context insufficient (rare edge case)
+
+  **Rejected Approaches:**
+  - ❌ Security confirmations (delete/archive) - Use API key permissions & client-side controls
+  - ❌ Preview confirmations (batch operations) - Breaks automation workflow
+  - ❌ Wizards (create_collection, export) - Wrong pattern for MCP servers
+  - ❌ Subjective confirmations (important docs, major changes) - LLM decides from context
+  - ❌ Missing parameter elicitation (collection selection) - Return structured data, let LLM choose
 
 - [ ] **MCP Context Features**:
   - Research additional FastMCP context capabilities
