@@ -32,7 +32,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def read_document(document_id: str) -> str:
+    async def read_document(document_id: str) -> str:
         """
         Retrieves and displays the full content of a document.
 
@@ -49,8 +49,8 @@ def register_tools(mcp) -> None:
             Formatted string containing the document title and content
         """
         try:
-            client = get_outline_client()
-            document = client.get_document(document_id)
+            client = await get_outline_client()
+            document = await client.get_document(document_id)
             return _format_document_content(document)
         except OutlineClientError as e:
             return f"Error reading document: {str(e)}"
@@ -58,7 +58,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def export_document(document_id: str) -> str:
+    async def export_document(document_id: str) -> str:
         """
         Exports a document as plain markdown text.
 
@@ -75,8 +75,10 @@ def register_tools(mcp) -> None:
             Document content in markdown format without additional formatting
         """
         try:
-            client = get_outline_client()
-            response = client.post("documents.export", {"id": document_id})
+            client = await get_outline_client()
+            response = await client.post(
+                "documents.export", {"id": document_id}
+            )
             return response.get("data", "No content available")
         except OutlineClientError as e:
             return f"Error exporting document: {str(e)}"

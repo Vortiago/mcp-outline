@@ -52,7 +52,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def ask_ai_about_documents(
+    async def ask_ai_about_documents(
         question: str,
         collection_id: Optional[str] = None,
         document_id: Optional[str] = None,
@@ -76,8 +76,8 @@ def register_tools(mcp) -> None:
             AI-generated answer based on document content with sources
         """
         try:
-            client = get_outline_client()
-            response = client.answer_question(
+            client = await get_outline_client()
+            response = await client.answer_question(
                 question, collection_id, document_id
             )
             return _format_ai_answer(response)

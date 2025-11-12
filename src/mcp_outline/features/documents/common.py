@@ -15,9 +15,9 @@ class OutlineClientError(Exception):
     pass
 
 
-def get_outline_client() -> OutlineClient:
+async def get_outline_client() -> OutlineClient:
     """
-    Get the document outline client.
+    Get the document outline client (async).
 
     Returns:
         OutlineClient instance
@@ -34,7 +34,7 @@ def get_outline_client() -> OutlineClient:
         client = OutlineClient(api_key=api_key, api_url=api_url)
 
         # Test the connection by attempting to get auth info
-        _ = client.auth_info()
+        _ = await client.auth_info()
 
         return client
     except OutlineError as e:

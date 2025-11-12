@@ -21,7 +21,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def move_document(
+    async def move_document(
         document_id: str,
         collection_id: Optional[str] = None,
         parent_document_id: Optional[str] = None,
@@ -49,7 +49,7 @@ def register_tools(mcp) -> None:
             Result message confirming the move operation
         """
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             # Require at least one destination parameter
             if collection_id is None and parent_document_id is None:
@@ -66,7 +66,7 @@ def register_tools(mcp) -> None:
             if parent_document_id:
                 data["parentDocumentId"] = parent_document_id
 
-            response = client.post("documents.move", data)
+            response = await client.post("documents.move", data)
 
             # Check for successful response
             if response.get("data"):

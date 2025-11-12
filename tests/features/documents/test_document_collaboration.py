@@ -2,7 +2,7 @@
 Tests for document collaboration tools.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -132,22 +132,23 @@ class TestDocumentCollaborationFormatters:
 class TestDocumentCollaborationTools:
     """Tests for document collaboration tools."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_list_document_comments_success(
+    async def test_list_document_comments_success(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test list_document_comments tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": SAMPLE_COMMENTS}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["list_document_comments"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "list_document_comments"
+        ]("doc123")
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -165,40 +166,44 @@ class TestDocumentCollaborationTools:
         assert "Comment by Test User" in result
         assert "This is a test comment" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_list_document_comments_empty(
+    async def test_list_document_comments_empty(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test list_document_comments tool with no comments."""
         # Set up mock client with empty response
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": []}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["list_document_comments"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "list_document_comments"
+        ]("doc123")
 
         # Verify result contains expected message
         assert "No comments found" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_get_comment_success(
+    async def test_get_comment_success(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test get_comment tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": SAMPLE_COMMENTS[0]}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["get_comment"]("comment1")
+        result = await register_collaboration_tools.tools["get_comment"](
+            "comment1"
+        )
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -210,42 +215,44 @@ class TestDocumentCollaborationTools:
         assert "This is a test comment" in result
         assert "2023-01-01" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_get_comment_not_found(
+    async def test_get_comment_not_found(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test get_comment tool with comment not found."""
         # Set up mock client with empty response
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": {}}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["get_comment"](
+        result = await register_collaboration_tools.tools["get_comment"](
             "comment999"
         )
 
         # Verify result contains expected message
         assert "Comment not found" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_get_document_backlinks_success(
+    async def test_get_document_backlinks_success(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test get_document_backlinks tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": SAMPLE_BACKLINK_DOCUMENTS}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["get_document_backlinks"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "get_document_backlinks"
+        ]("doc123")
 
         # Verify client was called correctly
         mock_client.post.assert_called_once_with(
@@ -259,42 +266,44 @@ class TestDocumentCollaborationTools:
         assert "Referencing Document 2" in result
         assert "doc2" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_get_document_backlinks_none(
+    async def test_get_document_backlinks_none(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test get_document_backlinks tool with no backlinks."""
         # Set up mock client with empty response
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": []}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["get_document_backlinks"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "get_document_backlinks"
+        ]("doc123")
 
         # Verify result contains expected message
         assert "No documents link to this document" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_collaboration.get_outline_client"
     )
-    def test_get_document_backlinks_client_error(
+    async def test_get_document_backlinks_client_error(
         self, mock_get_client, register_collaboration_tools
     ):
         """Test get_document_backlinks tool with client error."""
         # Set up mock client to raise an error
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_collaboration_tools.tools["get_document_backlinks"](
-            "doc123"
-        )
+        result = await register_collaboration_tools.tools[
+            "get_document_backlinks"
+        ]("doc123")
 
         # Verify error is handled and returned
         assert "Error retrieving backlinks" in result

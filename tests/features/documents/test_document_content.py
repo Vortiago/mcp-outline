@@ -2,7 +2,7 @@
 Tests for document content tools.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -71,20 +71,21 @@ def register_content_tools(mcp):
 class TestDocumentContentTools:
     """Tests for document content tools."""
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_create_document_success(
+    async def test_create_document_success(
         self, mock_get_client, register_content_tools
     ):
         """Test create_document tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_CREATE_DOCUMENT_RESPONSE
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["create_document"](
+        result = await register_content_tools.tools["create_document"](
             title="Test Document",
             collection_id="col123",
             text="This is a test document.",
@@ -106,20 +107,21 @@ class TestDocumentContentTools:
         assert "Test Document" in result
         assert "doc123" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_create_document_with_parent(
+    async def test_create_document_with_parent(
         self, mock_get_client, register_content_tools
     ):
         """Test create_document tool with parent document ID."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_CREATE_DOCUMENT_RESPONSE
         mock_get_client.return_value = mock_client
 
         # Call the tool with parent document ID
-        _ = register_content_tools.tools["create_document"](
+        _ = await register_content_tools.tools["create_document"](
             title="Test Document",
             collection_id="col123",
             text="This is a test document.",
@@ -134,40 +136,42 @@ class TestDocumentContentTools:
         assert "parentDocumentId" in call_args[1]
         assert call_args[1]["parentDocumentId"] == "parent123"
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_create_document_failure(
+    async def test_create_document_failure(
         self, mock_get_client, register_content_tools
     ):
         """Test create_document tool with empty response."""
         # Set up mock client with empty response
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": None}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["create_document"](
+        result = await register_content_tools.tools["create_document"](
             title="Test Document", collection_id="col123"
         )
 
         # Verify result contains error message
         assert "Failed to create document" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_create_document_client_error(
+    async def test_create_document_client_error(
         self, mock_get_client, register_content_tools
     ):
         """Test create_document tool with client error."""
         # Set up mock client to raise an error
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["create_document"](
+        result = await register_content_tools.tools["create_document"](
             title="Test Document", collection_id="col123"
         )
 
@@ -175,20 +179,21 @@ class TestDocumentContentTools:
         assert "Error creating document" in result
         assert "API error" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_update_document_success(
+    async def test_update_document_success(
         self, mock_get_client, register_content_tools
     ):
         """Test update_document tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["update_document"](
+        result = await register_content_tools.tools["update_document"](
             document_id="doc123",
             title="Updated Document",
             text="This document has been updated.",
@@ -209,20 +214,21 @@ class TestDocumentContentTools:
         assert "Document updated successfully" in result
         assert "Updated Document" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_update_document_append(
+    async def test_update_document_append(
         self, mock_get_client, register_content_tools
     ):
         """Test update_document tool with append flag."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
         mock_get_client.return_value = mock_client
 
         # Call the tool with append flag
-        _ = register_content_tools.tools["update_document"](
+        _ = await register_content_tools.tools["update_document"](
             document_id="doc123", text="Additional text.", append=True
         )
 
@@ -234,20 +240,21 @@ class TestDocumentContentTools:
         assert "append" in call_args[1]
         assert call_args[1]["append"] is True
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_add_comment_success(
+    async def test_add_comment_success(
         self, mock_get_client, register_content_tools
     ):
         """Test add_comment tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_COMMENT_RESPONSE
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["add_comment"](
+        result = await register_content_tools.tools["add_comment"](
             document_id="doc123", text="This is a comment"
         )
 
@@ -261,40 +268,42 @@ class TestDocumentContentTools:
         assert "Comment added successfully" in result
         assert "comment123" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_add_comment_failure(
+    async def test_add_comment_failure(
         self, mock_get_client, register_content_tools
     ):
         """Test add_comment tool with empty response."""
         # Set up mock client with empty response
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = {"data": None}
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["add_comment"](
+        result = await register_content_tools.tools["add_comment"](
             document_id="doc123", text="This is a comment"
         )
 
         # Verify result contains error message
         assert "Failed to create comment" in result
 
+    @pytest.mark.asyncio
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
-    def test_add_comment_client_error(
+    async def test_add_comment_client_error(
         self, mock_get_client, register_content_tools
     ):
         """Test add_comment tool with client error."""
         # Set up mock client to raise an error
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.post.side_effect = OutlineClientError("API error")
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_content_tools.tools["add_comment"](
+        result = await register_content_tools.tools["add_comment"](
             document_id="doc123", text="This is a comment"
         )
 

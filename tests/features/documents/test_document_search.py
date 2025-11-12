@@ -2,7 +2,7 @@
 Tests for document search tools.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -157,18 +157,21 @@ def register_search_tools(mcp):
 class TestDocumentSearchTools:
     """Tests for document search tools."""
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_search_documents_success(
+    async def test_search_documents_success(
         self, mock_get_client, register_search_tools
     ):
         """Test search_documents tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.search_documents.return_value = SAMPLE_SEARCH_RESULTS
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_search_tools.tools["search_documents"]("test query")
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
@@ -179,18 +182,19 @@ class TestDocumentSearchTools:
         assert "Test Document 1" in result
         assert "doc1" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_search_documents_with_collection(
+    async def test_search_documents_with_collection(
         self, mock_get_client, register_search_tools
     ):
         """Test search_documents tool with collection filter."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.search_documents.return_value = SAMPLE_SEARCH_RESULTS
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        _ = register_search_tools.tools["search_documents"](
+        _ = await register_search_tools.tools["search_documents"](
             "test query", "coll1"
         )
 
@@ -199,37 +203,41 @@ class TestDocumentSearchTools:
             "test query", "coll1"
         )
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_search_documents_client_error(
+    async def test_search_documents_client_error(
         self, mock_get_client, register_search_tools
     ):
         """Test search_documents tool with client error."""
         # Set up mock client to raise an error
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.search_documents.side_effect = OutlineClientError(
             "API error"
         )
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_search_tools.tools["search_documents"]("test query")
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
 
         # Verify error is handled and returned
         assert "Error searching documents" in result
         assert "API error" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_list_collections_success(
+    async def test_list_collections_success(
         self, mock_get_client, register_search_tools
     ):
         """Test list_collections tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.list_collections.return_value = SAMPLE_COLLECTIONS
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_search_tools.tools["list_collections"]()
+        result = await register_search_tools.tools["list_collections"]()
 
         # Verify client was called correctly
         mock_client.list_collections.assert_called_once()
@@ -238,20 +246,21 @@ class TestDocumentSearchTools:
         assert "Test Collection 1" in result
         assert "coll1" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_collection_structure_success(
+    async def test_get_collection_structure_success(
         self, mock_get_client, register_search_tools
     ):
         """Test get_collection_structure tool success case."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.get_collection_documents.return_value = (
             SAMPLE_COLLECTION_DOCUMENTS
         )
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_search_tools.tools["get_collection_structure"](
+        result = await register_search_tools.tools["get_collection_structure"](
             "coll1"
         )
 
@@ -262,8 +271,9 @@ class TestDocumentSearchTools:
         assert "Root Document" in result
         assert "Child Document" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_document_id_from_title_exact_match(
+    async def test_get_document_id_from_title_exact_match(
         self, mock_get_client, register_search_tools
     ):
         """Test get_document_id_from_title tool with exact match."""
@@ -273,14 +283,14 @@ class TestDocumentSearchTools:
         ]
 
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.search_documents.return_value = exact_match_results
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_search_tools.tools["get_document_id_from_title"](
-            "Exact Match"
-        )
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Exact Match")
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
@@ -291,39 +301,41 @@ class TestDocumentSearchTools:
         assert "Document ID: doc1" in result
         assert "Exact Match" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_document_id_from_title_best_match(
+    async def test_get_document_id_from_title_best_match(
         self, mock_get_client, register_search_tools
     ):
         """Test get_document_id_from_title tool with best match (non-exact)."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.search_documents.return_value = SAMPLE_SEARCH_RESULTS
         mock_get_client.return_value = mock_client
 
         # Call the tool with title that doesn't exactly match
-        result = register_search_tools.tools["get_document_id_from_title"](
-            "Test Doc"
-        )
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Test Doc")
 
         # Verify result contains expected information
         assert "Best match" in result
         assert "doc1" in result
 
+    @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
-    def test_get_document_id_from_title_no_results(
+    async def test_get_document_id_from_title_no_results(
         self, mock_get_client, register_search_tools
     ):
         """Test get_document_id_from_title tool with no results."""
         # Set up mock client
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.search_documents.return_value = []
         mock_get_client.return_value = mock_client
 
         # Call the tool
-        result = register_search_tools.tools["get_document_id_from_title"](
-            "Nonexistent"
-        )
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Nonexistent")
 
         # Verify result contains expected information
         assert "No documents found" in result

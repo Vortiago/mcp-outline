@@ -117,7 +117,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool()
-    def batch_archive_documents(document_ids: List[str]) -> str:
+    async def batch_archive_documents(document_ids: List[str]) -> str:
         """
         Archives multiple documents in a single batch operation.
 
@@ -150,11 +150,11 @@ def register_tools(mcp) -> None:
         failed = 0
 
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             for doc_id in document_ids:
                 try:
-                    document = client.archive_document(doc_id)
+                    document = await client.archive_document(doc_id)
 
                     if document:
                         results.append(
@@ -200,7 +200,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def batch_move_documents(
+    async def batch_move_documents(
         document_ids: List[str],
         collection_id: Optional[str] = None,
         parent_document_id: Optional[str] = None,
@@ -245,7 +245,7 @@ def register_tools(mcp) -> None:
         failed = 0
 
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             for doc_id in document_ids:
                 try:
@@ -258,7 +258,7 @@ def register_tools(mcp) -> None:
                     if parent_document_id:
                         data["parentDocumentId"] = parent_document_id
 
-                    response = client.post("documents.move", data)
+                    response = await client.post("documents.move", data)
 
                     if response.get("data"):
                         # Get document title for success message
@@ -306,7 +306,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def batch_delete_documents(
+    async def batch_delete_documents(
         document_ids: List[str], permanent: bool = False
     ) -> str:
         """
@@ -341,12 +341,14 @@ def register_tools(mcp) -> None:
         failed = 0
 
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             for doc_id in document_ids:
                 try:
                     if permanent:
-                        success = client.permanently_delete_document(doc_id)
+                        success = await client.permanently_delete_document(
+                            doc_id
+                        )
                         if success:
                             results.append(
                                 _create_result_entry(
@@ -367,11 +369,11 @@ def register_tools(mcp) -> None:
                             failed += 1
                     else:
                         # Get document details before deleting
-                        document = client.get_document(doc_id)
+                        document = await client.get_document(doc_id)
                         doc_title = document.get("title", "Untitled")
 
                         # Move to trash
-                        response = client.post(
+                        response = await client.post(
                             "documents.delete", {"id": doc_id}
                         )
 
@@ -418,7 +420,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
+    async def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
         """
         Updates multiple documents with different changes.
 
@@ -453,7 +455,7 @@ def register_tools(mcp) -> None:
         failed = 0
 
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             for update_spec in updates:
                 doc_id = update_spec.get("id")
@@ -480,7 +482,7 @@ def register_tools(mcp) -> None:
                         data["text"] = update_spec["text"]
                         data["append"] = update_spec.get("append", False)
 
-                    response = client.post("documents.update", data)
+                    response = await client.post("documents.update", data)
                     document = response.get("data", {})
 
                     if document:
@@ -527,7 +529,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool()
-    def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
+    async def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
         """
         Creates multiple documents in a single batch operation.
 
@@ -566,7 +568,7 @@ def register_tools(mcp) -> None:
         created_ids: List[str] = []
 
         try:
-            client = get_outline_client()
+            client = await get_outline_client()
 
             for doc_spec in documents:
                 # Validate required fields
@@ -606,7 +608,7 @@ def register_tools(mcp) -> None:
                             "parent_document_id"
                         ]
 
-                    response = client.post("documents.create", data)
+                    response = await client.post("documents.create", data)
                     document = response.get("data", {})
 
                     if document:
