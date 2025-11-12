@@ -417,15 +417,26 @@ Improve Docker infrastructure and automated builds:
 
 ### Topics to Explore
 
-- [ ] **Structured Data Support** (June 2025 MCP spec):
-  - Research returning dictionaries serialized to JSON
-  - Evaluate if tools should return structured data vs strings
-  - Assess compatibility with FastMCP
+- [x] **Structured Data Support / Output Schemas** (June 2025 MCP spec):
+  - **Status**: ✅ Researched - Ready for implementation
+  - **FastMCP Support**: v2.10.0+ with automatic schema generation
+  - **What**: Tools return TypedDict/Pydantic models instead of strings; FastMCP auto-generates JSON schemas
+  - **Benefits**: Better AI integration, token efficiency, type safety, backward compatible (dual output)
+  - **Complexity**: ⭐⭐ Low-Medium (can migrate tools incrementally)
+  - **Priority**: HIGH - Should implement in Phase 2/3
+  - **Next Steps**: Verify FastMCP version, create output models, refactor formatters to return dicts
+  - **Example**: `async def search_documents() -> list[SearchResult]:` instead of `-> str`
 
-- [ ] **Structured Input Requests** (June 2025 MCP spec):
-  - Research interactive tool workflows
-  - Evaluate use cases (multi-step document creation, guided wizards)
-  - Assess FastMCP support
+- [ ] **Structured Input Requests / Elicitation** (June 2025 MCP spec):
+  - **Status**: ⚠️ Researched - Client compatibility required
+  - **FastMCP Support**: v2.10.0+ via `ctx.elicit()` method
+  - **What**: Tools can request structured user input at runtime (human-in-the-loop workflows)
+  - **Use Cases**: Ambiguity resolution, confirmations, multi-step wizards, progressive input gathering
+  - **Client Support**: ✅ VS Code Insiders, MCP C# SDK | ❌ LangChain adapters | ⚠️ Claude Desktop/Code (unknown)
+  - **Complexity**: ⭐⭐⭐⭐ Medium-High (requires client support, complex error handling)
+  - **Priority**: MEDIUM - Verify client support first
+  - **Next Steps**: Test elicitation support in target clients before implementing
+  - **Security**: Never request PII, credentials, or secrets (MCP spec requirement)
 
 - [ ] **MCP Context Features**:
   - Research additional FastMCP context capabilities
