@@ -133,83 +133,61 @@ Replace synchronous `requests` library with async HTTP client:
 ## Phase 3: API Coverage Expansion
 
 ### 3.1 Document Features
-**Complexity**: Moderate (per feature)
 **Status**: Not Started
+**Note**: See PHASE3_ANALYSIS.md for design rationale
 
-Expand Outline API coverage with missing document features:
-
+**High Priority:**
 - [ ] **Templates**:
   - [ ] Add tool: `list_document_templates` - List available templates
   - [ ] Add tool: `create_document_from_template` - Create from template
   - [ ] Add OutlineClient methods: `list_templates()`, `create_from_template()`
   - [ ] Add tests
-- [ ] **Revision History**:
-  - [ ] Add tool: `get_document_revisions` - List document versions
-  - [ ] Add tool: `get_document_revision` - Get specific revision content
-  - [ ] Add tool: `restore_document_revision` - Revert to old version
-  - [ ] Add OutlineClient methods: `get_revisions()`, `get_revision()`, `restore_revision()`
-  - [ ] Add tests
-- [ ] **Favorites/Stars**:
-  - [ ] Add tool: `star_document` - Bookmark a document
-  - [ ] Add tool: `unstar_document` - Remove bookmark
-  - [ ] Add tool: `list_starred_documents` - List user's starred documents
-  - [ ] Add OutlineClient methods: `star()`, `unstar()`, `list_starred()`
-  - [ ] Add tests
-- [ ] **Search Pagination**:
+
+- [ ] **Search Pagination** (CRITICAL):
   - [ ] Add `offset` and `limit` parameters to `search_documents` tool
   - [ ] Update OutlineClient.search_documents() to support pagination
-  - [ ] Update search result formatter to show pagination info
-  - [ ] Add tests
-- [ ] **File Attachments**:
-  - [ ] Add tool: `upload_attachment` - Upload file to document
-  - [ ] Add tool: `list_attachments` - List document attachments
-  - [ ] Add tool: `download_attachment` - Download attachment
-  - [ ] Add tool: `delete_attachment` - Remove attachment
-  - [ ] Add OutlineClient methods for attachment operations
-  - [ ] Handle file encoding/decoding
+  - [ ] Update formatter: "Showing X-Y of Z results"
   - [ ] Add tests
 
+**Low Priority (Phase 4/5):**
+- [ ] **Revision History** (read-only):
+  - [ ] Add tool: `get_document_revisions` - List versions with metadata
+  - [ ] Add tool: `get_document_revision` - Get specific version content
+  - [ ] Add OutlineClient methods
+  - [ ] Add tests
+  - ❌ Do NOT implement `restore_document_revision` - too risky for automation
+
+**Rejected (see analysis):**
+- ❌ **Favorites/Stars** - Personal metadata, not content operations
+- ❌ **File Attachments** - Complex binary handling, unclear workflow benefit
+
 **Benefits**:
-- Complete Outline API coverage
-- Better document management capabilities
-- Enhanced collaboration features
+- Core workflow automation (templates)
+- Proper handling of large result sets (pagination)
+- Focus on content operations, not UI feature parity
 
 ---
 
 ### 3.2 Collaboration Features
-**Complexity**: Moderate (per feature)
 **Status**: Not Started
+**Note**: See PHASE3_ANALYSIS.md for design rationale
 
-Add advanced collaboration tools:
+**Low Priority (Phase 4/5):**
+- [ ] **Activity Context** (read-only, if clear workflow emerges):
+  - [ ] Add tool: `get_document_editors` - Recent editors for ownership context
+  - [ ] Add OutlineClient method
+  - [ ] Add tests
 
-- [ ] **Sharing & Permissions**:
-  - [ ] Add tool: `create_share_link` - Generate public/team share link
-  - [ ] Add tool: `revoke_share_link` - Remove share link
-  - [ ] Add tool: `list_document_shares` - List active shares
-  - [ ] Add OutlineClient methods for share operations
-  - [ ] Add tests
-- [ ] **User Mentions**:
-  - [ ] Add tool: `mention_user_in_comment` - @ mention in comment
-  - [ ] Update comment tools to support mentions
-  - [ ] Add OutlineClient support for mentions API
-  - [ ] Add tests
-- [ ] **Subscriptions**:
-  - [ ] Add tool: `subscribe_to_document` - Get notifications
-  - [ ] Add tool: `unsubscribe_from_document` - Stop notifications
-  - [ ] Add tool: `list_subscriptions` - List user's subscriptions
-  - [ ] Add OutlineClient methods for subscription operations
-  - [ ] Add tests
-- [ ] **Activity Tracking**:
-  - [ ] Add tool: `get_document_viewers` - List recent viewers
-  - [ ] Add tool: `get_document_editors` - List recent editors
-  - [ ] Add tool: `get_document_activity` - Full activity log
-  - [ ] Add OutlineClient methods for activity tracking
-  - [ ] Add tests
+**Rejected (see analysis):**
+- ❌ **Sharing & Permissions** - Security-sensitive, user should control manually
+- ❌ **User Mentions** - Already supported in comment text with @username syntax
+- ❌ **Subscriptions** - Personal notification preferences, not content operations
+- ❌ **Activity Tracking** (viewers/logs) - Information overload, privacy concerns
 
 **Benefits**:
-- Enhanced team collaboration
-- Better visibility into document activity
-- Improved notification management
+- Minimal ownership context if needed
+- Avoids security-sensitive operations
+- Keeps MCP server focused on content automation
 
 ---
 
