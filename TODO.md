@@ -37,45 +37,6 @@ Implement resource handlers to expose Outline data via MCP URIs:
 
 ---
 
-
-### 1.3 Add MCP Sampling Support
-**Complexity**: Complex
-**Status**: Not Started
-
-Implement LLM sampling via `ctx.sample()` for AI-powered enhancements:
-
-- [ ] Update FastMCP to ensure sampling support is available
-- [ ] Create `ai_enhancements/` module for AI-powered tools
-- [ ] Add tool: **`suggest_document_title`**
-  - Takes: document_content (string), context (optional string)
-  - Uses: ctx.sample() to generate 3-5 title suggestions
-  - Returns: List of suggested titles with rationale
-- [ ] Add tool: **`enhance_document_content`**
-  - Takes: document_id (string), enhancement_type (enum: clarity|grammar|structure|all)
-  - Uses: ctx.sample() to suggest improvements
-  - Returns: Detailed suggestions with examples
-- [ ] Add tool: **`auto_categorize_document`**
-  - Takes: document_id (string)
-  - Uses: ctx.sample() to analyze content and suggest collections/tags
-  - Returns: Recommended collection and reasoning
-- [ ] Add tool: **`generate_document_summary`**
-  - Takes: document_id (string), length (enum: short|medium|long)
-  - Uses: ctx.sample() to create summary
-  - Returns: Formatted summary
-- [ ] Add tool: **`suggest_related_documents`**
-  - Takes: document_id (string), limit (optional int)
-  - Uses: ctx.sample() to analyze and find semantically related docs
-  - Returns: List of related documents with relevance scores
-- [ ] Add comprehensive tests (mock ctx.sample())
-- [ ] Update README with sampling examples
-
-**Benefits**:
-- AI-powered content enhancement
-- Intelligent document organization
-- Automated summarization and categorization
-
----
-
 ## Phase 2: Transport & Performance Upgrades
 
 ### 2.1 Streamable HTTP Transport (2025-03-26 Spec)
@@ -103,148 +64,36 @@ Update to the new Streamable HTTP transport specification:
 
 ---
 
-### 2.2 Async HTTP Client Migration
-**Complexity**: Moderate
-**Status**: Not Started
-
-Replace synchronous `requests` library with async HTTP client:
-
-- [ ] Choose async HTTP library: `httpx` (recommended) or `aiohttp`
-- [ ] Update requirements in pyproject.toml
-- [ ] Refactor OutlineClient to use async methods:
-  - [ ] Convert all HTTP methods to async (get, post, delete, etc.)
-  - [ ] Add async context manager support (`async with OutlineClient()`)
-  - [ ] Implement connection pooling
-  - [ ] Add configurable timeout settings
-- [ ] Update all tool functions to await OutlineClient calls
-- [ ] Add connection lifecycle management
-- [ ] Configure connection pool size and limits
-- [ ] Update all tests to use async patterns
-- [ ] Run performance benchmarks (async vs sync)
-- [ ] Update README with async usage examples
-
-**Benefits**:
-- True async operations (non-blocking)
-- Better performance under load
-- Connection pooling for efficiency
-- Scalable for multiple concurrent requests
-
-
 ## Phase 3: API Coverage Expansion
 
 ### 3.1 Document Features
-**Complexity**: Moderate (per feature)
 **Status**: Not Started
 
-Expand Outline API coverage with missing document features:
-
+**High Priority:**
 - [ ] **Templates**:
   - [ ] Add tool: `list_document_templates` - List available templates
   - [ ] Add tool: `create_document_from_template` - Create from template
   - [ ] Add OutlineClient methods: `list_templates()`, `create_from_template()`
   - [ ] Add tests
-- [ ] **Revision History**:
-  - [ ] Add tool: `get_document_revisions` - List document versions
-  - [ ] Add tool: `get_document_revision` - Get specific revision content
-  - [ ] Add tool: `restore_document_revision` - Revert to old version
-  - [ ] Add OutlineClient methods: `get_revisions()`, `get_revision()`, `restore_revision()`
-  - [ ] Add tests
-- [ ] **Favorites/Stars**:
-  - [ ] Add tool: `star_document` - Bookmark a document
-  - [ ] Add tool: `unstar_document` - Remove bookmark
-  - [ ] Add tool: `list_starred_documents` - List user's starred documents
-  - [ ] Add OutlineClient methods: `star()`, `unstar()`, `list_starred()`
-  - [ ] Add tests
-- [ ] **Search Pagination**:
+
+- [ ] **Search Pagination** (CRITICAL):
   - [ ] Add `offset` and `limit` parameters to `search_documents` tool
   - [ ] Update OutlineClient.search_documents() to support pagination
-  - [ ] Update search result formatter to show pagination info
+  - [ ] Update formatter: "Showing X-Y of Z results"
   - [ ] Add tests
-- [ ] **File Attachments**:
-  - [ ] Add tool: `upload_attachment` - Upload file to document
-  - [ ] Add tool: `list_attachments` - List document attachments
-  - [ ] Add tool: `download_attachment` - Download attachment
-  - [ ] Add tool: `delete_attachment` - Remove attachment
-  - [ ] Add OutlineClient methods for attachment operations
-  - [ ] Handle file encoding/decoding
+
+**Low Priority (Phase 4/5):**
+- [ ] **Revision History** (read-only):
+  - [ ] Add tool: `get_document_revisions` - List versions with metadata
+  - [ ] Add tool: `get_document_revision` - Get specific version content
+  - [ ] Add OutlineClient methods
   - [ ] Add tests
+  - ❌ Do NOT implement `restore_document_revision` - too risky for automation
 
 **Benefits**:
-- Complete Outline API coverage
-- Better document management capabilities
-- Enhanced collaboration features
-
----
-
-### 3.2 Collaboration Features
-**Complexity**: Moderate (per feature)
-**Status**: Not Started
-
-Add advanced collaboration tools:
-
-- [ ] **Sharing & Permissions**:
-  - [ ] Add tool: `create_share_link` - Generate public/team share link
-  - [ ] Add tool: `revoke_share_link` - Remove share link
-  - [ ] Add tool: `list_document_shares` - List active shares
-  - [ ] Add OutlineClient methods for share operations
-  - [ ] Add tests
-- [ ] **User Mentions**:
-  - [ ] Add tool: `mention_user_in_comment` - @ mention in comment
-  - [ ] Update comment tools to support mentions
-  - [ ] Add OutlineClient support for mentions API
-  - [ ] Add tests
-- [ ] **Subscriptions**:
-  - [ ] Add tool: `subscribe_to_document` - Get notifications
-  - [ ] Add tool: `unsubscribe_from_document` - Stop notifications
-  - [ ] Add tool: `list_subscriptions` - List user's subscriptions
-  - [ ] Add OutlineClient methods for subscription operations
-  - [ ] Add tests
-- [ ] **Activity Tracking**:
-  - [ ] Add tool: `get_document_viewers` - List recent viewers
-  - [ ] Add tool: `get_document_editors` - List recent editors
-  - [ ] Add tool: `get_document_activity` - Full activity log
-  - [ ] Add OutlineClient methods for activity tracking
-  - [ ] Add tests
-
-**Benefits**:
-- Enhanced team collaboration
-- Better visibility into document activity
-- Improved notification management
-
----
-
-### 3.3 Batch Operations
-**Complexity**: Moderate
-**Status**: ✅ Completed
-
-Implement batch operations for efficiency:
-
-- [x] Create `features/documents/batch_operations.py` module
-- [x] Add tool: **`batch_create_documents`**
-  - Takes: List of document specifications
-  - Returns: List of created document IDs
-  - Handles partial failures gracefully
-- [x] Add tool: **`batch_move_documents`**
-  - Takes: List of document IDs, target collection ID
-  - Returns: Success/failure status for each
-- [x] Add tool: **`batch_archive_documents`**
-  - Takes: List of document IDs
-  - Returns: Archive status for each
-- [x] Add tool: **`batch_update_documents`**
-  - Takes: List of document IDs with updates
-  - Returns: Update status for each
-- [x] Add tool: **`batch_delete_documents`**
-  - Takes: List of document IDs, permanent flag
-  - Returns: Deletion status for each
-- [x] Implement rate limit awareness (leverages existing OutlineClient)
-- [x] Add comprehensive tests with partial failure scenarios
-- [x] Document batch operation limits and best practices (in tool docstrings)
-
-**Benefits**:
-- Efficient bulk operations
-- Reduced API calls
-- Better rate limit management
-- Time savings for large-scale operations
+- Core workflow automation (templates)
+- Proper handling of large result sets (pagination)
+- Focus on content operations, not UI feature parity
 
 ---
 
@@ -373,13 +222,6 @@ Expand test coverage and quality:
 
 Improve Docker infrastructure and automated builds:
 
-- [x] **Local Development Environment** ✓ COMPLETED
-  - [x] Update docker-compose.yml with self-hosted Outline
-  - [x] Add Dex OIDC authentication provider
-  - [x] Add configuration examples (config/outline.env.example)
-  - [x] Update README with local setup instructions
-  - [x] Enable local testing without paid Outline account
-
 - [ ] **Multi-Architecture Docker Builds**
   - [ ] Add GitHub Actions workflow for automated builds
   - [ ] Support AMD64 and ARM64 architectures
@@ -400,16 +242,22 @@ Improve Docker infrastructure and automated builds:
 
 ## Phase 5: Advanced Features (Future)
 
-### 5.2 Advanced Search
-**Complexity**: Moderate
+### 5.2 Enhanced Search Parameters
+**Complexity**: Low-Moderate
 **Status**: Not Started
 
-- [ ] Add date range filters to search
-- [ ] Add author filtering
-- [ ] Add tag filtering
-- [ ] Add content type filtering
-- [ ] Implement faceted search results
-- [ ] Add search result ranking options
+**Note**: These are just parameter additions to existing `search_documents` tool, not a separate phase
+
+- [ ] Add optional parameters to `search_documents` tool:
+  - [ ] `date_from`, `date_to` - Date range filtering
+  - [ ] `author` - Filter by document author
+  - [ ] `tags` - Filter by tags
+  - [ ] `sort_by` - Ranking options (relevance, date, title)
+- [ ] Update OutlineClient.search_documents() to pass filters to API
+- [ ] Update formatter to show applied filters
+- [ ] Add tests for filtered searches
+
+**Do NOT implement**: Separate tools for each filter type - just enhance existing tool
 
 ---
 
@@ -417,15 +265,15 @@ Improve Docker infrastructure and automated builds:
 
 ### Topics to Explore
 
-- [ ] **Structured Data Support** (June 2025 MCP spec):
-  - Research returning dictionaries serialized to JSON
-  - Evaluate if tools should return structured data vs strings
-  - Assess compatibility with FastMCP
-
-- [ ] **Structured Input Requests** (June 2025 MCP spec):
-  - Research interactive tool workflows
-  - Evaluate use cases (multi-step document creation, guided wizards)
-  - Assess FastMCP support
+- [x] **Structured Data Support / Output Schemas** (June 2025 MCP spec):
+  - **Status**: ✅ Researched - Ready for implementation
+  - **FastMCP Support**: v2.10.0+ with automatic schema generation
+  - **What**: Tools return TypedDict/Pydantic models instead of strings; FastMCP auto-generates JSON schemas
+  - **Benefits**: Better AI integration, token efficiency, type safety, backward compatible (dual output)
+  - **Complexity**: ⭐⭐ Low-Medium (can migrate tools incrementally)
+  - **Priority**: HIGH - Should implement in Phase 2/3
+  - **Next Steps**: Verify FastMCP version, create output models, refactor formatters to return dicts
+  - **Example**: `async def search_documents() -> list[SearchResult]:` instead of `-> str`
 
 - [ ] **MCP Context Features**:
   - Research additional FastMCP context capabilities
@@ -440,12 +288,6 @@ Improve Docker infrastructure and automated builds:
 
 ---
 
-## Completed Items
-
-None yet - this is a fresh roadmap!
-
----
-
 ## Notes
 
 ### Prioritization Criteria
@@ -455,16 +297,3 @@ Items are prioritized based on:
 2. **Complexity**: How difficult is implementation?
 3. **Dependencies**: What must be done first?
 4. **MCP Compliance**: Does this use core MCP features?
-
-### Success Metrics
-
-- All core MCP features (Resources, Prompts, Sampling) implemented
-- Transport upgraded to Streamable HTTP
-- Documentation site live
-- Test coverage > 95%
-- Performance benchmarks established
-- Community adoption and feedback
-
----
-
-Last Updated: 2025-11-06
