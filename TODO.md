@@ -429,34 +429,24 @@ Improve Docker infrastructure and automated builds:
 
 - [ ] **Structured Input Requests / Elicitation** (June 2025 MCP spec):
   - **Status**: ⚠️ Researched - Client compatibility required
-  - **FastMCP Support**: v2.10.0+ via `ctx.elicit()` method
-  - **What**: Tools can request structured user input at runtime (human-in-the-loop workflows)
-  - **Use Cases**: Ambiguity resolution, confirmations, multi-step wizards, progressive input gathering
-  - **Client Support**: ✅ VS Code Insiders, MCP C# SDK | ❌ LangChain adapters | ⚠️ Claude Desktop/Code (unknown)
-  - **Complexity**: ⭐⭐⭐⭐ Medium-High (requires client support, complex error handling)
-  - **Priority**: MEDIUM - Verify client support first
-  - **Next Steps**: Test elicitation support in target clients before implementing
-  - **Security**: Never request PII, credentials, or secrets (MCP spec requirement)
-  - **Implementation Strategy**: Use try/except with graceful fallback; check `ctx.session.client_params.capabilities` if needed
+  - **API**: FastMCP v2.10.0+ `ctx.elicit()` method
+  - **What**: Runtime structured user input (human-in-the-loop)
+  - **Client Support**: ✅ VS Code Insiders, MCP C# SDK | ❌ LangChain | ⚠️ Claude Desktop/Code (unknown)
+  - **Implementation**: Use try/except with graceful fallback; check `ctx.session.client_params.capabilities`
+  - **Security**: Never request PII, credentials, or secrets
 
-  **Tools to Enhance with Elicitation** (Priority Order):
-
-  **High Priority - Destructive Operation Confirmations:**
-  - [ ] `delete_document` (when `permanent=True`) - Elicit boolean confirmation: "⚠️ Permanently delete '{title}'? This cannot be undone."
-  - [ ] `delete_collection` - Elicit boolean confirmation: "⚠️ Delete collection '{name}' and ALL its documents? This cannot be undone."
-  - [ ] `batch_delete_documents` (when `permanent=True`) - Elicit boolean confirmation with preview: "⚠️ Permanently delete {count} documents? This cannot be undone."
-
-  **Medium Priority - Ambiguity Resolution:**
-  - [ ] `get_document_id_from_title` - When multiple exact matches, elicit selection from list of matching documents
-  - [ ] `move_document` - If collection_id not provided, elicit target collection selection from list
-  - [ ] `batch_move_documents` - Elicit confirmation with preview: "Move {count} documents to collection '{target}'?"
-
-  **Lower Priority - Progressive Input & Validation:**
-  - [ ] `create_collection` - Optional wizard mode: elicit name → description → color step-by-step
-  - [ ] `export_collection` - If format not provided, elicit format selection (outline-markdown, json, html)
-  - [ ] `export_all_collections` - Elicit confirmation: "Export entire workspace ({count} collections)? This may take time."
-  - [ ] `archive_document` - Elicit confirmation for important/recently-edited documents
-  - [ ] `update_document` - If major changes detected, elicit confirmation to prevent accidental overwrites
+  **Tools to Enhance:**
+  - [ ] `delete_document` (permanent=True) - Boolean confirm
+  - [ ] `delete_collection` - Boolean confirm
+  - [ ] `batch_delete_documents` (permanent=True) - Boolean confirm
+  - [ ] `get_document_id_from_title` - Multi-match selection
+  - [ ] `move_document` - Collection selection if missing
+  - [ ] `batch_move_documents` - Preview confirm
+  - [ ] `create_collection` - Optional step-by-step wizard
+  - [ ] `export_collection` - Format selection if missing
+  - [ ] `export_all_collections` - Workspace export confirm
+  - [ ] `archive_document` - Confirm for important docs
+  - [ ] `update_document` - Confirm major changes
 
 - [ ] **MCP Context Features**:
   - Research additional FastMCP context capabilities
