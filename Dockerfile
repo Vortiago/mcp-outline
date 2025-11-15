@@ -29,6 +29,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app
 ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=3000
+ENV MCP_TRANSPORT=streamable-http
 
 USER appuser
 
