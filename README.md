@@ -38,11 +38,6 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 
 ## Configuration
 
-**Important**: This MCP server connects TO an existing Outline instance.
-- **MCP Server** (this project) runs on `MCP_PORT` (default: 3000)
-- **Outline** (the document app) runs on a different port (e.g., 3030 in docker-compose)
-- `OUTLINE_API_URL` tells the MCP server where to find your Outline instance
-
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
 | `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
@@ -68,7 +63,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (or `%APP
       "args": ["mcp-outline"],
       "env": {
         "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
       }
     }
   }
@@ -89,7 +84,7 @@ Go to **Settings → MCP** and click **Add Server**:
     "args": ["mcp-outline"],
     "env": {
       "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
     }
   }
 }
@@ -111,7 +106,7 @@ Install the [MCP extension](https://marketplace.visualstudio.com/items?itemName=
         "args": ["mcp-outline"],
         "env": {
           "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-          "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+          "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
         }
       }
     }
@@ -133,7 +128,7 @@ In Cline extension settings, add to MCP servers:
     "args": ["mcp-outline"],
     "env": {
       "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
     }
   }
 }
@@ -158,25 +153,22 @@ Then in your client config, replace `"command": "uvx"` with `"command": "mcp-out
     "command": "mcp-outline",
     "env": {
       "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
     }
   }
 }
 ```
-
-This approach applies to Claude Desktop, Cursor, VS Code, and Cline.
 
 </details>
 
 <details>
 <summary><b>Docker Deployment (HTTP)</b></summary>
 
-For remote access or Docker containers, use HTTP transport. This runs the **MCP server** on port 3000 (separate from your Outline instance):
+For remote access or Docker containers, use HTTP transport. This runs the **MCP server** on port 3000:
 
 ```bash
 docker run -p 3000:3000 \
   -e OUTLINE_API_KEY=<YOUR_API_KEY> \
-  -e OUTLINE_API_URL=<YOUR_OUTLINE_URL> \
   -e MCP_TRANSPORT=streamable-http \
   ghcr.io/vortiago/mcp-outline:latest
 ```
@@ -197,17 +189,51 @@ Then connect from client:
 
 ## Tools
 
-- `search_documents(query, collection_id?)` - Search documents by keywords
+### Search & Discovery
+- `search_documents(query, collection_id?, limit?, offset?)` - Search documents by keywords with pagination
 - `list_collections()` - List all collections
-- `read_document(id)` - Get document content
-- `create_document(title, content, collection_id)` - Create new document
-- `update_document(id, title?, content?)` - Update document
-- `move_document(id, collection_id)` - Move to different collection
-- `archive_document(id)` - Archive document
-- `restore_document(id)` - Restore archived document
-- `add_comment(document_id, text)` - Add comment to document
-- `list_comments(document_id)` - View document comments
-- `get_backlinks(document_id)` - Find documents that link here
+- `get_collection_structure(collection_id)` - Get document hierarchy within a collection
+- `get_document_id_from_title(query, collection_id?)` - Find document ID by title search
+
+### Document Reading
+- `read_document(document_id)` - Get document content
+- `export_document(document_id)` - Export document as markdown
+
+### Document Management
+- `create_document(title, collection_id, text?, parent_document_id?, publish?)` - Create new document
+- `update_document(document_id, title?, text?, append?)` - Update document (append mode available)
+- `move_document(document_id, collection_id?, parent_document_id?)` - Move document to different collection or parent
+
+### Document Lifecycle
+- `archive_document(document_id)` - Archive document
+- `unarchive_document(document_id)` - Restore document from archive
+- `delete_document(document_id, permanent?)` - Delete document (or move to trash)
+- `restore_document(document_id)` - Restore document from trash
+- `list_archived_documents()` - List all archived documents
+- `list_trash()` - List all documents in trash
+
+### Comments & Collaboration
+- `add_comment(document_id, text, parent_comment_id?)` - Add comment to document (supports threaded replies)
+- `list_document_comments(document_id, include_anchor_text?, limit?, offset?)` - View document comments with pagination
+- `get_comment(comment_id, include_anchor_text?)` - Get specific comment details
+- `get_document_backlinks(document_id)` - Find documents that link to this document
+
+### Collection Management
+- `create_collection(name, description?, color?)` - Create new collection
+- `update_collection(collection_id, name?, description?, color?)` - Update collection properties
+- `delete_collection(collection_id)` - Delete collection
+- `export_collection(collection_id, format?)` - Export collection (default: outline-markdown)
+- `export_all_collections(format?)` - Export all collections
+
+### Batch Operations
+- `batch_create_documents(documents)` - Create multiple documents at once
+- `batch_update_documents(updates)` - Update multiple documents at once
+- `batch_move_documents(document_ids, collection_id?, parent_document_id?)` - Move multiple documents
+- `batch_archive_documents(document_ids)` - Archive multiple documents
+- `batch_delete_documents(document_ids, permanent?)` - Delete multiple documents
+
+### AI-Powered
+- `ask_ai_about_documents(question, collection_id?, document_id?)` - Ask natural language questions about your documents
 
 ## Development
 
@@ -272,29 +298,9 @@ npx @modelcontextprotocol/inspector -e OUTLINE_API_KEY=<your-key> -e OUTLINE_API
 npx @modelcontextprotocol/inspector http://localhost:3000
 ```
 
-The MCP Inspector allows you to:
-- View all available tools
-- Test tool calls with custom parameters
-- See responses in real-time
-
 ![MCP Inspector](./docs/mcp_inspector_guide.png)
 
 ## Architecture Notes
-
-**System Architecture**:
-```
-Client (Claude, Cursor, etc.)
-    ↓ connects to
-MCP Server (port 3000)
-    ↓ calls API to
-Outline (port 3030 in docker-compose)
-```
-
-Key points:
-- Client connects to **MCP Server** on port 3000
-- **MCP Server** calls **Outline** API via `OUTLINE_API_URL`
-- In docker-compose: Outline runs on port 3030, MCP Server on port 3000
-- Do NOT point `OUTLINE_API_URL` to the MCP Server port
 
 **Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). No configuration needed.
 
