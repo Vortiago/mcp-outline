@@ -1,305 +1,233 @@
 # MCP Outline Server
 
-A Model Context Protocol (MCP) server enabling AI assistants to interact with Outline (https://www.getoutline.com)
-
-## Overview
-
-This project implements a Model Context Protocol (MCP) server that allows AI assistants (like Claude) to interact with Outline document services, providing a bridge between natural language interactions and Outline's document management capabilities.
+A Model Context Protocol server for interacting with Outline document management.
 
 ## Features
 
-Currently implemented:
-
-- **Document Search**: Search for documents by keywords
-- **Collection Management**: List collections and view document structure
-- **Document Reading**: Read document content, export as markdown
-- **Comment Management**: View and add comments on documents
-- **Document Creation**: Create new documents in collections
-- **Document Editing**: Update document content and move documents
-- **Backlink Management**: View documents that link to a specific document
-- **Automatic Rate Limiting**: Smart handling of API rate limits with proactive waiting and automatic retry
+- **Document operations**: Search, read, create, edit, archive documents
+- **Collections**: List, create, manage document hierarchies
+- **Comments**: Add and view threaded comments
+- **Backlinks**: Find documents referencing a specific document
+- **Automatic rate limiting**: Transparent handling of API limits with retry logic
 
 ## Installation
 
-### Option 1: Install from PyPI
+### Using uv (Recommended)
+
+```bash
+uvx mcp-outline
+```
+
+### Using pip
 
 ```bash
 pip install mcp-outline
 ```
 
-### Option 2: Docker
+### Using Docker
 
-Run the MCP server using Docker to avoid installing dependencies on your machine.
+```bash
+docker run -e OUTLINE_API_KEY=<your-key> ghcr.io/vortiago/mcp-outline:latest
+```
 
-#### Option 2a: Use Pre-built Image
+Or build from source:
+```bash
+docker buildx build -t mcp-outline .
+docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
+```
 
-1. Install and run Docker (or Docker Desktop)
-2. Pull the pre-built image:
-   ```bash
-   docker pull ghcr.io/vortiago/mcp-outline:latest
-   ```
-3. In Cursor, go to the "MCP Servers" tab and click "Add Server"
-   ```json
-   {
-     "mcpServers": {
-       "mcp-outline": {
-         "command": "docker",
-         "args": [
-           "run",
-           "-i",
-           "--rm",
-           "--init",
-           "-e",
-           "DOCKER_CONTAINER=true",
-           "-e",
-           "OUTLINE_API_KEY",
-           "-e",
-           "OUTLINE_API_URL",
-           "ghcr.io/vortiago/mcp-outline:latest"
-         ],
-         "env": {
-           "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
-           "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>",
-           "MCP_TRANSPORT": "sse"
-         }
-       }
-     }
-   }
-   ```
+## Configuration
 
-#### Option 2b: Build from Source
+| Variable | Required | Default | Notes |
+|----------|----------|---------|-------|
+| `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
+| `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | Self-hosted Outline: `https://your-domain/api` |
+| `MCP_TRANSPORT` | No | `stdio` | `stdio`, `sse`, or `streamable-http` |
+| `MCP_HOST` | No | `127.0.0.1` | Use `0.0.0.0` in Docker for external access |
+| `MCP_PORT` | No | `3000` | HTTP server port (for `sse`/`streamable-http`) |
 
-1. Install and run Docker (or Docker Desktop)
-2. Build the Docker image `docker buildx build -t mcp-outline .`
-3. In Cursor, go to the "MCP Servers" tab and click "Add Server"
-   ```json
-   {
-     "mcpServers": {
-       "mcp-outline": {
-         "command": "docker",
-         "args": [
-           "run",
-           "-i",
-           "--rm",
-           "--init",
-           "-e",
-           "DOCKER_CONTAINER=true",
-           "-e",
-           "OUTLINE_API_KEY",
-           "-e",
-           "OUTLINE_API_URL",
-           "mcp-outline"
-         ],
-         "env": {
-           "OUTLINE_API_KEY": "<YOUR_OUTLINE_API_KEY>",
-           "OUTLINE_API_URL": "<YOUR_OUTLINE_API_URL>",
-           "MCP_TRANSPORT": "sse"
-         }
-       }
-     }
-   }
-   ```
-   > OUTLINE_API_URL is optional, defaulting to https://app.getoutline.com/api
-4. Debug the docker image by using MCP inspector and passing the docker image to it:
-   ```bash
-   npx @modelcontextprotocol/inspector docker run -i --rm --init -e DOCKER_CONTAINER=true --env-file .env mcp-outline
-   ```
+## Adding to Your Client
+
+> **Prerequisites**: Install `uv` with `pip install uv` or from [astral.sh/uv](https://docs.astral.sh/uv/)
+
+<details>
+<summary><b>Add to Claude Desktop</b></summary>
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "mcp-outline": {
+      "command": "uvx",
+      "args": ["mcp-outline"],
+      "env": {
+        "OUTLINE_API_KEY": "<YOUR_API_KEY>",
+        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Add to Cursor</b></summary>
+
+Go to **Settings → MCP** and click **Add Server**:
+
+```json
+{
+  "mcp-outline": {
+    "command": "uvx",
+    "args": ["mcp-outline"],
+    "env": {
+      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
+      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Add to VS Code</b></summary>
+
+Install the [MCP extension](https://marketplace.visualstudio.com/items?itemName=Claude.Claude) and add to VS Code settings:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "mcp-outline": {
+        "command": "uvx",
+        "args": ["mcp-outline"],
+        "env": {
+          "OUTLINE_API_KEY": "<YOUR_API_KEY>",
+          "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+        }
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Add to Cline (VS Code)</b></summary>
+
+In Cline extension settings, add to MCP servers:
+
+```json
+{
+  "mcp-outline": {
+    "command": "uvx",
+    "args": ["mcp-outline"],
+    "env": {
+      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
+      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Using pip instead of uvx</b></summary>
+
+If you prefer to use `pip` instead:
+
+```bash
+pip install mcp-outline
+```
+
+Then in your client config, replace `"command": "uvx"` with `"command": "mcp-outline"` and remove the `"args"` line:
+
+```json
+{
+  "mcp-outline": {
+    "command": "mcp-outline",
+    "env": {
+      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
+      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
+    }
+  }
+}
+```
+
+This approach applies to Claude Desktop, Cursor, VS Code, and Cline.
+
+</details>
+
+<details>
+<summary><b>Docker Deployment (HTTP)</b></summary>
+
+For remote access or Docker containers, use HTTP transport:
+
+```bash
+docker run -p 3000:3000 \
+  -e OUTLINE_API_KEY=<YOUR_API_KEY> \
+  -e OUTLINE_API_URL=<YOUR_OUTLINE_URL> \
+  -e MCP_TRANSPORT=streamable-http \
+  ghcr.io/vortiago/mcp-outline:latest
+```
+
+Then connect from client:
+
+```json
+{
+  "mcp-outline": {
+    "url": "http://localhost:3000"
+  }
+}
+```
+
+</details>
+
+## Tools
+
+- `search_documents(query, collection_id?)` - Search documents by keywords
+- `list_collections()` - List all collections
+- `read_document(id)` - Get document content
+- `create_document(title, content, collection_id)` - Create new document
+- `update_document(id, title?, content?)` - Update document
+- `move_document(id, collection_id)` - Move to different collection
+- `archive_document(id)` - Archive document
+- `restore_document(id)` - Restore archived document
+- `add_comment(document_id, text)` - Add comment to document
+- `list_comments(document_id)` - View document comments
+- `get_backlinks(document_id)` - Find documents that link here
 
 ## Development
 
-### Prerequisites
-
-- Python 3.10+
-- Outline account with API access
-- Outline API key (get this from your Outline account settings)
-
-### Installation
+### Quick Start with Self-Hosted Outline
 
 ```bash
-# Clone the repository
+# Generate configuration
+cp config/outline.env.example config/outline.env
+openssl rand -hex 32 > /tmp/secret_key && openssl rand -hex 32 > /tmp/utils_secret
+# Update config/outline.env with generated secrets
+
+# Start all services
+docker compose up -d
+
+# Create API key: http://localhost:32110 → Settings → API Keys
+# Add to .env: OUTLINE_API_KEY=<token>
+```
+
+### Setup
+
+```bash
 git clone https://github.com/Vortiago/mcp-outline.git
 cd mcp-outline
-
-# Install in development mode
 uv pip install -e ".[dev]"
 ```
 
-### Configuration
-
-Create a `.env` file in the project root with the following variables:
-
-```
-# Outline API Configuration
-OUTLINE_API_KEY=your_outline_api_key_here
-
-# For cloud-hosted Outline (default)
-# OUTLINE_API_URL=https://app.getoutline.com/api
-
-# For self-hosted Outline
-# OUTLINE_API_URL=https://your-outline-instance.example.com/api
-```
-
-### Rate Limiting
-
-The server automatically handles Outline API rate limits using a hybrid approach:
-
-- **Proactive Prevention**: Tracks `RateLimit-Remaining` and `RateLimit-Reset` headers from API responses and automatically waits when rate limits are exhausted before making new requests
-- **Reactive Retry**: If rate limits are still hit (e.g., due to concurrent requests), automatically retries with exponential backoff (1s, 2s, 4s intervals) up to 3 times
-- **Retry-After Header**: Respects the `Retry-After` header provided by the Outline API for optimal wait times
-
-No configuration is required - rate limiting is enabled by default and works transparently.
-
-### Running the Server
-
-```bash
-# Development mode with the MCP Inspector
-mcp dev src/mcp_outline/server.py
-
-# Or use the provided script
-./start_server.sh
-
-# Install in Claude Desktop (if available)
-mcp install src/mcp_outline/server.py --name "Document Outline Assistant"
-```
-
-### Transport Mode Configuration
-
-The MCP Outline server supports two transport modes:
-
-- **`stdio`** (default): Standard input/output for direct process communication
-- **`sse`**: HTTP Server-Sent Events for web-based communication
-
-#### Configuring Transport Mode
-
-Set the `MCP_TRANSPORT` environment variable to choose your transport mode:
-
-```bash
-# For stdio mode (default - backward compatible)
-export MCP_TRANSPORT=stdio
-mcp-outline
-
-# For HTTP/SSE mode (useful for Docker deployments)
-export MCP_TRANSPORT=sse
-mcp-outline
-```
-
-#### Docker HTTP Transport
-
-For Docker deployments, use SSE transport to enable HTTP endpoints:
-
-```bash
-docker run -p 3001:3001 --env-file .env -e MCP_TRANSPORT=sse mcp-outline
-```
-
-Or in docker-compose.yml:
-```yaml
-environment:
-  - MCP_TRANSPORT=sse
-  - OUTLINE_API_KEY=your_api_key
-  - OUTLINE_API_URL=https://your-outline-instance.com/api
-```
-
-**SSE Endpoint**: Connect to `http://localhost:3001/sse` (not root path)
-
-**Environment Variables**:
-- `MCP_TRANSPORT`: `stdio` (default) or `sse`
-- `MCP_HOST`: Bind address (default: `127.0.0.1` for local, `0.0.0.0` in Docker)
-
-When running the MCP Inspector, go to Tools > Click on a tool > it appears on the right side so that you can query it.
-![MCP Inspector](./docs/mcp_inspector_guide.png)
-
-## Local Development with Self-Hosted Outline
-
-For local testing without a paid Outline account, you can run a complete development environment with self-hosted Outline using Docker Compose.
-
-### Quick Start
-
-1. **Generate security keys**:
-   ```bash
-   # Copy the example configuration
-   cp config/outline.env.example config/outline.env
-
-   # Generate two unique secrets and add them to config/outline.env
-   openssl rand -hex 32  # Use for SECRET_KEY
-   openssl rand -hex 32  # Use for UTILS_SECRET
-   ```
-
-2. **Start all services**:
-   ```bash
-   docker compose up -d
-   ```
-
-3. **Access Outline**:
-   - Open http://localhost:32110 in your browser
-   - Login with `admin@example.com` / `admin`
-
-4. **Generate API key**:
-   - Go to Settings → API Keys
-   - Create a new token
-   - Add to `.env` file: `OUTLINE_API_KEY=<your-token>`
-
-5. **Restart MCP server**:
-   ```bash
-   docker compose restart mcp-outline
-   ```
-
-6. **Test MCP server**:
-   ```bash
-   npx @modelcontextprotocol/inspector http://localhost:3001/sse
-   ```
-
-The development environment includes:
-- **Outline** (localhost:3000) - Document management
-- **MCP Server** (localhost:3001) - MCP Outline server
-- **Dex** (localhost:5556) - OIDC authentication
-- **PostgreSQL** - Database
-- **Redis** - Cache
-
-All data persists in Docker volumes. To reset: `docker compose down -v`
-
-## Usage Examples
-
-### Search for Documents
-
-```
-Search for documents containing "project planning"
-```
-
-### List Collections
-
-```
-Show me all available collections
-```
-
-### Read a Document
-
-```
-Get the content of document with ID "docId123"
-```
-
-### Create a New Document
-
-```
-Create a new document titled "Research Report" in collection "colId456" with content "# Introduction\n\nThis is a research report..."
-```
-
-### Add a Comment
-
-```
-Add a comment to document "docId123" saying "This looks great, but we should add more details to the methodology section."
-```
-
-### Move a Document
-
-```
-Move document "docId123" to collection "colId789"
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Development
+### Testing
 
 ```bash
 # Run tests
@@ -307,7 +235,57 @@ uv run pytest tests/
 
 # Format code
 uv run ruff format .
+
+# Type check
+uv run pyright src/
+
+# Lint
+uv run ruff check .
 ```
+
+### Running Locally
+
+```bash
+uv run mcp-outline
+```
+
+### Testing with MCP Inspector
+
+Use the MCP Inspector to test the server tools visually via an interactive UI.
+
+**For local development** (with stdio):
+
+```bash
+npx @modelcontextprotocol/inspector -e OUTLINE_API_KEY=<your-key> -e OUTLINE_API_URL=<your-url> uv run python -m mcp_outline
+```
+
+**For Docker Compose** (with HTTP):
+
+```bash
+npx @modelcontextprotocol/inspector http://localhost:3000
+```
+
+The MCP Inspector allows you to:
+- View all available tools
+- Test tool calls with custom parameters
+- See responses in real-time
+
+![MCP Inspector](./docs/mcp_inspector_guide.png)
+
+## Architecture Notes
+
+**Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). No configuration needed.
+
+**Transport Modes**:
+- `stdio` (default): Direct process communication
+- `sse`: HTTP Server-Sent Events (use for web clients)
+- `streamable-http`: Streamable HTTP transport
+
+**Connection Pooling**: Shared httpx connection pool across instances (configurable: `OUTLINE_MAX_CONNECTIONS=100`, `OUTLINE_MAX_KEEPALIVE=20`)
+
+## Contributing
+
+Contributions welcome! Please submit a Pull Request.
 
 ## License
 

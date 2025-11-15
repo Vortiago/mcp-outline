@@ -87,17 +87,18 @@ services:
       dockerfile: Dockerfile
     container_name: outline-mcp
     ports:
-      - "127.0.0.1:3001:3001"
+      - "127.0.0.1:${MCP_PORT:-3000}:${MCP_PORT:-3000}"
     environment:
       - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
       - OUTLINE_API_URL=http://outline:3000/api
-      - MCP_TRANSPORT=sse
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=${MCP_PORT:-3000}
     depends_on:
       - outline
     networks:
       - outline
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; socket.socket().connect(('localhost', 3001))"]
+      test: ["CMD", "curl", "-f", "http://localhost:${MCP_PORT:-3000}/ready"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -182,3 +182,5 @@ docker.env            # Docker environment file with secrets
 config/*.env          # Configuration files with secrets (keep .example files)
 !config/*.env.example # But keep example files
 outline.env
+
+settings.local.json
