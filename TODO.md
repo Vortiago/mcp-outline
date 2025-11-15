@@ -6,8 +6,9 @@ This document tracks quality-of-life enhancements and new features based on the 
 
 - **MCP SDK Version**: FastMCP 1.20.0+
 - **Tools Implemented**: 25
-- **MCP Features Used**: Tools only (stdio, SSE, streamable-http transports)
-- **MCP Features NOT Used**: Resources, Prompts, Sampling
+- **MCP Features Used**: Tools (stdio, SSE, Streamable HTTP transports)
+- **MCP Features NOT Yet Used**: Resources, Prompts, Sampling
+- **Completed Features**: Search pagination with offset/limit parameters
 
 ---
 
@@ -17,18 +18,32 @@ This document tracks quality-of-life enhancements and new features based on the 
 **Complexity**: Moderate
 **Status**: Not Started
 
-Implement resource handlers to expose Outline data via MCP URIs:
+Implement resource handlers to expose Outline data via MCP URIs using FastMCP's `@mcp.resource()` decorator (KISS approach):
 
-- [ ] Implement `@mcp.resource()` decorators in new `resources/` module
-- [ ] Create `list_resources()` handler
-- [ ] Create `read_resource()` handler
+**Implementation Pattern** (simpler than low-level handlers):
+```python
+@mcp.resource("outline://document/{document_id}")
+async def read_document(document_id: str) -> str:
+    """Full document content in markdown."""
+    client = await get_outline_client()
+    doc = await client.get_document(document_id)
+    return doc.get("text", "")
+```
+
+**Tasks**:
+- [ ] Create new `features/resources/` module with resource decorators
 - [ ] Add resource: `outline://collection/{id}` - Collection metadata and properties
 - [ ] Add resource: `outline://document/{id}` - Full document content (markdown)
 - [ ] Add resource: `outline://collection/{id}/tree` - Hierarchical document tree
 - [ ] Add resource: `outline://collection/{id}/documents` - List of documents in collection
 - [ ] Add resource: `outline://document/{id}/backlinks` - Documents linking to this document
 - [ ] Add comprehensive tests for all resources
-- [ ] Update README with resource examples
+- [ ] Update README with resource examples and URI scheme documentation
+
+**Notes**:
+- Use FastMCP's `@mcp.resource()` decorator pattern (simpler than manual handlers)
+- Keep URI scheme consistent: use `outline://` prefix for all resources
+- All resources are read-only (no side effects)
 
 **Benefits**:
 - Direct content access via URIs
@@ -39,98 +54,78 @@ Implement resource handlers to expose Outline data via MCP URIs:
 
 ## Phase 2: Transport & Performance Upgrades
 
-### 2.1 Streamable HTTP Transport (2025-03-26 Spec)
-**Complexity**: Moderate
-**Status**: Not Started
+### 2.1 Streamable HTTP Transport & Health Checks
+**Complexity**: Low
+**Status**: Complete
 
-Update to the new Streamable HTTP transport specification:
+**Status**: ✅ Streamable HTTP transport implemented (server.py line 32)
+**Status**: ✅ Health check endpoints implemented (features/health.py)
+**Status**: ✅ Docker-compose updated to use /ready endpoint
 
-- [ ] Research Streamable HTTP spec from MCP docs (2025-03-26 revision)
-- [ ] Update FastMCP to latest version supporting Streamable HTTP
-- [ ] Implement Streamable HTTP transport mode
-- [ ] Add health check endpoints: `/health`, `/ready`, `/metrics`
-- [ ] Update transport configuration in server.py
-- [ ] Update README with Streamable HTTP examples
-- [ ] Add transport-specific tests
-- [ ] Mark old SSE transport as deprecated with migration guide
-- [ ] Update docker-compose.yml for new transport
-- [ ] Update CI/CD to test all transport modes
+**Completed Tasks**:
+- [x] Add health check endpoints for Docker/K8s deployments:
+  - [x] `GET /health` - Simple liveness check (always returns 200 OK)
+  - [x] `GET /ready` - Readiness check that verifies Outline API key works
+- [x] Update docker-compose.yml healthcheck to use `/ready` endpoint
+- [ ] Add tests for health check endpoints (optional for hobby project)
+
+**Implementation Notes**:
+- `/health`: Simple endpoint that returns `{"status": "healthy"}` - for liveness probes
+- `/ready`: Should make a test call to Outline API (e.g., `collections.list` with limit=1) to verify:
+  - Network connectivity to Outline
+  - API key is valid
+  - Returns `{"status": "ready", "outline": "connected"}` or error
+- Use FastMCP's `@mcp.custom_route()` decorator for these endpoints
+- Do NOT require authentication for health checks (they need to be accessible for monitoring)
+
+**Example Usage in docker-compose.yml**:
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:3000/ready"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
 
 **Benefits**:
-- Better performance than SSE
-- Simpler implementation
-- Standards-compliant with latest spec
-- Multiple client connection support
+- Enables Docker/Kubernetes to monitor server readiness
+- Automatic restart on unhealthy state
+- Early detection of API connectivity issues
+- Standards-compliant with container orchestration platforms
 
 ---
 
 ## Phase 3: API Coverage Expansion
 
 ### 3.1 Document Features
-**Status**: Not Started
+**Status**: Mostly Complete
 
-**High Priority:**
-- [ ] **Templates**:
-  - [ ] Add tool: `list_document_templates` - List available templates
-  - [ ] Add tool: `create_document_from_template` - Create from template
-  - [ ] Add OutlineClient methods: `list_templates()`, `create_from_template()`
-  - [ ] Add tests
+**Search Pagination** (✅ COMPLETE):
+- [x] ✅ `offset` and `limit` parameters already implemented
+- [x] ✅ OutlineClient.search_documents() supports pagination
+- [x] ✅ Formatter shows pagination info in document_search.py:141-146
+- [x] ✅ Tests exist in tests/features/test_document_search.py
+- No further work needed for pagination!
 
-- [ ] **Search Pagination** (CRITICAL):
-  - [ ] Add `offset` and `limit` parameters to `search_documents` tool
-  - [ ] Update OutlineClient.search_documents() to support pagination
-  - [ ] Update formatter: "Showing X-Y of Z results"
-  - [ ] Add tests
+**Templates** (Limited Support):
+- [ ] Add tool: `list_document_templates` - List templates via documents.list with template=true
+- [ ] Add tool: `create_template_from_document` - Convert document to template via documents.templatize
+- [ ] Add OutlineClient methods: `list_templates()`, `create_template_from_document()`
+- [ ] Add tests
+- ❌ Do NOT implement `create_document_from_template` - This endpoint doesn't exist in Outline API
 
-**Low Priority (Phase 4/5):**
-- [ ] **Revision History** (read-only):
-  - [ ] Add tool: `get_document_revisions` - List versions with metadata
-  - [ ] Add tool: `get_document_revision` - Get specific version content
-  - [ ] Add OutlineClient methods
-  - [ ] Add tests
-  - ❌ Do NOT implement `restore_document_revision` - too risky for automation
+**Revision History** (Low Priority - Nice to Have):
+- [ ] Add tool: `get_document_revisions` - List document versions with metadata
+- [ ] Add tool: `get_document_revision` - Get specific revision content
+- [ ] Add OutlineClient methods: `list_revisions()`, `get_revision()`
+- [ ] Add tests
+- ❌ Do NOT implement `restore_document_revision` - too risky for automation
 
 **Benefits**:
+- Proper handling of large result sets (pagination - DONE!)
 - Core workflow automation (templates)
-- Proper handling of large result sets (pagination)
 - Focus on content operations, not UI feature parity
-
----
-
-## Phase 4: Developer Experience
-
-### 4.1 Documentation Site
-**Complexity**: Moderate
-**Status**: Not Started
-
-Create comprehensive API documentation:
-
-- [ ] Choose documentation framework: MkDocs (recommended) or Sphinx
-- [ ] Set up documentation structure in `docs/` directory
-- [ ] Create documentation pages:
-  - [ ] Getting Started guide
-  - [ ] Installation & Configuration
-  - [ ] Transport Modes (stdio, SSE, Streamable HTTP)
-  - [ ] Tools Reference (auto-generated from docstrings)
-  - [ ] Resources Reference
-  - [ ] Prompts Reference
-  - [ ] API Client Reference
-  - [ ] Architecture Overview
-  - [ ] Contributing Guide
-  - [ ] Troubleshooting Guide
-- [ ] Add interactive examples and code snippets
-- [ ] Create architecture diagrams (using Mermaid or PlantUML)
-- [ ] Add API authentication guide
-- [ ] Document rate limiting behavior
-- [ ] Set up GitHub Pages deployment
-- [ ] Add documentation build to CI/CD
-- [ ] Add "Edit on GitHub" links
-
-**Benefits**:
-- Better onboarding experience
-- Reduced support burden
-- Professional presentation
-- Easier contribution process
 
 ---
 
@@ -138,7 +133,7 @@ Create comprehensive API documentation:
 **Complexity**: Simple to Moderate (per item)
 **Status**: Not Started
 
-Enhance development tools and error handling:
+Enhance development tools and error handling (hobby-project scope):
 
 - [ ] **Configuration Validation**:
   - [ ] Add Pydantic models for configuration
@@ -163,14 +158,12 @@ Enhance development tools and error handling:
 - [ ] **Development Scripts**:
   - [ ] Improve start_server.sh with better error handling
   - [ ] Add setup script for first-time setup
-  - [ ] Add version checker script
-  - [ ] Add dependency update checker
 
 **Benefits**:
 - Better debugging experience
 - Faster issue resolution
 - Clearer error messages
-- Easier onboarding
+- Easier onboarding for users
 
 ---
 
@@ -178,41 +171,36 @@ Enhance development tools and error handling:
 **Complexity**: Moderate
 **Status**: Not Started
 
-Expand test coverage and quality:
+Expand test coverage and quality (hobby-project scope - only meaningful tests):
 
 - [ ] **Integration Tests**:
   - [ ] Set up test Outline instance (Docker-based)
   - [ ] Create integration test suite with real API calls
   - [ ] Test all tools end-to-end
-  - [ ] Test all transport modes
   - [ ] Add to CI/CD (optional, on-demand)
 - [ ] **Performance Tests**:
   - [ ] Create benchmark suite using pytest-benchmark
   - [ ] Benchmark tool execution times
-  - [ ] Benchmark with/without caching
-  - [ ] Benchmark async vs sync client
+  - [ ] Benchmark with/without connection pooling
   - [ ] Add performance regression detection
 - [ ] **Transport-Specific Tests**:
   - [ ] Test stdio transport in isolation
-  - [ ] Test SSE transport with multiple clients
   - [ ] Test Streamable HTTP transport
-  - [ ] Test transport switching
+  - [ ] Test rate limiting behavior across transports
 - [ ] **Coverage Improvements**:
   - [ ] Increase coverage to 95%+
-  - [ ] Add edge case tests
-  - [ ] Add error path tests
-  - [ ] Add concurrent operation tests
-- [ ] **Test Infrastructure**:
+  - [ ] Add edge case tests (malformed input, empty results, API errors)
+  - [ ] Add error path tests (authentication failures, timeouts, rate limiting)
+  - [ ] Add concurrent operation tests (parallel requests, connection pool usage)
+- [ ] **Test Fixtures**:
   - [ ] Add test fixtures for common scenarios
-  - [ ] Create test data generators
-  - [ ] Add test helper utilities
-  - [ ] Improve test organization
+  - [ ] Create test data generators for realistic Outline data
 
 **Benefits**:
 - Higher confidence in releases
 - Catch regressions early
 - Performance visibility
-- Better code quality
+- Meaningful edge case coverage
 
 ---
 
@@ -243,21 +231,27 @@ Improve Docker infrastructure and automated builds:
 ## Phase 5: Advanced Features (Future)
 
 ### 5.2 Enhanced Search Parameters
-**Complexity**: Low-Moderate
+**Complexity**: Low
 **Status**: Not Started
 
-**Note**: These are just parameter additions to existing `search_documents` tool, not a separate phase
+**Note**: Parameter additions to existing `search_documents` tool (not a separate phase)
 
-- [ ] Add optional parameters to `search_documents` tool:
-  - [ ] `date_from`, `date_to` - Date range filtering
-  - [ ] `author` - Filter by document author
-  - [ ] `tags` - Filter by tags
-  - [ ] `sort_by` - Ranking options (relevance, date, title)
+Add optional parameters matching Outline API capabilities:
+- [ ] `user_id` - Filter by document editor (Outline API: userId)
+- [ ] `document_id` - Search within specific document (Outline API: documentId)
+- [ ] `status_filter` - Enum: "draft", "published", "archived"
+- [ ] `date_filter` - Enum: "day", "week", "month", "year" (relative date ranges)
 - [ ] Update OutlineClient.search_documents() to pass filters to API
 - [ ] Update formatter to show applied filters
 - [ ] Add tests for filtered searches
 
-**Do NOT implement**: Separate tools for each filter type - just enhance existing tool
+**Do NOT implement**:
+- ❌ `tags` - Not supported by Outline API
+- ❌ `author` - Use `user_id` instead (Outline uses editor, not author)
+- ❌ `sort_by` - API only supports relevance sorting
+- ❌ `date_from`, `date_to` - Use `date_filter` enum instead
+
+**Reference**: Outline API `documents.search` endpoint supports userId, documentId, statusFilter, dateFilter parameters
 
 ---
 

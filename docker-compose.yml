@@ -5,7 +5,7 @@
 #   1. Copy config/outline.env.example to config/outline.env
 #   2. Generate secrets: openssl rand -hex 32 (do this twice for SECRET_KEY and UTILS_SECRET)
 #   3. docker compose up -d
-#   4. Open http://localhost:32110 and login with admin@example.com / admin
+#   4. Open http://localhost:3030 and login with admin@example.com / admin (Outline)
 #   5. Go to Settings -> API Keys and create a token
 #   6. Add token to .env as OUTLINE_API_KEY=<your-token>
 #   7. docker compose restart mcp-outline
@@ -14,10 +14,10 @@ services:
   # Dex - OpenID Connect authentication provider
   # Required: Outline has no built-in authentication
   dex:
-    image: ghcr.io/dexidp/dex:v2.37.0
+    image: ghcr.io/dexidp/dex:v2.44.0-alpine
     container_name: outline-dex
     ports:
-      - "127.0.0.1:5556:5556"
+      - 5556:5556
     volumes:
       - ./config/dex-config.yaml:/etc/dex/config.docker.yaml:ro
     networks:
@@ -26,7 +26,7 @@ services:
 
   # PostgreSQL - Database for Outline
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: outline-postgres
     environment:
       POSTGRES_USER: outline
@@ -45,7 +45,7 @@ services:
 
   # Redis - Cache and session management
   redis:
-    image: redis:7-alpine
+    image: redis:8.2-alpine
     container_name: outline-redis
     volumes:
       - outline-redis-data:/data
@@ -60,11 +60,11 @@ services:
 
   # Outline - Document management platform
   outline:
-    image: docker.getoutline.com/outlinewiki/outline:0.78.0
+    image: docker.getoutline.com/outlinewiki/outline:1.1.0-0
     container_name: outline
     env_file: ./config/outline.env
     ports:
-      - "127.0.0.1:32110:3000"
+      - 3030:3030
     volumes:
       - outline-data:/var/lib/outline/data
     depends_on:
@@ -87,17 +87,17 @@ services:
       dockerfile: Dockerfile
     container_name: outline-mcp
     ports:
-      - "127.0.0.1:3001:3001"
+      - ${MCP_PORT:-3000}:${MCP_PORT:-3000}
     environment:
       - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
-      - OUTLINE_API_URL=http://outline:3000/api
-      - MCP_TRANSPORT=sse
+      - OUTLINE_API_URL=http://outline:3030/api
+      - MCP_PORT=${MCP_PORT:-3000}
     depends_on:
       - outline
     networks:
       - outline
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; socket.socket().connect(('localhost', 3001))"]
+      test: ["CMD", "curl", "-f", "http://localhost:${MCP_PORT:-3000}/ready"]
       interval: 30s
       timeout: 10s
       retries: 3

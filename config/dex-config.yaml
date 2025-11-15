@@ -17,8 +17,8 @@ staticClients:
     secret: outline-secret
     name: 'Outline Wiki'
     redirectURIs:
-      - 'http://localhost:32110/auth/oidc.callback'
-      - 'http://127.0.0.1:32110/auth/oidc.callback'
+      - 'http://localhost:3030/auth/oidc.callback'
+      - 'http://127.0.0.1:3030/auth/oidc.callback'
 
 # Enable password-based authentication for development
 enablePasswordDB: true

@@ -12,12 +12,33 @@ from mcp_outline.features.documents.common import (
 )
 
 
-def _format_search_results(results: List[Dict[str, Any]]) -> str:
-    """Format search results into readable text."""
+def _format_search_results(
+    results: List[Dict[str, Any]],
+    pagination: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Format search results into readable text with pagination info."""
     if not results:
         return "No documents found matching your search."
 
     output = "# Search Results\n\n"
+
+    # Add pagination info if available
+    if pagination:
+        limit = pagination.get("limit", 25)
+        offset = pagination.get("offset", 0)
+        shown_start = offset + 1
+        shown_end = offset + len(results)
+        output += f"Showing results {shown_start}-{shown_end}\n"
+
+        # Suggest next page if we got a full page of results
+        if len(results) == limit:
+            next_offset = offset + limit
+            output += (
+                f"More results may be available. "
+                f"Use offset={next_offset} to see more.\n"
+            )
+
+        output += "\n"
 
     for i, result in enumerate(results, 1):
         document = result.get("document", {})
@@ -27,6 +48,10 @@ def _format_search_results(results: List[Dict[str, Any]]) -> str:
 
         output += f"## {i}. {title}\n"
         output += f"ID: {doc_id}\n"
+        # Show ranking if present (including 0.0)
+        if "ranking" in result:
+            ranking = result["ranking"]
+            output += f"Relevance: {ranking:.2f}\n"
         if context:
             output += f"Context: {context}\n"
         output += "\n"
@@ -114,7 +139,10 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     async def search_documents(
-        query: str, collection_id: Optional[str] = None
+        query: str,
+        collection_id: Optional[str] = None,
+        limit: int = 25,
+        offset: int = 0,
     ) -> str:
         """
         Searches for documents using keywords or phrases across your knowledge
@@ -129,25 +157,39 @@ def register_tools(mcp) -> None:
         providing
         the collection_id.
 
+        PAGINATION: By default, returns up to 25 results at a time. If more
+        results exist, use the 'offset' parameter to fetch additional pages.
+        For example, use offset=25 to get results 26-50, offset=50 for
+        51-75, etc.
+
         Use this tool when you need to:
         - Find documents containing specific terms or topics
         - Locate information across multiple documents
         - Search within a specific collection using collection_id
         - Discover content based on keywords
+        - Browse through large result sets using limit and offset
 
         Args:
             query: Search terms (e.g., "vacation policy" or "project plan")
             collection_id: Optional collection to limit the search to
+            limit: Maximum results to return (default: 25, max: 100)
+            offset: Number of results to skip for pagination (default: 0)
 
         Returns:
-            Formatted string containing search results with document titles
-            and
-            contexts
+            Formatted string containing search results with document titles,
+            contexts, and pagination information
         """
         try:
             client = await get_outline_client()
-            results = await client.search_documents(query, collection_id)
-            return _format_search_results(results)
+            response = await client.search_documents(
+                query, collection_id, limit, offset
+            )
+
+            # Extract results and pagination metadata
+            results = response.get("data", [])
+            pagination = response.get("pagination", {})
+
+            return _format_search_results(results, pagination)
         except OutlineClientError as e:
             return f"Error searching documents: {str(e)}"
         except Exception as e:
@@ -231,7 +273,10 @@ def register_tools(mcp) -> None:
         """
         try:
             client = await get_outline_client()
-            results = await client.search_documents(query, collection_id)
+            response = await client.search_documents(query, collection_id)
+
+            # Extract results from response
+            results = response.get("data", [])
 
             if not results:
                 return f"No documents found matching '{query}'"
