@@ -38,6 +38,11 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 
 ## Configuration
 
+**Important**: This MCP server connects TO an existing Outline instance.
+- **MCP Server** (this project) runs on `MCP_PORT` (default: 3000)
+- **Outline** (the document app) runs on a different port (e.g., 3030 in docker-compose)
+- `OUTLINE_API_URL` tells the MCP server where to find your Outline instance
+
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
 | `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
@@ -166,7 +171,7 @@ This approach applies to Claude Desktop, Cursor, VS Code, and Cline.
 <details>
 <summary><b>Docker Deployment (HTTP)</b></summary>
 
-For remote access or Docker containers, use HTTP transport:
+For remote access or Docker containers, use HTTP transport. This runs the **MCP server** on port 3000 (separate from your Outline instance):
 
 ```bash
 docker run -p 3000:3000 \
@@ -185,6 +190,8 @@ Then connect from client:
   }
 }
 ```
+
+**Note**: `OUTLINE_API_URL` should point to where your Outline instance is running, not localhost:3000.
 
 </details>
 
@@ -215,7 +222,7 @@ openssl rand -hex 32 > /tmp/secret_key && openssl rand -hex 32 > /tmp/utils_secr
 # Start all services
 docker compose up -d
 
-# Create API key: http://localhost:32110 → Settings → API Keys
+# Create API key: http://localhost:3030 → Settings → API Keys
 # Add to .env: OUTLINE_API_KEY=<token>
 ```
 
@@ -273,6 +280,21 @@ The MCP Inspector allows you to:
 ![MCP Inspector](./docs/mcp_inspector_guide.png)
 
 ## Architecture Notes
+
+**System Architecture**:
+```
+Client (Claude, Cursor, etc.)
+    ↓ connects to
+MCP Server (port 3000)
+    ↓ calls API to
+Outline (port 3030 in docker-compose)
+```
+
+Key points:
+- Client connects to **MCP Server** on port 3000
+- **MCP Server** calls **Outline** API via `OUTLINE_API_URL`
+- In docker-compose: Outline runs on port 3030, MCP Server on port 3000
+- Do NOT point `OUTLINE_API_URL` to the MCP Server port
 
 **Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). No configuration needed.
 
