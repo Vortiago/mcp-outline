@@ -438,6 +438,9 @@ def register_tools(mcp) -> None:
         - Batch edit document titles or content
         - Append content to multiple documents
 
+        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
+        as the code fence language identifier for proper rendering.
+
         Recommended batch size: 10-50 documents per operation
 
         Args:
@@ -547,6 +550,9 @@ def register_tools(mcp) -> None:
         - Create multiple documents at once
         - Bulk import content into collections
         - Set up document structures efficiently
+
+        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
+        as the code fence language identifier for proper rendering.
 
         Recommended batch size: 10-50 documents per operation
 

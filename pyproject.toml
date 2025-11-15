@@ -34,6 +34,7 @@ dev = [
     "anyio>=4.11.0",
     "pyright>=1.1.407",
     "trio>=0.31.0",
+    "pre-commit>=4.0.0",
 ]
 
 [tool.setuptools]

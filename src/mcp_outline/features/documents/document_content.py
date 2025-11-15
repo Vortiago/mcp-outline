@@ -37,6 +37,9 @@ def register_tools(mcp) -> None:
         - Add a child document to an existing parent
         - Start a new document thread or topic
 
+        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
+        as the code fence language identifier for proper rendering.
+
         Args:
             title: The document title
             collection_id: The collection ID to create the document in
@@ -97,6 +100,9 @@ def register_tools(mcp) -> None:
         - Change a document's title
         - Append new content to an existing document
         - Fix errors or add information to documents
+
+        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
+        as the code fence language identifier for proper rendering.
 
         Args:
             document_id: The document ID to update
