@@ -60,10 +60,7 @@ def register_routes(mcp) -> None:
             # - Network connectivity to Outline
             # - API key is valid
             # - API endpoint is accessible
-            result = await client.post(
-                "collections.list",
-                {"limit": 1}
-            )
+            await client.post("collections.list", {"limit": 1})
 
             # If we got here, everything is ready
             return JSONResponse(
