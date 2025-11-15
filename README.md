@@ -95,24 +95,51 @@ Go to **Settings → MCP** and click **Add Server**:
 <details>
 <summary><b>Add to VS Code</b></summary>
 
-Install the [MCP extension](https://marketplace.visualstudio.com/items?itemName=Claude.Claude) and add to VS Code settings:
+Create a `.vscode/mcp.json` file in your workspace with the following configuration:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "mcp-outline": {
-        "command": "uvx",
-        "args": ["mcp-outline"],
-        "env": {
-          "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-          "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
-        }
+  "servers": {
+    "mcp-outline": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-outline"],
+      "env": {
+        "OUTLINE_API_KEY": "<YOUR_API_KEY>"
       }
     }
   }
 }
 ```
+
+For self-hosted Outline instances, add `OUTLINE_API_URL` to the `env` object.
+
+**Optional**: Use input variables for sensitive credentials:
+
+```json
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "outline-api-key",
+      "description": "Outline API Key",
+      "password": true
+    }
+  ],
+  "servers": {
+    "mcp-outline": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-outline"],
+      "env": {
+        "OUTLINE_API_KEY": "${input:outline-api-key}"
+      }
+    }
+  }
+}
+```
+
+VS Code will automatically discover and load MCP servers from this configuration file. For more details, see the [official VS Code MCP documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
 
 </details>
 
