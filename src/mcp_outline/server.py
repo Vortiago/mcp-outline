@@ -6,6 +6,7 @@ A simple MCP server that provides document outline capabilities.
 
 import logging
 import os
+import sys
 from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -27,6 +28,13 @@ register_all(mcp)
 
 
 def main() -> None:
+    # Suppress KeyboardInterrupt traceback for clean exit
+    sys.excepthook = lambda exc_type, exc_value, exc_tb: (
+        sys.exit(0)
+        if exc_type is KeyboardInterrupt
+        else sys.__excepthook__(exc_type, exc_value, exc_tb)
+    )
+
     # Get transport mode from environment variable,
     # default to stdio for backward compatibility
     transport_str = os.getenv("MCP_TRANSPORT", "stdio").lower()

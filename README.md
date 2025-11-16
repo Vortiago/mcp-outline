@@ -8,6 +8,7 @@ A Model Context Protocol server for interacting with Outline document management
 - **Collections**: List, create, manage document hierarchies
 - **Comments**: Add and view threaded comments
 - **Backlinks**: Find documents referencing a specific document
+- **MCP Resources**: Direct content access via URIs (outline://document/{id}, outline://collection/{id}, etc.)
 - **Automatic rate limiting**: Transparent handling of API limits with retry logic
 
 ## Installation
@@ -261,6 +262,14 @@ Then connect from client:
 
 ### AI-Powered
 - `ask_ai_about_documents(question, collection_id?, document_id?)` - Ask natural language questions about your documents
+
+## Resources
+
+- `outline://collection/{id}` - Collection metadata (name, description, color, document count)
+- `outline://collection/{id}/tree` - Hierarchical document tree structure
+- `outline://collection/{id}/documents` - Flat list of documents in collection
+- `outline://document/{id}` - Full document content (markdown)
+- `outline://document/{id}/backlinks` - Documents that link to this document
 
 ## Development
 

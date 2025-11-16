@@ -258,6 +258,19 @@ class OutlineClient:
         response = await self.post("collections.list", {"limit": limit})
         return response.get("data", [])
 
+    async def get_collection(self, collection_id: str) -> Dict[str, Any]:
+        """
+        Get a single collection by ID.
+
+        Args:
+            collection_id: The collection ID.
+
+        Returns:
+            Collection information.
+        """
+        response = await self.post("collections.info", {"id": collection_id})
+        return response.get("data", {})
+
     async def get_collection_documents(
         self, collection_id: str
     ) -> List[Dict[str, Any]]:
