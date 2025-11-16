@@ -13,7 +13,7 @@ from mcp_outline.utils.outline_client import OutlineError
 
 def _format_backlinks(backlinks: list) -> str:
     """
-    Format document backlinks for display.
+    Format document backlinks as simple list.
 
     Args:
         backlinks: List of documents linking to the target document
@@ -22,17 +22,16 @@ def _format_backlinks(backlinks: list) -> str:
         Formatted backlinks list
     """
     if not backlinks:
-        return "No backlinks to this document.\n"
+        return "No backlinks found."
 
-    result = "# Backlinks\n\n"
-    result += "The following documents link to this document:\n\n"
-
+    # Simple bullet list without heavy formatting
+    result = []
     for doc in backlinks:
         title = doc.get("title", "Untitled")
         doc_id = doc.get("id", "")
-        result += f"- **{title}** (`{doc_id}`)\n"
+        result.append(f"- {title} ({doc_id})")
 
-    return result
+    return "\n".join(result)
 
 
 def register_resources(mcp):

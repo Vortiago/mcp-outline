@@ -33,7 +33,7 @@ SAMPLE_COLLECTION = {
     "name": "Test Collection",
     "description": "A test collection for unit tests",
     "color": "#FF0000",
-    "documents": 5,
+    "documents": {"count": 5},
 }
 
 SAMPLE_DOCUMENT_TREE = [
@@ -94,47 +94,81 @@ def register_collection_resources(mcp):
 class TestCollectionResourceFormatters:
     """Tests for collection resource formatting functions."""
 
-    def test_format_collection_metadata(self):
-        """Test formatting collection metadata."""
+    def test_format_collection_metadata_structure(self):
+        """Test collection metadata format is key-value pairs."""
         result = _format_collection_metadata(SAMPLE_COLLECTION)
+        lines = result.strip().split("\n")
 
-        assert "# Test Collection" in result
-        assert "A test collection for unit tests" in result
-        assert "**Documents**: 5" in result
-        assert "**Color**: #FF0000" in result
+        # Verify key-value format
+        assert lines[0] == "Name: Test Collection"
+        assert lines[1] == "Documents: 5"
+        assert "Description: A test collection for unit tests" in result
+        assert "Color: #FF0000" in result
 
-    def test_format_collection_metadata_no_description(self):
-        """Test formatting collection without description."""
-        collection = SAMPLE_COLLECTION.copy()
-        collection["description"] = ""
+    def test_format_collection_metadata_minimal(self):
+        """Test collection with only required fields."""
+        minimal_collection = {"name": "Minimal", "documents": {"count": 0}}
 
-        result = _format_collection_metadata(collection)
+        result = _format_collection_metadata(minimal_collection)
+        lines = result.strip().split("\n")
 
-        assert "# Test Collection" in result
-        assert "**Documents**: 5" in result
+        # Should have exactly 2 lines (name and documents)
+        assert len(lines) == 2
+        assert lines[0] == "Name: Minimal"
+        assert lines[1] == "Documents: 0"
+        # Should not include optional fields
+        assert "Description" not in result
+        assert "Color" not in result
 
-    def test_format_collection_tree(self):
-        """Test formatting collection document tree."""
+    def test_format_collection_tree_structure(self):
+        """Test tree maintains proper hierarchical structure."""
         result = _format_collection_tree(SAMPLE_DOCUMENT_TREE)
+        lines = result.strip().split("\n")
 
-        assert "- Parent Document (doc1)" in result
-        assert "  - Child Document 1 (doc2)" in result
-        assert "  - Child Document 2 (doc3)" in result
-        assert "- Another Parent (doc4)" in result
+        # Verify parent has no indentation
+        assert lines[0].startswith("- Parent Document")
+        assert lines[3].startswith("- Another Parent")
+
+        # Verify children have exactly 2 spaces indentation
+        assert lines[1].startswith("  - Child Document 1")
+        assert lines[2].startswith("  - Child Document 2")
+
+        # Verify parent-child count
+        parents = [line for line in lines if not line.startswith("  ")]
+        children = [line for line in lines if line.startswith("  - ")]
+        assert len(parents) == 2  # 2 parents
+        assert len(children) == 2  # 2 children
+
+    def test_format_collection_tree_deep_nesting(self):
+        """Test tree with multiple nesting levels."""
+        deep_tree = [
+            {
+                "id": "doc1",
+                "title": "Level 1",
+                "children": [
+                    {
+                        "id": "doc2",
+                        "title": "Level 2",
+                        "children": [
+                            {"id": "doc3", "title": "Level 3", "children": []}
+                        ],
+                    }
+                ],
+            }
+        ]
+
+        result = _format_collection_tree(deep_tree)
+        lines = result.strip().split("\n")
+
+        # Verify indentation increases by 2 spaces per level
+        assert lines[0].startswith("- Level 1")
+        assert lines[1].startswith("  - Level 2")
+        assert lines[2].startswith("    - Level 3")
 
     def test_format_collection_tree_empty(self):
         """Test formatting empty tree."""
         result = _format_collection_tree([])
         assert result == ""
-
-    def test_format_document_list(self):
-        """Test formatting document list."""
-        result = _format_document_list(SAMPLE_DOCUMENT_LIST)
-
-        assert "# Documents" in result
-        assert "**Document 1**" in result
-        assert "`doc1`" in result
-        assert "Last updated: 2023-01-01T12:00:00Z" in result
 
     def test_format_document_list_empty(self):
         """Test formatting empty document list."""
@@ -155,7 +189,7 @@ class TestCollectionResources:
             "get_outline_client"
         ) as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.list_collections.return_value = [SAMPLE_COLLECTION]
+            mock_client.get_collection.return_value = SAMPLE_COLLECTION
             mock_get_client.return_value = mock_client
 
             resource_func = register_collection_resources.resources[
@@ -163,21 +197,26 @@ class TestCollectionResources:
             ]
             result = await resource_func("coll123")
 
-            assert "# Test Collection" in result
-            assert "A test collection for unit tests" in result
-            mock_client.list_collections.assert_called_once()
+            assert "Name: Test Collection" in result
+            assert "Documents: 5" in result
+            assert "Description: A test collection for unit tests" in result
+            mock_client.get_collection.assert_called_once_with("coll123")
 
     @pytest.mark.asyncio
     async def test_get_collection_metadata_not_found(
         self, register_collection_resources
     ):
         """Test collection not found."""
+        from mcp_outline.utils.outline_client import OutlineError
+
         with patch(
             "mcp_outline.features.resources.collection_resources."
             "get_outline_client"
         ) as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.list_collections.return_value = []
+            mock_client.get_collection.side_effect = OutlineError(
+                "Collection not found"
+            )
             mock_get_client.return_value = mock_client
 
             resource_func = register_collection_resources.resources[
@@ -185,7 +224,7 @@ class TestCollectionResources:
             ]
             result = await resource_func("nonexistent")
 
-            assert "Error: Collection nonexistent not found" in result
+            assert "Outline API error: Collection not found" in result
 
     @pytest.mark.asyncio
     async def test_get_collection_metadata_error(
@@ -262,9 +301,7 @@ class TestCollectionResources:
             "get_outline_client"
         ) as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.search_documents.return_value = {
-                "data": SAMPLE_DOCUMENT_LIST
-            }
+            mock_client.list_documents.return_value = SAMPLE_DOCUMENT_LIST
             mock_get_client.return_value = mock_client
 
             resource_func = register_collection_resources.resources[
@@ -275,8 +312,8 @@ class TestCollectionResources:
             assert "# Documents" in result
             assert "Document 1" in result
             assert "Document 2" in result
-            mock_client.search_documents.assert_called_once_with(
-                query="", collection_id="coll123"
+            mock_client.list_documents.assert_called_once_with(
+                collection_id="coll123"
             )
 
     @pytest.mark.asyncio
@@ -289,7 +326,7 @@ class TestCollectionResources:
             "get_outline_client"
         ) as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.search_documents.return_value = {"data": []}
+            mock_client.list_documents.return_value = []
             mock_get_client.return_value = mock_client
 
             resource_func = register_collection_resources.resources[

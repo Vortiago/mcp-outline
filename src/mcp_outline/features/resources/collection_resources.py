@@ -13,7 +13,7 @@ from mcp_outline.utils.outline_client import OutlineError
 
 def _format_collection_metadata(collection: dict) -> str:
     """
-    Format collection metadata for display.
+    Format collection metadata as key-value pairs.
 
     Args:
         collection: Collection data from API
@@ -24,19 +24,20 @@ def _format_collection_metadata(collection: dict) -> str:
     name = collection.get("name", "Untitled")
     description = collection.get("description", "")
     color = collection.get("color", "")
-    doc_count = collection.get("documents", 0)
+    doc_count = collection.get("documents", {}).get("count", 0)
 
-    result = f"# {name}\n\n"
+    result = [
+        f"Name: {name}",
+        f"Documents: {doc_count}",
+    ]
 
     if description:
-        result += f"{description}\n\n"
-
-    result += f"**Documents**: {doc_count}\n"
+        result.append(f"Description: {description}")
 
     if color:
-        result += f"**Color**: {color}\n"
+        result.append(f"Color: {color}")
 
-    return result
+    return "\n".join(result)
 
 
 def _format_collection_tree(tree: list, indent: int = 0) -> str:
@@ -105,16 +106,8 @@ def register_resources(mcp):
         """
         try:
             client = await get_outline_client()
-            # Get all collections and find the matching one
-            collections = await client.list_collections()
-            collection = next(
-                (c for c in collections if c.get("id") == collection_id),
-                None,
-            )
-
-            if not collection:
-                return f"Error: Collection {collection_id} not found"
-
+            # Get collection directly by ID
+            collection = await client.get_collection(collection_id)
             return _format_collection_metadata(collection)
         except OutlineClientError as e:
             return f"Outline client error: {str(e)}"
@@ -164,12 +157,10 @@ def register_resources(mcp):
         """
         try:
             client = await get_outline_client()
-            # Search for all documents in the collection
-            result = await client.search_documents(
-                query="", collection_id=collection_id
+            # Get all documents in the collection
+            documents = await client.list_documents(
+                collection_id=collection_id
             )
-
-            documents = result.get("data", [])
             return _format_document_list(documents)
         except OutlineClientError as e:
             return f"Outline client error: {str(e)}"

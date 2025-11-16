@@ -66,21 +66,39 @@ def register_document_resources(mcp):
 class TestDocumentResourceFormatters:
     """Tests for document resource formatting functions."""
 
-    def test_format_backlinks(self):
-        """Test formatting backlinks."""
+    def test_format_backlinks_structure(self):
+        """Test backlinks format is consistent."""
         result = _format_backlinks(SAMPLE_BACKLINKS)
+        lines = result.strip().split("\n")
 
-        assert "# Backlinks" in result
-        assert "The following documents link to this document:" in result
-        assert "**Document 1 Linking Here**" in result
-        assert "`doc456`" in result
-        assert "**Document 2 Linking Here**" in result
-        assert "`doc789`" in result
+        # Each line should be a bullet point
+        assert all(line.startswith("- ") for line in lines)
+
+        # Each line should have title and ID in parentheses
+        assert "Document 1 Linking Here (doc456)" in result
+        assert "Document 2 Linking Here (doc789)" in result
+
+        # Verify count
+        assert len(lines) == 2
 
     def test_format_backlinks_empty(self):
         """Test formatting empty backlinks."""
         result = _format_backlinks([])
-        assert "No backlinks to this document" in result
+        assert result == "No backlinks found."
+
+    def test_format_backlinks_special_characters(self):
+        """Test backlinks with special characters in titles."""
+        backlinks = [
+            {"id": "doc1", "title": "Document with *asterisks*"},
+            {"id": "doc2", "title": "Document [with] {braces}"},
+        ]
+
+        result = _format_backlinks(backlinks)
+
+        # Should preserve special characters
+        assert "*asterisks*" in result
+        assert "[with]" in result
+        assert "{braces}" in result
 
 
 class TestDocumentResources:
@@ -167,9 +185,11 @@ class TestDocumentResources:
             ]
             result = await resource_func("doc123")
 
-            assert "# Backlinks" in result
-            assert "Document 1 Linking Here" in result
-            assert "Document 2 Linking Here" in result
+            # Verify simple bullet list format
+            assert "Document 1 Linking Here (doc456)" in result
+            assert "Document 2 Linking Here (doc789)" in result
+            # Should not have markdown headers
+            assert "# Backlinks" not in result
             mock_client.post.assert_called_once_with(
                 "documents.list", {"backlinkDocumentId": "doc123"}
             )
@@ -192,7 +212,7 @@ class TestDocumentResources:
             ]
             result = await resource_func("doc123")
 
-            assert "No backlinks to this document" in result
+            assert result == "No backlinks found."
 
     @pytest.mark.asyncio
     async def test_get_document_backlinks_error(

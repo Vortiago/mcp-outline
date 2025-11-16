@@ -2,99 +2,13 @@
 
 This document tracks quality-of-life enhancements and new features based on the latest MCP 2025 specifications and capabilities.
 
-## Current Status
-
-- **MCP SDK Version**: FastMCP 1.20.0+
-- **Tools Implemented**: 25
-- **MCP Features Used**: Tools (stdio, SSE, Streamable HTTP transports)
-- **MCP Features NOT Yet Used**: Resources, Prompts, Sampling
-- **Completed Features**: Search pagination with offset/limit parameters
-
----
-
 ## Phase 1: Core MCP Features (High Priority)
 
 ### 1.1 Add MCP Resources Support
 **Complexity**: Moderate
-**Status**: Not Started
+**Status**: ✅ COMPLETE (2025-11-16)
 
-Implement resource handlers to expose Outline data via MCP URIs using FastMCP's `@mcp.resource()` decorator (KISS approach):
-
-**Implementation Pattern** (simpler than low-level handlers):
-```python
-@mcp.resource("outline://document/{document_id}")
-async def read_document(document_id: str) -> str:
-    """Full document content in markdown."""
-    client = await get_outline_client()
-    doc = await client.get_document(document_id)
-    return doc.get("text", "")
-```
-
-**Tasks**:
-- [ ] Create new `features/resources/` module with resource decorators
-- [ ] Add resource: `outline://collection/{id}` - Collection metadata and properties
-- [ ] Add resource: `outline://document/{id}` - Full document content (markdown)
-- [ ] Add resource: `outline://collection/{id}/tree` - Hierarchical document tree
-- [ ] Add resource: `outline://collection/{id}/documents` - List of documents in collection
-- [ ] Add resource: `outline://document/{id}/backlinks` - Documents linking to this document
-- [ ] Add comprehensive tests for all resources
-- [ ] Update README with resource examples and URI scheme documentation
-
-**Notes**:
-- Use FastMCP's `@mcp.resource()` decorator pattern (simpler than manual handlers)
-- Keep URI scheme consistent: use `outline://` prefix for all resources
-- All resources are read-only (no side effects)
-
-**Benefits**:
-- Direct content access via URIs
-- Enables AI to fetch context without explicit tool calls
-- Better integration with MCP-aware clients
-
----
-
-## Phase 2: Transport & Performance Upgrades
-
-### 2.1 Streamable HTTP Transport & Health Checks
-**Complexity**: Low
-**Status**: Complete
-
-**Status**: ✅ Streamable HTTP transport implemented (server.py line 32)
-**Status**: ✅ Health check endpoints implemented (features/health.py)
-**Status**: ✅ Docker-compose updated to use /ready endpoint
-
-**Completed Tasks**:
-- [x] Add health check endpoints for Docker/K8s deployments:
-  - [x] `GET /health` - Simple liveness check (always returns 200 OK)
-  - [x] `GET /ready` - Readiness check that verifies Outline API key works
-- [x] Update docker-compose.yml healthcheck to use `/ready` endpoint
-- [ ] Add tests for health check endpoints (optional for hobby project)
-
-**Implementation Notes**:
-- `/health`: Simple endpoint that returns `{"status": "healthy"}` - for liveness probes
-- `/ready`: Should make a test call to Outline API (e.g., `collections.list` with limit=1) to verify:
-  - Network connectivity to Outline
-  - API key is valid
-  - Returns `{"status": "ready", "outline": "connected"}` or error
-- Use FastMCP's `@mcp.custom_route()` decorator for these endpoints
-- Do NOT require authentication for health checks (they need to be accessible for monitoring)
-
-**Example Usage in docker-compose.yml**:
-```yaml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:3000/ready"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 40s
-```
-
-**Benefits**:
-- Enables Docker/Kubernetes to monitor server readiness
-- Automatic restart on unhealthy state
-- Early detection of API connectivity issues
-- Standards-compliant with container orchestration platforms
-
----
+Implemented resource handlers to expose Outline data via MCP URIs using FastMCP's `@mcp.resource()` decorator.
 
 ## Phase 3: API Coverage Expansion
 
@@ -281,13 +195,3 @@ Add optional parameters matching Outline API capabilities:
   - Research API key scoping
 
 ---
-
-## Notes
-
-### Prioritization Criteria
-
-Items are prioritized based on:
-1. **Impact**: How much value does this add to users?
-2. **Complexity**: How difficult is implementation?
-3. **Dependencies**: What must be done first?
-4. **MCP Compliance**: Does this use core MCP features?
