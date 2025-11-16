@@ -8,6 +8,7 @@ A Model Context Protocol server for interacting with Outline document management
 - **Collections**: List, create, manage document hierarchies
 - **Comments**: Add and view threaded comments
 - **Backlinks**: Find documents referencing a specific document
+- **MCP Resources**: Direct content access via URIs (outline://document/{id}, outline://collection/{id}, etc.)
 - **Automatic rate limiting**: Transparent handling of API limits with retry logic
 
 ## Installation
@@ -261,6 +262,65 @@ Then connect from client:
 
 ### AI-Powered
 - `ask_ai_about_documents(question, collection_id?, document_id?)` - Ask natural language questions about your documents
+
+## MCP Resources
+
+MCP Resources provide direct content access via URIs without requiring tool calls. This enables AI clients to fetch context more efficiently and integrate better with MCP-aware workflows.
+
+### Available Resources
+
+All resources use the `outline://` URI scheme:
+
+#### Collection Resources
+
+- **`outline://collection/{id}`** - Collection metadata and properties
+  ```
+  Returns: Collection name, description, color, and document count
+  ```
+
+- **`outline://collection/{id}/tree`** - Hierarchical document tree
+  ```
+  Returns: Tree structure showing parent-child document relationships
+  ```
+
+- **`outline://collection/{id}/documents`** - List of documents in collection
+  ```
+  Returns: Flat list of all documents with titles and IDs
+  ```
+
+#### Document Resources
+
+- **`outline://document/{id}`** - Full document content in markdown
+  ```
+  Returns: Raw markdown content of the document
+  ```
+
+- **`outline://document/{id}/backlinks`** - Documents linking to this document
+  ```
+  Returns: List of documents that reference this document
+  ```
+
+### Usage Examples
+
+Resources can be accessed directly by MCP-aware clients:
+
+```javascript
+// Fetch document content
+const content = await client.readResource("outline://document/abc123");
+
+// Get collection tree
+const tree = await client.readResource("outline://collection/xyz789/tree");
+
+// Find backlinks
+const backlinks = await client.readResource("outline://document/abc123/backlinks");
+```
+
+### Benefits
+
+- **Direct Access**: Fetch content via URIs without tool calls
+- **Reduced Latency**: Skip tool invocation overhead
+- **Better Integration**: Standard MCP resource protocol
+- **Proactive Loading**: AI clients can load relevant context automatically
 
 ## Development
 
