@@ -1,5 +1,5 @@
 # Document Outline MCP features package
-from mcp_outline.features import documents, health
+from mcp_outline.features import documents, health, resources
 
 
 def register_all(mcp):
@@ -14,3 +14,6 @@ def register_all(mcp):
 
     # Register document management features
     documents.register(mcp)
+
+    # Register MCP resources
+    resources.register(mcp)
