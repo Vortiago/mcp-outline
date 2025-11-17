@@ -24,6 +24,14 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # Run test suite (skip slow integration tests)
+      - id: pytest
+        name: pytest (fast unit tests)
+        entry: bash -c 'uv run pytest tests/ -v -m "not integration"'
+        language: system
+        types: [python]
+        pass_filenames: false
+
   # General pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
