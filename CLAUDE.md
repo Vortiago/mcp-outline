@@ -241,7 +241,7 @@ uv run pytest tests/ -v --cov=src/mcp_outline
 uv run pytest tests/ -v -m integration
 ```
 
-Note: `uv run` automatically installs dependencies from `pyproject.toml` as needed. These checks mirror the GitHub Actions CI workflow and must pass before pushing.
+These checks mirror the GitHub Actions CI workflow and must pass before pushing. Commits that fail CI checks will block PR merges.
 
 ## Common Patterns
 
