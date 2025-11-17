@@ -50,6 +50,28 @@ def main() -> None:
         )
         transport_mode = "stdio"
 
+    # Configure logging based on transport mode
+    if transport_mode == "stdio":
+        # In stdio mode, suppress all logging to prevent interference
+        # with MCP protocol. MCP uses stdio for JSON-RPC communication,
+        # so any logs to stdout/stderr break the protocol.
+        logging.basicConfig(
+            level=logging.CRITICAL,  # Only show critical errors
+            format="%(message)s",
+        )
+        # Also suppress httpx logging (HTTP request logs)
+        logging.getLogger("httpx").setLevel(logging.CRITICAL)
+        # Suppress MCP SDK's internal logging
+        logging.getLogger("mcp").setLevel(logging.CRITICAL)
+    else:
+        # In SSE/HTTP modes, enable info logging for debugging
+        logging.basicConfig(
+            level=logging.INFO,
+            format="[%(asctime)s] %(levelname)-8s %(message)s",
+            datefmt="%m/%d/%y %H:%M:%S",
+        )
+        logging.getLogger("httpx").setLevel(logging.INFO)
+
     logging.info(
         f"Starting MCP Outline server with transport mode: {transport_mode}"
     )
