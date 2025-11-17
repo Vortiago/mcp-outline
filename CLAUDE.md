@@ -223,22 +223,25 @@ OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
 
 ```bash
 # 1. Install dev dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 
 # 2. Format code
-ruff format .
+uv run ruff format .
 
 # 3. Check formatting
-ruff format --check .
+uv run ruff format --check .
 
 # 4. Lint code
-ruff check .
+uv run ruff check .
 
 # 5. Type check
-pyright src/
+uv run pyright src/
 
 # 6. Run tests
-pytest tests/ -v --cov=src/mcp_outline
+uv run pytest tests/ -v --cov=src/mcp_outline
+
+# Run integration tests
+uv run pytest tests/ -v -m integration
 ```
 
 These checks mirror the GitHub Actions CI workflow and must pass before pushing. Commits that fail CI checks will block PR merges.
