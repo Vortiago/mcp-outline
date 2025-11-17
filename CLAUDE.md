@@ -222,29 +222,26 @@ OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
 **IMPORTANT**: Before committing, run all CI checks locally to ensure they pass:
 
 ```bash
-# 1. Install dev dependencies
-uv pip install -e ".[dev]"
-
-# 2. Format code
+# Format code
 uv run ruff format .
 
-# 3. Check formatting
+# Check formatting
 uv run ruff format --check .
 
-# 4. Lint code
+# Lint code
 uv run ruff check .
 
-# 5. Type check
+# Type check
 uv run pyright src/
 
-# 6. Run tests
+# Run tests
 uv run pytest tests/ -v --cov=src/mcp_outline
 
 # Run integration tests
 uv run pytest tests/ -v -m integration
 ```
 
-These checks mirror the GitHub Actions CI workflow and must pass before pushing. Commits that fail CI checks will block PR merges.
+Note: `uv run` automatically installs dependencies from `pyproject.toml` as needed. These checks mirror the GitHub Actions CI workflow and must pass before pushing.
 
 ## Common Patterns
 
