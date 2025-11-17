@@ -241,8 +241,6 @@ uv run pytest tests/ -v --cov=src/mcp_outline
 uv run pytest tests/ -v -m integration
 ```
 
-These checks mirror the GitHub Actions CI workflow and must pass before pushing. Commits that fail CI checks will block PR merges.
-
 ## Common Patterns
 
 **Pagination**: Use `offset` and `limit` parameters for large result sets
