@@ -58,6 +58,7 @@ def main() -> None:
         logging.basicConfig(
             level=logging.CRITICAL,  # Only show critical errors
             format="%(message)s",
+            force=True,  # Override any existing logging configuration
         )
         # Also suppress httpx logging (HTTP request logs)
         logging.getLogger("httpx").setLevel(logging.CRITICAL)
@@ -69,6 +70,7 @@ def main() -> None:
             level=logging.INFO,
             format="[%(asctime)s] %(levelname)-8s %(message)s",
             datefmt="%m/%d/%y %H:%M:%S",
+            force=True,  # Override any existing logging configuration
         )
         logging.getLogger("httpx").setLevel(logging.INFO)
         logging.info(
