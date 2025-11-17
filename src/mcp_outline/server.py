@@ -71,10 +71,10 @@ def main() -> None:
             datefmt="%m/%d/%y %H:%M:%S",
         )
         logging.getLogger("httpx").setLevel(logging.INFO)
-
-    logging.info(
-        f"Starting MCP Outline server with transport mode: {transport_mode}"
-    )
+        logging.info(
+            f"Starting MCP Outline server with "
+            f"transport mode: {transport_mode}"
+        )
 
     # Start the server with the specified transport
     mcp.run(transport=transport_mode)
