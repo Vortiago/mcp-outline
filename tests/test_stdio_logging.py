@@ -49,7 +49,8 @@ def test_stdio_mode_no_log_output():
         if process.poll() is not None:
             stdout, stderr = process.communicate()
             pytest.fail(
-                f"Server exited unexpectedly (exit code {process.returncode})\n"
+                f"Server exited unexpectedly "
+                f"(exit code {process.returncode})\n"
                 f"stderr: {stderr}\nstdout: {stdout}"
             )
 
@@ -86,7 +87,8 @@ def test_stdio_mode_no_log_output():
         except json.JSONDecodeError:
             # Any non-JSON output is a log message - fail the test
             pytest.fail(
-                f"Found non-JSON output in stdout (likely a log message):\n{line}\n"
+                f"Found non-JSON output in stdout "
+                f"(likely a log message):\n{line}\n"
                 f"Full stdout:\n{stdout}"
             )
 
