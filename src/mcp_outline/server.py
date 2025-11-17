@@ -12,6 +12,11 @@ from typing import Literal
 from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
+from mcp_outline.patches import patch_for_copilot_cli
+
+# Apply compatibility patches for MCP clients
+# This must happen before creating the FastMCP instance
+patch_for_copilot_cli()
 
 # Get host from environment variable, default to 127.0.0.1
 # Use 0.0.0.0 for Docker containers to allow external connections
