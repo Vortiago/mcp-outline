@@ -15,6 +15,7 @@ References:
 - Similar issue in FastMCP: https://github.com/jlowin/fastmcp/issues/883
 """
 
+import logging
 from typing import Any
 
 from pydantic import field_validator
@@ -74,6 +75,4 @@ def patch_for_copilot_cli() -> None:
         pass
     except Exception as e:
         # Log but don't crash - the patch is optional
-        import logging
-
         logging.warning(f"Failed to apply GitHub Copilot CLI patch: {e}")

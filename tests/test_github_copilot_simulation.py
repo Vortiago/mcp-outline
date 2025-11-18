@@ -10,6 +10,56 @@ import json
 import pytest
 
 
+def test_pydantic_validator_coerces_empty_string():
+    """
+    Test that the patch's field validator works correctly.
+
+    This directly tests the core fix: the Pydantic validator that
+    coerces empty string to empty dict.
+    """
+    from mcp_outline.patches.copilot_cli import patch_for_copilot_cli
+
+    # Apply the patch
+    patch_for_copilot_cli()
+
+    try:
+        import mcp.types
+    except ImportError:
+        pytest.skip("MCP SDK not installed")
+
+    # Test 1: Empty string should be coerced to empty dict
+    params = mcp.types.CallToolRequestParams(
+        name="test_tool",
+        arguments="",  # This is what Copilot CLI sends
+    )
+    assert params.arguments == {}, (
+        "Empty string should be coerced to empty dict"
+    )
+
+    # Test 2: Empty dict should pass through unchanged
+    params2 = mcp.types.CallToolRequestParams(name="test_tool", arguments={})
+    assert params2.arguments == {}, "Empty dict should pass through"
+
+    # Test 3: Normal values should pass through unchanged
+    params3 = mcp.types.CallToolRequestParams(
+        name="test_tool", arguments={"key": "value"}
+    )
+    assert params3.arguments == {"key": "value"}, (
+        "Normal values should pass through"
+    )
+
+    # Test 4: None should pass through unchanged
+    params4 = mcp.types.CallToolRequestParams(name="test_tool", arguments=None)
+    assert params4.arguments is None, "None should pass through"
+
+    # Test 5: Patch is idempotent
+    patch_for_copilot_cli()  # Apply again
+    params5 = mcp.types.CallToolRequestParams(name="test_tool", arguments="")
+    assert params5.arguments == {}, (
+        "Patch should still work after reapplication"
+    )
+
+
 def test_empty_string_is_not_valid_json():
     """Confirm that empty string is NOT valid JSON."""
     with pytest.raises(json.JSONDecodeError, match="Expecting value"):
@@ -64,20 +114,11 @@ def test_schema_signals_for_parameterless_tools():
     #    even if optional, so should send {} or {"unused": null}
     # 3. schema_with_required: LLM must send {"query": "..."}
 
-    print("\n=== Schema Analysis ===")
-    print(f"\nNo properties:")
-    print(json.dumps(schema_no_properties, indent=2))
-    print("^ LLM interpretation: 'No parameters' -> might send ''")
-
-    print(f"\nWith optional parameter:")
-    print(json.dumps(schema_with_optional, indent=2))
-    print("^ LLM interpretation: 'Optional parameter' -> should send {}")
-
-    print(f"\nWith required parameter:")
-    print(json.dumps(schema_with_required, indent=2))
-    print(
-        "^ LLM interpretation: 'Required parameter' -> must send {\"query\": ...}"
-    )
+    # Verify schemas are valid
+    assert schema_no_properties["type"] == "object"
+    assert schema_with_optional["type"] == "object"
+    assert schema_with_required["type"] == "object"
+    assert "query" in schema_with_required["properties"]
 
 
 def test_copilot_log_analysis():
@@ -104,26 +145,13 @@ def test_copilot_log_analysis():
         },
     }
 
-    # Test parsing
-    print("\n=== GitHub Copilot CLI Log Analysis ===")
-
-    print(
-        f"\nActual arguments sent: {repr(copilot_tool_call['function']['arguments'])}"
-    )
-    try:
+    # Test that Copilot's empty string is invalid JSON
+    with pytest.raises(json.JSONDecodeError):
         json.loads(copilot_tool_call["function"]["arguments"])
-        print("✓ Valid JSON")
-    except json.JSONDecodeError as e:
-        print(f"✗ Invalid JSON: {e}")
 
-    print(
-        f"\nCorrect arguments: {repr(correct_tool_call['function']['arguments'])}"
-    )
-    try:
-        result = json.loads(correct_tool_call["function"]["arguments"])
-        print(f"✓ Valid JSON: {result}")
-    except json.JSONDecodeError as e:
-        print(f"✗ Invalid JSON: {e}")
+    # Test that the correct format is valid JSON
+    result = json.loads(correct_tool_call["function"]["arguments"])
+    assert result == {}
 
 
 def test_hypothesis_about_schema_change():
@@ -136,7 +164,7 @@ def test_hypothesis_about_schema_change():
     (like list_collections) fail.
     """
     # Evidence from user's log:
-    # 1. search_documents works: arguments = "{\"query\": \"*\", \"limit\": 100}"
+    # 1. search_documents works: has query & limit args
     # 2. list_collections fails: arguments = ""
 
     # Working tool schema (has parameters):
@@ -160,20 +188,14 @@ def test_hypothesis_about_schema_change():
         },
     }
 
-    print("\n=== Hypothesis Testing ===")
-    print("\nWorking schema (search_documents):")
-    print(json.dumps(working_schema, indent=2))
-    print("Result: LLM sends valid JSON with required parameters")
-
-    print("\nFailing schema (old list_collections):")
-    print(json.dumps(failing_schema, indent=2))
-    print("Result: LLM sends empty string ''")
-
-    print("\nFixed schema (new list_collections):")
-    print(json.dumps(fixed_schema, indent=2))
-    print('Hypothesis: LLM will now send {} or {"unused": null}')
-
     # The key insight: Tools with ANY parameter structure (even optional)
     # signal to the LLM that it should construct a JSON object.
     # Tools with EMPTY properties might be interpreted as "no data needed"
     # leading to empty string instead of empty object.
+
+    # Verify all schemas are valid
+    assert working_schema["type"] == "object"
+    assert failing_schema["type"] == "object"
+    assert fixed_schema["type"] == "object"
+    assert "query" in working_schema["properties"]
+    assert "unused" in fixed_schema["properties"]

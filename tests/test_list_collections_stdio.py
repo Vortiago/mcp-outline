@@ -5,7 +5,6 @@ Tests that the tool works correctly when called with empty arguments,
 as GitHub Copilot CLI does.
 """
 
-import json
 import os
 
 import pytest
@@ -46,12 +45,6 @@ async def test_list_collections_tool_schema():
 
             assert list_collections_tool is not None, (
                 "list_collections tool not found"
-            )
-
-            # Check the input schema
-            print(
-                f"\nlist_collections schema: "
-                f"{json.dumps(list_collections_tool.inputSchema, indent=2)}"
             )
 
             # The schema should be a valid JSON Schema
@@ -107,8 +100,6 @@ async def test_list_collections_with_empty_arguments():
                 text = first_content.text
                 assert isinstance(text, str)
                 assert len(text) > 0
-
-                print(f"\nlist_collections result: {text[:200]}...")
 
                 # The result should either show collections or an API error
                 # but NOT a JSON parsing error
@@ -169,12 +160,6 @@ async def test_compare_search_and_list_schemas():
             assert search_tool is not None, "search_documents not found"
             assert list_tool is not None, "list_collections not found"
 
-            print("\n=== search_documents schema ===")
-            print(json.dumps(search_tool.inputSchema, indent=2))
-
-            print("\n=== list_collections schema ===")
-            print(json.dumps(list_tool.inputSchema, indent=2))
-
             # Both should have type: object
             assert search_tool.inputSchema.get("type") == "object"
             assert list_tool.inputSchema.get("type") == "object"
@@ -186,12 +171,9 @@ async def test_compare_search_and_list_schemas():
             )
 
             # list_collections should have no required parameters
-            list_props = list_tool.inputSchema.get("properties", {})
             list_required = list_tool.inputSchema.get("required", [])
 
-            print(f"\nlist_collections properties: {list(list_props.keys())}")
-            print(f"list_collections required: {list_required}")
-
-            # If there are no required params, the tool should accept {}
-            if not list_required:
-                print("\nlist_collections accepts empty arguments")
+            # Verify that list_collections accepts empty arguments
+            assert len(list_required) == 0, (
+                "list_collections should have no required parameters"
+            )
