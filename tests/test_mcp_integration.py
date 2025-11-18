@@ -21,8 +21,15 @@ async def test_mcp_server_integration():
     This test validates:
     - Server starts without errors
     - MCP protocol handshake succeeds
-    - Stdio transport works
+    - Stdio transport works correctly
     - Multiple tools are registered and discoverable
+
+    CRITICAL: This test validates the stdio logging fix! If logging output
+    is not properly suppressed in stdio mode, this test will FAIL because
+    log messages will corrupt the MCP JSON-RPC protocol communication.
+
+    This is the primary regression test for the stdio logging bug where
+    INFO logs from the server, httpx, and MCP SDK were breaking the protocol.
     """
     # Set environment for stdio mode
     env = os.environ.copy()

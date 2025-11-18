@@ -24,10 +24,12 @@ repos:
         types: [python]
         pass_filenames: false
 
-      # Run test suite (skip slow integration tests)
+      # Run test suite including critical stdio integration test
+      # Note: Runs asyncio variant only for speed (~1.3s vs 2.6s for both)
+      # CI runs both asyncio + trio for comprehensive coverage
       - id: pytest
-        name: pytest (fast unit tests)
-        entry: bash -c 'uv run pytest tests/ -v -m "not integration"'
+        name: pytest (unit + critical integration)
+        entry: bash -c 'uv run pytest tests/ -v -k "not trio"'
         language: system
         types: [python]
         pass_filenames: false
