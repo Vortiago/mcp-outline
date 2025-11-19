@@ -1,4 +1,5 @@
 # Document management features for MCP Outline
+import os
 from typing import Optional
 
 from mcp_outline.features.documents import (
@@ -33,5 +34,13 @@ def register(
     document_lifecycle.register_tools(mcp)
     document_collaboration.register_tools(mcp)
     collection_tools.register_tools(mcp)
-    ai_tools.register_tools(mcp)
+
+    # Conditionally register AI tools (can be disabled for local instances)
+    if os.getenv("OUTLINE_DISABLE_AI_TOOLS", "").lower() not in (
+        "true",
+        "1",
+        "yes",
+    ):
+        ai_tools.register_tools(mcp)
+
     batch_operations.register_tools(mcp)
