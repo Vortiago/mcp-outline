@@ -205,6 +205,7 @@ OUTLINE_MAX_CONNECTIONS=100                # Optional - Max connections
 OUTLINE_MAX_KEEPALIVE=20                   # Optional - Max keepalive
 OUTLINE_TIMEOUT=30.0                       # Optional - Request timeout
 OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
+OUTLINE_DISABLE_AI_TOOLS=true              # Optional - Disable AI tools
 ```
 
 ### Critical Requirements
