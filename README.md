@@ -43,6 +43,7 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 |----------|----------|---------|-------|
 | `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | Self-hosted Outline: `https://your-domain/api` |
+| `OUTLINE_DISABLE_AI_TOOLS` | No | - | Set to `true` to disable AI tools (for instances without OpenAI) |
 | `MCP_TRANSPORT` | No | `stdio` | `stdio`, `sse`, or `streamable-http` |
 | `MCP_HOST` | No | `127.0.0.1` | Use `0.0.0.0` in Docker for external access |
 | `MCP_PORT` | No | `3000` | HTTP server port (for `sse`/`streamable-http`) |
