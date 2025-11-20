@@ -501,7 +501,7 @@ class TestConditionalRegistration:
         import os
 
         # Ensure environment variable is not set
-        os.environ.pop("OUTLINE_DISABLE_DESTRUCTIVE", None)
+        os.environ.pop("OUTLINE_DISABLE_DELETE", None)
 
         mock_mcp = MockMCP()
 
@@ -524,8 +524,8 @@ class TestConditionalRegistration:
         """Test delete_document not registered when disabled."""
         import os
 
-        # Set environment variable
-        os.environ["OUTLINE_DISABLE_DESTRUCTIVE"] = "true"
+        # Set environment variable (new name)
+        os.environ["OUTLINE_DISABLE_DELETE"] = "true"
 
         mock_mcp = MockMCP()
 
@@ -545,4 +545,4 @@ class TestConditionalRegistration:
         assert "list_trash" in mock_mcp.tools
 
         # Cleanup
-        os.environ.pop("OUTLINE_DISABLE_DESTRUCTIVE", None)
+        os.environ.pop("OUTLINE_DISABLE_DELETE", None)

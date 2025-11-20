@@ -62,9 +62,11 @@ def register_tools(mcp) -> None:
         "1",
         "yes",
     )
-    disable_destructive = os.getenv(
-        "OUTLINE_DISABLE_DESTRUCTIVE", ""
-    ).lower() in ("true", "1", "yes")
+    disable_delete = os.getenv("OUTLINE_DISABLE_DELETE", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
 
     # Export tools (always registered)
     @mcp.tool(
@@ -268,8 +270,8 @@ def register_tools(mcp) -> None:
             except Exception as e:
                 return f"Unexpected error: {str(e)}"
 
-    # Delete collection requires both read_only and disable_destructive checks
-    if not read_only and not disable_destructive:
+    # Delete collection requires both read_only and disable_delete checks
+    if not read_only and not disable_delete:
 
         @mcp.tool(
             annotations=ToolAnnotations(

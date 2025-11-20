@@ -44,7 +44,7 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 | `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | Self-hosted Outline: `https://your-domain/api` |
 | `OUTLINE_READ_ONLY` | No | `false` | Set to `true` to disable all write operations (see Access Control) |
-| `OUTLINE_DISABLE_DESTRUCTIVE` | No | `false` | Set to `true` to disable only delete operations (see Access Control) |
+| `OUTLINE_DISABLE_DELETE` | No | `false` | Set to `true` to disable only delete operations (see Access Control) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | Set to `true` to disable AI tools (for instances without OpenAI) |
 | `MCP_TRANSPORT` | No | `stdio` | `stdio`, `sse`, or `streamable-http` |
 | `MCP_HOST` | No | `127.0.0.1` | Use `0.0.0.0` in Docker for external access |
@@ -71,9 +71,9 @@ Set `OUTLINE_READ_ONLY=true` to enable viewer-only access. Only search, read, ex
 - Collections: `export_collection`, `export_all_collections`
 - AI: `ask_ai_about_documents` (if not disabled with `OUTLINE_DISABLE_AI_TOOLS`)
 
-### Disable Destructive Operations
+### Disable Delete Operations
 
-Set `OUTLINE_DISABLE_DESTRUCTIVE=true` to allow create and update workflows while preventing accidental data loss. Only delete operations are disabled.
+Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while preventing accidental data loss. Only delete operations are disabled.
 
 **Use cases:**
 - Production environments where documents should not be deleted
@@ -84,7 +84,7 @@ Set `OUTLINE_DISABLE_DESTRUCTIVE=true` to allow create and update workflows whil
 - `delete_document`, `delete_collection`
 - `batch_delete_documents`
 
-**Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DESTRUCTIVE`. If both are set, the server operates in read-only mode.
+**Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
 
 ## Adding to Your Client
 

@@ -95,9 +95,9 @@ async def test_read_only_mode_blocks_destructive_tools(fresh_mcp_server):
 
 
 @pytest.mark.anyio
-async def test_disable_destructive_blocks_deletes_only(fresh_mcp_server):
-    """Test OUTLINE_DISABLE_DESTRUCTIVE=true blocks only delete ops."""
-    with patch.dict(os.environ, {"OUTLINE_DISABLE_DESTRUCTIVE": "true"}):
+async def test_disable_delete_blocks_deletes_only(fresh_mcp_server):
+    """Test OUTLINE_DISABLE_DELETE=true blocks only delete ops."""
+    with patch.dict(os.environ, {"OUTLINE_DISABLE_DELETE": "true"}):
         register_all(fresh_mcp_server)
         tools = await fresh_mcp_server.list_tools()
         tool_names = [tool.name for tool in tools]
@@ -119,7 +119,7 @@ async def test_both_flags_together(fresh_mcp_server):
     """Test that OUTLINE_READ_ONLY takes precedence when both are set."""
     with patch.dict(
         os.environ,
-        {"OUTLINE_READ_ONLY": "true", "OUTLINE_DISABLE_DESTRUCTIVE": "true"},
+        {"OUTLINE_READ_ONLY": "true", "OUTLINE_DISABLE_DELETE": "true"},
     ):
         register_all(fresh_mcp_server)
         tools = await fresh_mcp_server.list_tools()

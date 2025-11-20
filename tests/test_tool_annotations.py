@@ -161,15 +161,16 @@ async def test_idempotent_tools(fresh_mcp_server):
 
 
 @pytest.mark.anyio
-async def test_search_tools_have_open_world_hint(fresh_mcp_server):
-    """Test that search tools have openWorldHint=True."""
+async def test_ai_tools_have_open_world_hint(fresh_mcp_server):
+    """Test that AI tools have openWorldHint=True."""
     register_all(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
 
-    # Define expected search tools with openWorldHint
-    search_tools = ["search_documents", "ask_ai_about_documents"]
+    # Only AI tools should have openWorldHint (can discover new insights)
+    # Regular search works with known entities, so no openWorldHint
+    ai_tools = ["ask_ai_about_documents"]
 
-    for tool_name in search_tools:
+    for tool_name in ai_tools:
         tool = next((t for t in tools if t.name == tool_name), None)
         # Skip if tool not found (may be conditionally registered)
         if tool is None:

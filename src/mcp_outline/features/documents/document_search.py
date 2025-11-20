@@ -140,9 +140,7 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool(
-        annotations=ToolAnnotations(
-            readOnlyHint=True, openWorldHint=True, idempotentHint=True
-        )
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
     async def search_documents(
         query: str,

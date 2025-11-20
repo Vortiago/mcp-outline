@@ -22,9 +22,7 @@ def register_tools(mcp) -> None:
     Args:
         mcp: The FastMCP server instance
     """
-    disable_destructive = os.getenv(
-        "OUTLINE_DISABLE_DESTRUCTIVE", ""
-    ).lower() in (
+    disable_delete = os.getenv("OUTLINE_DISABLE_DELETE", "").lower() in (
         "true",
         "1",
         "yes",
@@ -106,7 +104,7 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    if not disable_destructive:
+    if not disable_delete:
 
         @mcp.tool(
             annotations=ToolAnnotations(
