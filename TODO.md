@@ -10,6 +10,117 @@ This document tracks quality-of-life enhancements and new features based on the 
 
 Implemented resource handlers to expose Outline data via MCP URIs using FastMCP's `@mcp.resource()` decorator.
 
+### 1.2 Add Read-Only Mode and Tool Annotations
+**Complexity**: Low-Moderate
+**Status**: Not Started
+**Priority**: HIGH (safety feature for self-hosted instances)
+
+Implement environment variables to restrict destructive operations and add MCP tool annotations for better client UX.
+
+**Why**:
+- Self-hosted Outline instances may need read-only access for AI agents
+- Users may want to prevent accidental deletions while allowing creates/updates
+- MCP spec (March 2025) introduced tool annotations for better client behavior
+- Clients can show warnings/confirmations for destructive operations
+- Follows pattern from `OUTLINE_DISABLE_AI_TOOLS` feature
+
+**Environment Variables to Add**:
+
+1. **`OUTLINE_READ_ONLY`** (default: false)
+   - When `true`: Disables ALL write operations (create, update, delete, archive, move, comments)
+   - Use case: Viewer-only access, search and read documents without modification
+   - Blocks registration of: document_content, document_lifecycle, document_organization, document_collaboration, collection_tools, batch_operations
+   - Allows: document_search, document_reading, list operations
+
+2. **`OUTLINE_DISABLE_DESTRUCTIVE`** (default: false)
+   - When `true`: Disables only destructive delete/permanent operations
+   - Use case: Allow create/update workflows but prevent data loss
+   - Blocks only: `delete_document`, `delete_collection` (and their permanent variants)
+   - Allows: create, update, archive, move, comment operations
+
+**Tool Annotations to Add**:
+
+Use `from mcp.types import ToolAnnotations` and apply to ALL tools:
+
+**`readOnlyHint=True`** (doesn't modify environment):
+- `search_documents`
+- `get_document`
+- `get_document_as_markdown`
+- `list_collections`
+- `get_collection_structure`
+- `list_archived_documents`
+- `list_trash`
+- `get_document_backlinks`
+- `list_comments`
+- `get_comment`
+
+**`readOnlyHint=False, destructiveHint=False`** (additive updates):
+- `create_document`
+- `add_comment`
+- `create_collection`
+- `archive_document` (reversible)
+- `unarchive_document` (reversible)
+
+**`readOnlyHint=False, destructiveHint=True`** (destructive updates):
+- `update_document` (overwrites content)
+- `delete_document`
+- `move_document` (changes hierarchy)
+- `update_collection`
+- `delete_collection`
+- `export_collection` (potentially destructive based on MCP spec - removes on export? Check API)
+- `batch_archive_documents`
+- `batch_delete_documents`
+
+**`idempotentHint`**: Add where relevant
+- `True`: delete (calling twice = same result), get/read operations, archive
+- `False`: create (calling twice = two items), update (may change each time)
+
+**`openWorldHint`**: SKIP or use sparingly
+- Based on research: GitHub MCP only uses this on search tools, not all API calls
+- Consider using `openWorldHint=True` only on: `search_documents`, `ask_ai_about_documents`
+- All other tools: omit or use `False` (controlled operations on known entities)
+
+**Implementation Steps**:
+
+1. **Update `src/mcp_outline/features/documents/__init__.py`**:
+   - Add env var checks for `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DESTRUCTIVE`
+   - Conditionally register tool modules based on flags
+   - Follow existing pattern from `OUTLINE_DISABLE_AI_TOOLS`
+
+2. **Add annotations to each tool registration**:
+   - `document_search.py` - All readOnlyHint=True
+   - `document_reading.py` - All readOnlyHint=True
+   - `document_content.py` - create=additive, update=destructive, comment=additive
+   - `document_lifecycle.py` - delete=destructive, archive=additive
+   - `document_organization.py` - move=destructive
+   - `document_collaboration.py` - Mixed (read comments vs add comments)
+   - `collection_tools.py` - create=additive, update/delete=destructive
+   - `batch_operations.py` - All destructive
+
+3. **Update documentation**:
+   - Add to `.env.example`
+   - Update `README.md` configuration table
+   - Update `CLAUDE.md` configuration section
+   - Add examples of when to use each mode
+
+4. **Add tests**:
+   - Test tool registration with `OUTLINE_READ_ONLY=true`
+   - Test tool registration with `OUTLINE_DISABLE_DESTRUCTIVE=true`
+   - Test annotations are properly set on tools
+   - Follow pattern from `test_ai_tools_disabled_via_env_var`
+
+**Benefits**:
+- Actual enforcement via env variables (security/safety)
+- Better UX via annotations (client can show warnings)
+- Defense in depth approach
+- Flexibility for different use cases (read-only vs. no-deletes)
+- MCP spec compliance (March 2025 annotations)
+
+**Reference**:
+- MCP spec tool annotations: https://modelcontextprotocol.io/docs/concepts/tools
+- GitHub MCP server issue #1100 for openWorldHint usage patterns
+- Existing implementation: `OUTLINE_DISABLE_AI_TOOLS` in `__init__.py:38-44`
+
 ## Phase 3: API Coverage Expansion
 
 ### 3.1 Document Features
