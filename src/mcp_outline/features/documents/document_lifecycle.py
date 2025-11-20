@@ -5,6 +5,10 @@ This module provides MCP tools for archiving, trashing, and restoring
 documents.
 """
 
+import os
+
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -18,8 +22,19 @@ def register_tools(mcp) -> None:
     Args:
         mcp: The FastMCP server instance
     """
+    disable_destructive = os.getenv(
+        "OUTLINE_DISABLE_DESTRUCTIVE", ""
+    ).lower() in (
+        "true",
+        "1",
+        "yes",
+    )
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=True, idempotentHint=True
+        )
+    )
     async def archive_document(document_id: str) -> str:
         """
         Archives a document to remove it from active use while preserving it.
@@ -55,7 +70,11 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=True
+        )
+    )
     async def unarchive_document(document_id: str) -> str:
         """
         Restores a previously archived document to active status.
@@ -87,65 +106,77 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
-    async def delete_document(
-        document_id: str, permanent: bool = False
-    ) -> str:
-        """
-        Moves a document to trash or permanently deletes it.
+    if not disable_destructive:
 
-        IMPORTANT: When permanent=False (the default), documents are moved to
-        trash and retained for 30 days before being permanently deleted.
-        During
-        this period, they can be restored using the restore_document tool.
-        Setting permanent=True bypasses the trash and immediately deletes the
-        document without any recovery option.
+        @mcp.tool(
+            annotations=ToolAnnotations(
+                readOnlyHint=False, destructiveHint=True, idempotentHint=True
+            )
+        )
+        async def delete_document(
+            document_id: str, permanent: bool = False
+        ) -> str:
+            """
+            Moves a document to trash or permanently deletes it.
 
-        Use this tool when you need to:
-        - Remove unwanted or unnecessary documents
-        - Delete obsolete content
-        - Clean up workspace by removing documents
-        - Permanently remove sensitive information (with permanent=True)
+            IMPORTANT: When permanent=False (the default), documents are
+            moved to trash and retained for 30 days before being
+            permanently deleted. During this period, they can be restored
+            using the restore_document tool. Setting permanent=True
+            bypasses the trash and immediately deletes the document
+            without any recovery option.
 
-        Args:
-            document_id: The document ID to delete
-            permanent: If True, permanently deletes the document without
-                recovery option
+            Use this tool when you need to:
+            - Remove unwanted or unnecessary documents
+            - Delete obsolete content
+            - Clean up workspace by removing documents
+            - Permanently remove sensitive information (with permanent=True)
 
-        Returns:
-            Result message confirming deletion
-        """
-        try:
-            client = await get_outline_client()
+            Args:
+                document_id: The document ID to delete
+                permanent: If True, permanently deletes the document without
+                    recovery option
 
-            if permanent:
-                success = await client.permanently_delete_document(document_id)
-                if success:
-                    return "Document permanently deleted."
+            Returns:
+                Result message confirming deletion
+            """
+            try:
+                client = await get_outline_client()
+
+                if permanent:
+                    success = await client.permanently_delete_document(
+                        document_id
+                    )
+                    if success:
+                        return "Document permanently deleted."
+                    else:
+                        return "Failed to permanently delete document."
                 else:
-                    return "Failed to permanently delete document."
-            else:
-                # First get the document details for the success message
-                document = await client.get_document(document_id)
-                doc_title = document.get("title", "Untitled")
+                    # First get the document details for the success message
+                    document = await client.get_document(document_id)
+                    doc_title = document.get("title", "Untitled")
 
-                # Move to trash (using the regular delete endpoint)
-                response = await client.post(
-                    "documents.delete", {"id": document_id}
-                )
+                    # Move to trash (using the regular delete endpoint)
+                    response = await client.post(
+                        "documents.delete", {"id": document_id}
+                    )
 
-                # Check for successful response
-                if response.get("success", False):
-                    return f"Document moved to trash: {doc_title}"
-                else:
-                    return "Failed to move document to trash."
+                    # Check for successful response
+                    if response.get("success", False):
+                        return f"Document moved to trash: {doc_title}"
+                    else:
+                        return "Failed to move document to trash."
 
-        except OutlineClientError as e:
-            return f"Error deleting document: {str(e)}"
-        except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            except OutlineClientError as e:
+                return f"Error deleting document: {str(e)}"
+            except Exception as e:
+                return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=True
+        )
+    )
     async def restore_document(document_id: str) -> str:
         """
         Recovers a document from the trash back to active status.
@@ -177,7 +208,11 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=True, destructiveHint=False, idempotentHint=True
+        )
+    )
     async def list_archived_documents() -> str:
         """
         Displays all documents that have been archived.
@@ -205,7 +240,11 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=True, destructiveHint=False, idempotentHint=True
+        )
+    )
     async def list_trash() -> str:
         """
         Displays all documents currently in the trash.

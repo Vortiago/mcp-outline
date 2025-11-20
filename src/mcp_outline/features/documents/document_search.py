@@ -6,6 +6,8 @@ This module provides MCP tools for searching and listing documents.
 
 from typing import Any, Dict, List, Optional
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -137,7 +139,11 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=True, openWorldHint=True, idempotentHint=True
+        )
+    )
     async def search_documents(
         query: str,
         collection_id: Optional[str] = None,
@@ -195,7 +201,9 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error during search: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def list_collections() -> str:
         """
         Retrieves and displays all available collections in the workspace.
@@ -218,7 +226,9 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error listing collections: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def get_collection_structure(collection_id: str) -> str:
         """
         Retrieves the hierarchical document structure of a collection.

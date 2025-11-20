@@ -4,7 +4,10 @@ Collection management tools for the MCP Outline server.
 This module provides MCP tools for managing collections.
 """
 
+import os
 from typing import Any, Dict, Optional
+
+from mcp.types import ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
@@ -53,131 +56,24 @@ def register_tools(mcp) -> None:
     Args:
         mcp: The FastMCP server instance
     """
+    # Check environment variables for conditional registration
+    read_only = os.getenv("OUTLINE_READ_ONLY", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    disable_destructive = os.getenv(
+        "OUTLINE_DISABLE_DESTRUCTIVE", ""
+    ).lower() in ("true", "1", "yes")
 
-    @mcp.tool()
-    async def create_collection(
-        name: str, description: str = "", color: Optional[str] = None
-    ) -> str:
-        """
-            Creates a new collection for organizing documents.
-
-            Use this tool when you need to:
-            - Create a new section or category for documents
-            - Set up a workspace for a new project or team
-            - Organize content by department or topic
-            - Establish a separate space for related documents
-
-            Args:
-                name: Name for the collection
-                description: Optional description of the collection's purpose
-                color: Optional hex color code for visual identification
-        (e.g. #FF0000)
-
-            Returns:
-                Result message with the new collection ID
-        """
-        try:
-            client = await get_outline_client()
-            collection = await client.create_collection(
-                name, description, color
-            )
-
-            if not collection:
-                return "Failed to create collection."
-
-            collection_id = collection.get("id", "unknown")
-            collection_name = collection.get("name", "Untitled")
-
-            return (
-                f"Collection created successfully: {collection_name} "
-                f"(ID: {collection_id})"
-            )
-        except OutlineClientError as e:
-            return f"Error creating collection: {str(e)}"
-        except Exception as e:
-            return f"Unexpected error: {str(e)}"
-
-    @mcp.tool()
-    async def update_collection(
-        collection_id: str,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        color: Optional[str] = None,
-    ) -> str:
-        """
-        Modifies an existing collection's properties.
-
-        Use this tool when you need to:
-        - Rename a collection
-        - Update a collection's description
-        - Change a collection's color coding
-        - Refresh collection metadata
-
-        Args:
-            collection_id: The collection ID to update
-            name: Optional new name for the collection
-            description: Optional new description
-            color: Optional new hex color code (e.g. #FF0000)
-
-        Returns:
-            Result message confirming update
-        """
-        try:
-            client = await get_outline_client()
-
-            # Make sure at least one field is being updated
-            if name is None and description is None and color is None:
-                return "Error: You must specify at least one field to update."
-
-            collection = await client.update_collection(
-                collection_id, name, description, color
-            )
-
-            if not collection:
-                return "Failed to update collection."
-
-            collection_name = collection.get("name", "Untitled")
-
-            return f"Collection updated successfully: {collection_name}"
-        except OutlineClientError as e:
-            return f"Error updating collection: {str(e)}"
-        except Exception as e:
-            return f"Unexpected error: {str(e)}"
-
-    @mcp.tool()
-    async def delete_collection(collection_id: str) -> str:
-        """
-        Permanently removes a collection and all its documents.
-
-        Use this tool when you need to:
-        - Remove an entire section of content
-        - Delete obsolete project collections
-        - Remove collections that are no longer needed
-        - Clean up workspace organization
-
-        WARNING: This action cannot be undone and will delete all
-        documents within the collection.
-
-        Args:
-            collection_id: The collection ID to delete
-
-        Returns:
-            Result message confirming deletion
-        """
-        try:
-            client = await get_outline_client()
-            success = await client.delete_collection(collection_id)
-
-            if success:
-                return "Collection and all its documents deleted successfully."
-            else:
-                return "Failed to delete collection."
-        except OutlineClientError as e:
-            return f"Error deleting collection: {str(e)}"
-        except Exception as e:
-            return f"Unexpected error: {str(e)}"
-
-    @mcp.tool()
+    # Export tools (always registered)
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=True,
+            destructiveHint=False,
+            idempotentHint=True,
+        )
+    )
     async def export_collection(
         collection_id: str, format: str = "outline-markdown"
     ) -> str:
@@ -220,7 +116,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=True,
+            destructiveHint=False,
+            idempotentHint=True,
+        )
+    )
     async def export_all_collections(format: str = "outline-markdown") -> str:
         """
         Exports the entire workspace content to a downloadable file.
@@ -257,3 +159,156 @@ def register_tools(mcp) -> None:
             return f"Error exporting collections: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"
+
+    # Conditional registration for write operations
+    if not read_only:
+
+        @mcp.tool(
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+            )
+        )
+        async def create_collection(
+            name: str, description: str = "", color: Optional[str] = None
+        ) -> str:
+            """
+            Creates a new collection for organizing documents.
+
+            Use this tool when you need to:
+            - Create a new section or category for documents
+            - Set up a workspace for a new project or team
+            - Organize content by department or topic
+            - Establish a separate space for related documents
+
+            Args:
+                name: Name for the collection
+                description: Optional description of the collection's
+                    purpose
+                color: Optional hex color code for visual
+                    identification (e.g. #FF0000)
+
+            Returns:
+                Result message with the new collection ID
+            """
+            try:
+                client = await get_outline_client()
+                collection = await client.create_collection(
+                    name, description, color
+                )
+
+                if not collection:
+                    return "Failed to create collection."
+
+                collection_id = collection.get("id", "unknown")
+                collection_name = collection.get("name", "Untitled")
+
+                return (
+                    f"Collection created successfully: {collection_name} "
+                    f"(ID: {collection_id})"
+                )
+            except OutlineClientError as e:
+                return f"Error creating collection: {str(e)}"
+            except Exception as e:
+                return f"Unexpected error: {str(e)}"
+
+        @mcp.tool(
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=False,
+            )
+        )
+        async def update_collection(
+            collection_id: str,
+            name: Optional[str] = None,
+            description: Optional[str] = None,
+            color: Optional[str] = None,
+        ) -> str:
+            """
+            Modifies an existing collection's properties.
+
+            Use this tool when you need to:
+            - Rename a collection
+            - Update a collection's description
+            - Change a collection's color coding
+            - Refresh collection metadata
+
+            Args:
+                collection_id: The collection ID to update
+                name: Optional new name for the collection
+                description: Optional new description
+                color: Optional new hex color code (e.g. #FF0000)
+
+            Returns:
+                Result message confirming update
+            """
+            try:
+                client = await get_outline_client()
+
+                # Make sure at least one field is being updated
+                if name is None and description is None and color is None:
+                    return (
+                        "Error: You must specify at least one field to update."
+                    )
+
+                collection = await client.update_collection(
+                    collection_id, name, description, color
+                )
+
+                if not collection:
+                    return "Failed to update collection."
+
+                collection_name = collection.get("name", "Untitled")
+
+                return f"Collection updated successfully: {collection_name}"
+            except OutlineClientError as e:
+                return f"Error updating collection: {str(e)}"
+            except Exception as e:
+                return f"Unexpected error: {str(e)}"
+
+    # Delete collection requires both read_only and disable_destructive checks
+    if not read_only and not disable_destructive:
+
+        @mcp.tool(
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=True,
+            )
+        )
+        async def delete_collection(collection_id: str) -> str:
+            """
+            Permanently removes a collection and all its documents.
+
+            Use this tool when you need to:
+            - Remove an entire section of content
+            - Delete obsolete project collections
+            - Remove collections that are no longer needed
+            - Clean up workspace organization
+
+            WARNING: This action cannot be undone and will delete all
+            documents within the collection.
+
+            Args:
+                collection_id: The collection ID to delete
+
+            Returns:
+                Result message confirming deletion
+            """
+            try:
+                client = await get_outline_client()
+                success = await client.delete_collection(collection_id)
+
+                if success:
+                    return (
+                        "Collection and all its documents deleted "
+                        "successfully."
+                    )
+                else:
+                    return "Failed to delete collection."
+            except OutlineClientError as e:
+                return f"Error deleting collection: {str(e)}"
+            except Exception as e:
+                return f"Unexpected error: {str(e)}"

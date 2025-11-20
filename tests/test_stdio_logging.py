@@ -9,6 +9,7 @@ import asyncio
 import json
 import os
 import subprocess
+import sys
 
 import pytest
 
@@ -32,7 +33,7 @@ def test_stdio_mode_no_log_output():
     env["MCP_TRANSPORT"] = "stdio"
 
     process = subprocess.Popen(
-        ["mcp-outline"],
+        [sys.executable, "-m", "mcp_outline"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -106,7 +107,7 @@ def test_sse_mode_allows_log_output():
     env["MCP_TRANSPORT"] = "sse"
 
     process = subprocess.Popen(
-        ["mcp-outline"],
+        [sys.executable, "-m", "mcp_outline"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -116,7 +117,8 @@ def test_sse_mode_allows_log_output():
 
     try:
         # Give server time to start and log
-        asyncio.run(asyncio.sleep(2))
+        # Increased to 4 seconds to allow for slower startup on some systems
+        asyncio.run(asyncio.sleep(4))
     finally:
         process.terminate()
         try:

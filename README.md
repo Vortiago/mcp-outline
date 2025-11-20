@@ -43,10 +43,48 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 |----------|----------|---------|-------|
 | `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | Self-hosted Outline: `https://your-domain/api` |
-| `OUTLINE_DISABLE_AI_TOOLS` | No | - | Set to `true` to disable AI tools (for instances without OpenAI) |
+| `OUTLINE_READ_ONLY` | No | `false` | Set to `true` to disable all write operations (see Access Control) |
+| `OUTLINE_DISABLE_DESTRUCTIVE` | No | `false` | Set to `true` to disable only delete operations (see Access Control) |
+| `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | Set to `true` to disable AI tools (for instances without OpenAI) |
 | `MCP_TRANSPORT` | No | `stdio` | `stdio`, `sse`, or `streamable-http` |
 | `MCP_HOST` | No | `127.0.0.1` | Use `0.0.0.0` in Docker for external access |
 | `MCP_PORT` | No | `3000` | HTTP server port (for `sse`/`streamable-http`) |
+
+## Access Control
+
+Configure server permissions to control what operations are allowed:
+
+### Read-Only Mode
+
+Set `OUTLINE_READ_ONLY=true` to enable viewer-only access. Only search, read, export, and collaboration viewing tools are available. All write operations (create, update, move, archive, delete) are disabled.
+
+**Use cases:**
+- Shared access for team members who should only view content
+- Safe integration with AI assistants that should not modify documents
+- Public or demo instances where content should be protected
+
+**Available tools:**
+- Search & Discovery: `search_documents`, `list_collections`, `get_collection_structure`, `get_document_id_from_title`
+- Document Reading: `read_document`, `export_document`
+- Comments: `list_document_comments`, `get_comment`
+- Collaboration: `get_document_backlinks`
+- Collections: `export_collection`, `export_all_collections`
+- AI: `ask_ai_about_documents` (if not disabled with `OUTLINE_DISABLE_AI_TOOLS`)
+
+### Disable Destructive Operations
+
+Set `OUTLINE_DISABLE_DESTRUCTIVE=true` to allow create and update workflows while preventing accidental data loss. Only delete operations are disabled.
+
+**Use cases:**
+- Production environments where documents should not be deleted
+- Protecting against accidental deletions
+- Safe content editing workflows
+
+**Disabled tools:**
+- `delete_document`, `delete_collection`
+- `batch_delete_documents`
+
+**Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DESTRUCTIVE`. If both are set, the server operates in read-only mode.
 
 ## Adding to Your Client
 

@@ -206,7 +206,14 @@ OUTLINE_MAX_KEEPALIVE=20                   # Optional - Max keepalive
 OUTLINE_TIMEOUT=30.0                       # Optional - Request timeout
 OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
 OUTLINE_DISABLE_AI_TOOLS=true              # Optional - Disable AI tools
+OUTLINE_READ_ONLY=true                     # Optional - Disable all write operations
+OUTLINE_DISABLE_DESTRUCTIVE=true           # Optional - Disable delete operations only
 ```
+
+**Access Control Notes**:
+- `OUTLINE_READ_ONLY`: Blocks entire write modules at registration (content, lifecycle, organization, batch_operations)
+- `OUTLINE_DISABLE_DESTRUCTIVE`: Conditionally registers delete tools within document_lifecycle and collection_tools
+- Read-only mode takes precedence: If both are set, server operates in read-only mode
 
 ### Critical Requirements
 
@@ -249,3 +256,4 @@ uv run pytest tests/ -v -m integration
 **Tree Formatting**: Recursive formatting with indentation for hierarchies
 
 **Document ID Resolution**: `get_document_id_from_title` for user-friendly lookups
+- When tagging version numbers look at changes since last version. Follow this rule for version number, go from left to right. First one hit is the new version number. Anye feat!: => major version, any feat: => minor version, Only fix: => patch version. Use annotated tag with a short summary of what the release contains.

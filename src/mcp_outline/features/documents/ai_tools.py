@@ -6,6 +6,8 @@ This module provides MCP tools for AI-powered features in Outline.
 
 from typing import Any, Dict, Optional
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -51,7 +53,11 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=True, openWorldHint=True, idempotentHint=False
+        )
+    )
     async def ask_ai_about_documents(
         question: str,
         collection_id: Optional[str] = None,
