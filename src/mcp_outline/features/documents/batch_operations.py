@@ -7,6 +7,8 @@ documents efficiently.
 
 from typing import Any, Dict, List, Optional
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -116,7 +118,13 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+        )
+    )
     async def batch_archive_documents(document_ids: List[str]) -> str:
         """
         Archives multiple documents in a single batch operation.
@@ -199,7 +207,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+        )
+    )
     async def batch_move_documents(
         document_ids: List[str],
         collection_id: Optional[str] = None,
@@ -305,7 +319,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+        )
+    )
     async def batch_delete_documents(
         document_ids: List[str], permanent: bool = False
     ) -> str:
@@ -419,7 +439,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+        )
+    )
     async def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
         """
         Updates multiple documents with different changes.
@@ -531,7 +557,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=True,
+        )
+    )
     async def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
         """
         Creates multiple documents in a single batch operation.

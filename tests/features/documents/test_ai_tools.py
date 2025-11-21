@@ -15,7 +15,7 @@ class MockMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self):
+    def tool(self, annotations=None):
         def decorator(func):
             self.tools[func.__name__] = func
             return func

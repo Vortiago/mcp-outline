@@ -14,7 +14,7 @@ class MockMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self):
+    def tool(self, annotations=None):
         def decorator(func):
             self.tools[func.__name__] = func
             return func
@@ -491,3 +491,58 @@ class TestListTrash:
 
         assert "Error listing trash" in result
         assert "API error" in result
+
+
+class TestConditionalRegistration:
+    """Tests for conditional tool registration based on env vars."""
+
+    def test_delete_document_registered_by_default(self):
+        """Test delete_document is registered by default."""
+        import os
+
+        # Ensure environment variable is not set
+        os.environ.pop("OUTLINE_DISABLE_DELETE", None)
+
+        mock_mcp = MockMCP()
+
+        # Re-import to get fresh registration
+        import importlib
+
+        from mcp_outline.features.documents import document_lifecycle
+
+        importlib.reload(document_lifecycle)
+        document_lifecycle.register_tools(mock_mcp)
+
+        assert "delete_document" in mock_mcp.tools
+        assert "archive_document" in mock_mcp.tools
+        assert "unarchive_document" in mock_mcp.tools
+        assert "restore_document" in mock_mcp.tools
+        assert "list_archived_documents" in mock_mcp.tools
+        assert "list_trash" in mock_mcp.tools
+
+    def test_delete_document_not_registered_when_disabled(self):
+        """Test delete_document not registered when disabled."""
+        import os
+
+        # Set environment variable (new name)
+        os.environ["OUTLINE_DISABLE_DELETE"] = "true"
+
+        mock_mcp = MockMCP()
+
+        # Re-import to get fresh registration
+        import importlib
+
+        from mcp_outline.features.documents import document_lifecycle
+
+        importlib.reload(document_lifecycle)
+        document_lifecycle.register_tools(mock_mcp)
+
+        assert "delete_document" not in mock_mcp.tools
+        assert "archive_document" in mock_mcp.tools
+        assert "unarchive_document" in mock_mcp.tools
+        assert "restore_document" in mock_mcp.tools
+        assert "list_archived_documents" in mock_mcp.tools
+        assert "list_trash" in mock_mcp.tools
+
+        # Cleanup
+        os.environ.pop("OUTLINE_DISABLE_DELETE", None)

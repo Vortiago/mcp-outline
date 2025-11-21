@@ -6,6 +6,8 @@ This module provides MCP tools for organizing documents.
 
 from typing import Optional
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -20,7 +22,13 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=False,
+        )
+    )
     async def move_document(
         document_id: str,
         collection_id: Optional[str] = None,

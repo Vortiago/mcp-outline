@@ -6,6 +6,8 @@ This module provides MCP tools for creating and updating document content.
 
 from typing import Any, Dict, Optional
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -20,7 +22,13 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=False,
+            idempotentHint=False,
+        )
+    )
     async def create_document(
         title: str,
         collection_id: str,
@@ -79,7 +87,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=True,
+            idempotentHint=False,
+        )
+    )
     async def update_document(
         document_id: str,
         title: Optional[str] = None,
@@ -141,7 +155,13 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(
+            readOnlyHint=False,
+            destructiveHint=False,
+            idempotentHint=False,
+        )
+    )
     async def add_comment(
         document_id: str, text: str, parent_comment_id: Optional[str] = None
     ) -> str:

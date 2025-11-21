@@ -7,6 +7,8 @@ collaboration.
 
 from typing import Any, Dict, List
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -76,7 +78,9 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def list_document_comments(
         document_id: str,
         include_anchor_text: bool = False,
@@ -129,7 +133,9 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def get_comment(
         comment_id: str, include_anchor_text: bool = False
     ) -> str:
@@ -192,7 +198,9 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def get_document_backlinks(document_id: str) -> str:
         """
         Finds all documents that link to a specific document.

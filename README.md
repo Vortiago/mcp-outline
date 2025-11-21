@@ -1,5 +1,11 @@
 # MCP Outline Server
 
+[![PyPI](https://img.shields.io/pypi/v/mcp-outline)](https://pypi.org/project/mcp-outline/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/Vortiago/mcp-outline/pkgs/container/mcp-outline)
+
 A Model Context Protocol server for interacting with Outline document management.
 
 ## Features
@@ -10,6 +16,16 @@ A Model Context Protocol server for interacting with Outline document management
 - **Backlinks**: Find documents referencing a specific document
 - **MCP Resources**: Direct content access via URIs (outline://document/{id}, outline://collection/{id}, etc.)
 - **Automatic rate limiting**: Transparent handling of API limits with retry logic
+
+## Prerequisites
+
+Before using this MCP server, you need:
+
+- An [Outline](https://www.getoutline.com/) account (cloud hosted or self-hosted)
+- API key from Outline web UI: **Settings → API Keys → Create New**
+- Python 3.10+ (for non-Docker installations)
+
+> **Getting your API key**: Log into Outline → Click your profile → Settings → API Keys → "New API Key". Copy the generated token.
 
 ## Installation
 
@@ -41,12 +57,50 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | Yes | - | API token from Outline Settings → API Keys |
-| `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | Self-hosted Outline: `https://your-domain/api` |
-| `OUTLINE_DISABLE_AI_TOOLS` | No | - | Set to `true` to disable AI tools (for instances without OpenAI) |
-| `MCP_TRANSPORT` | No | `stdio` | `stdio`, `sse`, or `streamable-http` |
-| `MCP_HOST` | No | `127.0.0.1` | Use `0.0.0.0` in Docker for external access |
-| `MCP_PORT` | No | `3000` | HTTP server port (for `sse`/`streamable-http`) |
+| `OUTLINE_API_KEY` | Yes | - | Get from Outline web UI: Settings → API Keys → Create New |
+| `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
+| `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
+| `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
+| `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
+| `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
+| `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |
+| `MCP_PORT` | No | `3000` | HTTP server port (only for `sse` and `streamable-http` modes) |
+
+## Access Control
+
+Configure server permissions to control what operations are allowed:
+
+### Read-Only Mode
+
+Set `OUTLINE_READ_ONLY=true` to enable viewer-only access. Only search, read, export, and collaboration viewing tools are available. All write operations (create, update, move, archive, delete) are disabled.
+
+**Use cases:**
+- Shared access for team members who should only view content
+- Safe integration with AI assistants that should not modify documents
+- Public or demo instances where content should be protected
+
+**Available tools:**
+- Search & Discovery: `search_documents`, `list_collections`, `get_collection_structure`, `get_document_id_from_title`
+- Document Reading: `read_document`, `export_document`
+- Comments: `list_document_comments`, `get_comment`
+- Collaboration: `get_document_backlinks`
+- Collections: `export_collection`, `export_all_collections`
+- AI: `ask_ai_about_documents` (if not disabled with `OUTLINE_DISABLE_AI_TOOLS`)
+
+### Disable Delete Operations
+
+Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while preventing accidental data loss. Only delete operations are disabled.
+
+**Use cases:**
+- Production environments where documents should not be deleted
+- Protecting against accidental deletions
+- Safe content editing workflows
+
+**Disabled tools:**
+- `delete_document`, `delete_collection`
+- `batch_delete_documents`
+
+**Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
 
 ## Adding to Your Client
 
@@ -218,6 +272,8 @@ Then connect from client:
 
 ## Tools
 
+> **Note**: Tool availability depends on your [Access Control](#access-control) settings. Some tools are disabled in read-only mode or when delete operations are restricted.
+
 ### Search & Discovery
 - `search_documents(query, collection_id?, limit?, offset?)` - Search documents by keywords with pagination
 - `list_collections()` - List all collections
@@ -347,6 +403,52 @@ npx @modelcontextprotocol/inspector http://localhost:3000
 - `streamable-http`: Streamable HTTP transport
 
 **Connection Pooling**: Shared httpx connection pool across instances (configurable: `OUTLINE_MAX_CONNECTIONS=100`, `OUTLINE_MAX_KEEPALIVE=20`)
+
+## Troubleshooting
+
+### Server not connecting?
+
+**Check your API credentials:**
+```bash
+# Test your API key
+curl -H "Authorization: Bearer YOUR_API_KEY" YOUR_OUTLINE_URL/api/auth.info
+```
+
+Common issues:
+- Verify `OUTLINE_API_KEY` is set correctly in your MCP client configuration
+- Check `OUTLINE_API_URL` points to your Outline instance (default: `https://app.getoutline.com/api`)
+- For self-hosted Outline, ensure the URL ends with `/api`
+- Verify your API key hasn't expired or been revoked
+
+### Tools not appearing in client?
+
+- **Read-only mode enabled?** Check if `OUTLINE_READ_ONLY=true` is disabling write tools
+- **Delete operations disabled?** Check if `OUTLINE_DISABLE_DELETE=true` is hiding delete tools
+- **AI tools missing?** Check if `OUTLINE_DISABLE_AI_TOOLS=true` is disabling AI features
+- Restart your MCP client after changing environment variables
+
+### API rate limiting errors?
+
+The server automatically handles rate limiting with retry logic. If you see persistent rate limit errors:
+- Reduce concurrent operations
+- Check if multiple clients are using the same API key
+- Contact Outline support if limits are too restrictive for your use case
+
+### Docker container issues?
+
+**Container won't start:**
+- Ensure `OUTLINE_API_KEY` is set: `docker run -e OUTLINE_API_KEY=your_key ...`
+- Check logs: `docker logs <container-id>`
+
+**Can't connect from client:**
+- Use `0.0.0.0` for MCP_HOST: `-e MCP_HOST=0.0.0.0`
+- Verify port mapping: `-p 3000:3000`
+- Check transport mode: `-e MCP_TRANSPORT=streamable-http`
+
+### Need more help?
+
+- 📖 [MCP Documentation](https://modelcontextprotocol.io/)
+- 🐛 [Report an issue](https://github.com/Vortiago/mcp-outline/issues)
 
 ## Contributing
 

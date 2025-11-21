@@ -6,6 +6,8 @@ This module provides MCP tools for reading document content.
 
 from typing import Any, Dict
 
+from mcp.types import ToolAnnotations
+
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
@@ -31,7 +33,9 @@ def register_tools(mcp) -> None:
         mcp: The FastMCP server instance
     """
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def read_document(document_id: str) -> str:
         """
         Retrieves and displays the full content of a document.
@@ -57,7 +61,9 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def export_document(document_id: str) -> str:
         """
         Exports a document as plain markdown text.
