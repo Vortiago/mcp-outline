@@ -46,14 +46,6 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest tests/ -v --cov=src/mcp_outline --cov-report=term --cov-report=xml
+          uv run pytest tests/ -v --cov=src/mcp_outline --cov-report=term
         env:
           OUTLINE_API_KEY: "dummy"
-
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.xml
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}

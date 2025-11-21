@@ -4,7 +4,6 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Vortiago/mcp-outline/branch/main/graph/badge.svg)](https://codecov.io/gh/Vortiago/mcp-outline)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/Vortiago/mcp-outline/pkgs/container/mcp-outline)
 
 A Model Context Protocol server for interacting with Outline document management.
@@ -450,7 +449,6 @@ The server automatically handles rate limiting with retry logic. If you see pers
 
 - 📖 [MCP Documentation](https://modelcontextprotocol.io/)
 - 🐛 [Report an issue](https://github.com/Vortiago/mcp-outline/issues)
-- 💬 [GitHub Discussions](https://github.com/Vortiago/mcp-outline/discussions)
 
 ## Contributing
 
