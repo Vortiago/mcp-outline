@@ -252,7 +252,9 @@ def register_tools(mcp) -> None:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    @mcp.tool()
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+    )
     async def get_document_id_from_title(
         query: str, collection_id: Optional[str] = None
     ) -> str:
