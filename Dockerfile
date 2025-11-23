@@ -21,6 +21,11 @@ ARG APP_GID=1000
 RUN groupadd --gid $APP_GID appuser && \
     useradd --uid $APP_UID --gid $APP_GID --create-home appuser
 
+RUN apt-get update && \
+    apt-get install -y curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --chown=appuser:appuser --from=builder /app /app
