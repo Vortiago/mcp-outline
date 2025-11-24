@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Full history needed for setuptools-scm to calculate version
           fetch-tags: true  # Explicit tag fetching (redundant with fetch-depth: 0 but explicit)
