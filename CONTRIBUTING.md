@@ -11,7 +11,7 @@ git clone https://github.com/Vortiago/mcp-outline.git
 cd mcp-outline
 
 # Install dependencies (requires uv - https://docs.astral.sh/uv/)
-uv sync --dev
+uv sync --extra dev
 
 # Copy environment template
 cp .env.example .env
@@ -23,6 +23,9 @@ cp .env.example .env
 ### Running Tests
 
 ```bash
+# Set a dummy API key for tests (or use your real one)
+export OUTLINE_API_KEY=dummy
+
 # Run all tests
 uv run pytest tests/ -v
 
