@@ -1,259 +1,151 @@
 # MCP Outline Server Guide
 
-This guide helps you implement and modify the MCP Outline server effectively.
+Instructions for AI assistants working with this codebase.
 
-## Purpose
+## What This Is
 
-This MCP server bridges AI assistants with Outline's document management platform:
-- REST API integration for Outline services
-- Tools for documents, collections, and comments
-- API key authentication
-- Docker and local development support
+An MCP server connecting AI assistants to Outline's document management API.
+Provides tools for searching, reading, creating, and managing documents.
 
-## Architecture
+## Project Structure
 
-### Tool Categories
+```
+src/mcp_outline/
+├── server.py                 # FastMCP server entry point
+├── features/
+│   └── documents/            # All document tools
+│       ├── __init__.py       # Conditional tool registration
+│       ├── common.py         # Shared: get_outline_client(), OutlineClientError
+│       ├── document_search.py
+│       ├── document_reading.py
+│       ├── document_content.py
+│       ├── document_lifecycle.py
+│       ├── document_organization.py
+│       ├── document_collaboration.py
+│       ├── collection_tools.py
+│       ├── batch_operations.py
+│       └── ai_tools.py
+└── utils/
+    └── outline_client.py     # OutlineClient: async API wrapper
+```
 
-- **Search**: Find documents, collections, hierarchies
-- **Reading**: Read content, export markdown
-- **Content**: Create, update, comment
-- **Organization**: Move documents between collections
-- **Lifecycle**: Archive, delete, restore operations
-- **Collaboration**: Comments, backlinks
-- **Collections**: Create, update, delete, export
-- **AI**: Natural language queries
+## Key Patterns
 
-## Core Concepts
+### Tool Module Structure
 
-### Outline Objects
-
-- **Documents**: Markdown content with title and metadata
-- **Collections**: Grouping with name, description, color
-- **Comments**: Threaded discussions with replies
-- **Hierarchy**: Parent-child document relationships
-- **Lifecycle**: Draft → Published → Archived → Deleted
-
-### API Client
-
-`OutlineClient` in `utils/outline_client.py` handles async REST API interactions:
-
-**Operations** (all async):
-- Documents: get, search, create, update, move, archive, delete, restore
-- Collections: list, create, update, delete, export
-- Comments: create, list, get
-- AI: answer questions
-
-**Configuration**:
-- `OUTLINE_API_KEY` (required)
-- `OUTLINE_API_URL` (optional, defaults to https://app.getoutline.com/api)
-- `OUTLINE_MAX_CONNECTIONS` (optional, default: 100) - Maximum concurrent connections
-- `OUTLINE_MAX_KEEPALIVE` (optional, default: 20) - Maximum idle connections in pool
-- `OUTLINE_TIMEOUT` (optional, default: 30.0) - Request timeout in seconds
-- `OUTLINE_CONNECT_TIMEOUT` (optional, default: 5.0) - Connection timeout in seconds
-- Authentication via Bearer token
-
-**Connection Pooling**:
-- Uses httpx with class-level connection pool
-- Shared across all OutlineClient instances
-- Automatic connection reuse for better performance
-- Configurable limits via environment variables
-
-**Error Handling**:
-- Raises `OutlineError` for API failures
-- Tools catch exceptions and return error strings
-- Supports httpx exceptions (RequestError, HTTPStatusError, TimeoutException)
-
-**Rate Limiting**:
-- Tracks `RateLimit-Remaining` and `RateLimit-Reset` headers, waits proactively when exhausted
-- Uses asyncio.Lock for thread-safe rate limiting in concurrent scenarios
-- Automatic handling of HTTP 429 responses
-- Respects `Retry-After` header
-- Enabled by default, no configuration required
-
-## Implementation Patterns
-
-### Module Structure
-
-Feature modules follow this pattern:
+Every tool module follows this pattern:
 
 ```python
-# 1. Imports (standard lib → third-party → local)
-import os
-from typing import Any, Optional
-from mcp_outline.utils.outline_client import OutlineClient
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+    get_outline_client,
+)
 
-# 2. Helper formatters (private functions)
-def _format_search_results(data: dict) -> str:
-    """Format API response for user display."""
-    # Clean, readable output formatting
+def _format_result(data: dict) -> str:
+    """Private helper to format API response."""
     pass
 
-# 3. Tool registration function
-def register_tools(mcp):
-    """Register all tools in this module."""
+def register_tools(mcp) -> None:
+    """Register tools with MCP server."""
 
     @mcp.tool()
-    async def search_documents(
-        query: str,
-        collection_id: Optional[str] = None
-    ) -> str:
-        """
-        Search for documents by keywords.
-
-        Args:
-            query: Search keywords
-            collection_id: Optional collection filter
-
-        Returns:
-            Formatted search results
-        """
+    async def tool_name(param: str) -> str:
+        """Docstring becomes tool description for AI."""
         try:
             client = await get_outline_client()
-            result = await client.search_documents(query, collection_id)
-            return _format_search_results(result)
-        except Exception as e:
+            result = await client.some_method(param)
+            return _format_result(result)
+        except OutlineClientError as e:
             return f"Error: {str(e)}"
 ```
 
-### Adding New Tools
+### Critical Rules
 
-**Client Method** (if new endpoint needed):
-```python
-async def new_operation(self, param: str) -> dict:
-    """Docstring describing operation."""
-    response = await self.post("endpoint", {"param": param})
-    return response.get("data", {})
-```
+1. **Always async**: All tools use `async def` and `await`
+2. **Return strings**: Tools return formatted strings, never dicts
+3. **Catch exceptions**: Return error strings, don't raise
+4. **Use get_outline_client()**: Always `await get_outline_client()` for client
+5. **No stdout/stderr**: MCP uses stdio - logging breaks the protocol
 
-**Tool Function**:
-```python
-@mcp.tool()
-async def new_tool_name(param: str) -> str:
-    """Clear description."""
-    try:
-        client = await get_outline_client()
-        result = await client.new_operation(param)
-        return _format_result(result)
-    except Exception as e:
-        return f"Error: {str(e)}"
-```
+### Batch Operations Pattern
 
-**Testing**: Mock OutlineClient, test success and error cases
-
-## Technical Requirements
-
-### Code Style
-
-- PEP 8 conventions
-- Type hints for all functions
-- Max line length: 79 characters (ruff enforced)
-- Google-style docstrings
-- Import order: stdlib → third-party → local
-- Single responsibility per function
-
-### Error Handling
+For bulk operations, use the `_process_batch` helper in `batch_operations.py`:
 
 ```python
-# In OutlineClient methods
-try:
-    response = await self._client_pool.post(url, headers=headers, json=data)
-    response.raise_for_status()
-    return response.json()
-except httpx.HTTPStatusError as e:
-    if e.response.status_code == 429:
-        raise OutlineError(f"Rate limited")
-    raise OutlineError(f"HTTP {e.response.status_code}: {e.response.text}")
-except httpx.TimeoutException as e:
-    raise OutlineError(f"Request timeout: {str(e)}")
-except httpx.RequestError as e:
-    raise OutlineError(f"API request failed: {str(e)}")
-
-# In tool functions
-try:
-    client = await get_outline_client()
-    result = await client.operation()
-    return format_result(result)
-except OutlineError as e:
-    return f"Outline API error: {str(e)}"
-except Exception as e:
-    return f"Error: {str(e)}"
+async def _process_batch(
+    items: List[Any],
+    process_item: Callable[[OutlineClient, Any], Awaitable[Dict]],
+    operation_name: str,
+    empty_error: str = "No items provided.",
+) -> str:
+    """Generic batch processor with error handling per item."""
 ```
 
-### Testing
+Define a per-item processor and call `_process_batch`:
 
-Mock `OutlineClient` in async tests:
+```python
+async def batch_archive_documents(document_ids: List[str]) -> str:
+    async def archive_one(client, doc_id):
+        document = await client.archive_document(doc_id)
+        if document:
+            return _create_result_entry(doc_id, "success", title=...)
+        return _create_result_entry(doc_id, "failed", error=...)
+
+    return await _process_batch(
+        document_ids, archive_one, "archive", "No document IDs provided."
+    )
+```
+
+## Environment Variables
+
+```bash
+# Required
+OUTLINE_API_KEY=your_key
+
+# Optional
+OUTLINE_API_URL=https://app.getoutline.com/api  # Default
+OUTLINE_READ_ONLY=true          # Disable all write tools
+OUTLINE_DISABLE_AI_TOOLS=true   # Disable AI question tool
+OUTLINE_DISABLE_DELETE=true     # Disable only delete tools
+```
+
+## Testing
+
+Tests mock `get_outline_client`:
 
 ```python
 @pytest.mark.asyncio
-async def test_tool():
-    with patch('module.get_outline_client') as mock_get_client:
-        mock_client = AsyncMock()
-        mock_client.method.return_value = {"data": "value"}
-        mock_get_client.return_value = mock_client
+@patch("mcp_outline.features.documents.module.get_outline_client")
+async def test_tool(mock_get_client):
+    mock_client = AsyncMock()
+    mock_client.method.return_value = {"data": ...}
+    mock_get_client.return_value = mock_client
 
-        result = await tool_function("param")
-        assert "expected" in result
+    result = await tool_function("param")
+    assert "expected" in result
 ```
 
-### Configuration
-
-`.env` file:
-```bash
-OUTLINE_API_KEY=<your_key>                 # Required
-OUTLINE_API_URL=<custom_url>               # Optional
-OUTLINE_MAX_CONNECTIONS=100                # Optional - Max connections
-OUTLINE_MAX_KEEPALIVE=20                   # Optional - Max keepalive
-OUTLINE_TIMEOUT=30.0                       # Optional - Request timeout
-OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
-OUTLINE_DISABLE_AI_TOOLS=true              # Optional - Disable AI tools
-OUTLINE_READ_ONLY=true                     # Optional - Disable all write operations
-OUTLINE_DISABLE_DELETE=true                # Optional - Disable delete operations only
-```
-
-**Access Control Notes**:
-- `OUTLINE_READ_ONLY`: Blocks entire write modules at registration (content, lifecycle, organization, batch_operations)
-- `OUTLINE_DISABLE_DELETE`: Conditionally registers delete tools within document_lifecycle and collection_tools
-- Read-only mode takes precedence: If both are set, server operates in read-only mode
-
-### Critical Requirements
-
-- No stdout/stderr logging (MCP uses stdio)
-- Tools return strings, not dicts
-- Use `async def` for ALL tool functions
-- Use `await` for ALL client method calls
-- Always use `await get_outline_client()` to get client instance
-- Catch exceptions, return error strings
-- Follow KISS principle
-
-### Pre-Commit Checks
-
-**IMPORTANT**: Before committing, run all CI checks locally to ensure they pass:
+## Before Committing
 
 ```bash
-# Format code
-uv run ruff format .
-
-# Check formatting
-uv run ruff format --check .
-
-# Lint code
-uv run ruff check .
-
-# Type check
-uv run pyright src/
-
-# Run tests
-uv run pytest tests/ -v --cov=src/mcp_outline
-
-# Run integration tests
-uv run pytest tests/ -v -m integration
+uv run ruff format .           # Format
+uv run ruff check .            # Lint
+uv run pyright src/            # Type check
+uv run pytest tests/ -v        # Test
 ```
 
-## Common Patterns
+## Code Style
 
-**Pagination**: Use `offset` and `limit` parameters for large result sets
+- 79-char line limit (ruff enforced)
+- Type hints on all functions
+- Google-style docstrings
+- Import order: stdlib, third-party, local
 
-**Tree Formatting**: Recursive formatting with indentation for hierarchies
+## Version Tagging
 
-**Document ID Resolution**: `get_document_id_from_title` for user-friendly lookups
-- When tagging version numbers look at changes since last version. Follow this rule for version number, go from left to right. First one hit is the new version number. Anye feat!: => major version, any feat: => minor version, Only fix: => patch version. Use annotated tag with a short summary of what the release contains.
+When tagging releases, check commits since last version:
+- `feat!:` = major version bump
+- `feat:` = minor version bump
+- `fix:` only = patch version bump
+
+Use annotated tags with a summary of changes.
