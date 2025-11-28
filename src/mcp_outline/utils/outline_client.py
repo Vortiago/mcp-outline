@@ -41,7 +41,7 @@ class OutlineClient:
         """
         # Load raw values from arguments or environment
         raw_api_key = api_key or os.getenv("OUTLINE_API_KEY")
-        raw_api_url = api_url or os.getenv("OUTLINE_API_URL", "https://app.getoutline.com/api")
+        raw_api_url = api_url or os.getenv("OUTLINE_API_URL")
 
         # Sanitize API key: strip spaces and surrounding quotes
         if raw_api_key is not None:
