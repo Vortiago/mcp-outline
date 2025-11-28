@@ -276,8 +276,7 @@ class TestOutlineClient:
         client = OutlineClient()
         assert client.api_url == "https://outline.company.com/api"
 
-        # cleanup
-        os.environ["OUTLINE_API_URL"] = MOCK_API_URL
+        # rely on teardown_method() for environment restoration
 
     @pytest.mark.asyncio
     async def test_api_key_sanitized(self):
@@ -288,5 +287,4 @@ class TestOutlineClient:
         client = OutlineClient()
         assert client.api_key == "quoted_key"
 
-        # cleanup
-        os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
+        # rely on teardown_method() for environment restoration
