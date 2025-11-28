@@ -266,3 +266,27 @@ class TestOutlineClient:
         # Verify transport exists
         transport = client._client_pool._transport
         assert transport is not None
+
+    @pytest.mark.asyncio
+    async def test_api_url_normalization(self):
+        """OUTLINE_API_URL without trailing /api should be normalized."""
+        os.environ["OUTLINE_API_URL"] = "https://outline.company.com"
+        os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
+
+        client = OutlineClient()
+        assert client.api_url == "https://outline.company.com/api"
+
+        # cleanup
+        os.environ["OUTLINE_API_URL"] = MOCK_API_URL
+
+    @pytest.mark.asyncio
+    async def test_api_key_sanitized(self):
+        """OUTLINE_API_KEY with surrounding quotes/spaces should be sanitized."""
+        os.environ["OUTLINE_API_KEY"] = "  \"quoted_key\"  "
+        os.environ["OUTLINE_API_URL"] = MOCK_API_URL
+
+        client = OutlineClient()
+        assert client.api_key == "quoted_key"
+
+        # cleanup
+        os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY

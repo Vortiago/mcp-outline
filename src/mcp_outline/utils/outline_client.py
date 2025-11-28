@@ -39,11 +39,29 @@ class OutlineClient:
         Raises:
             OutlineError: If API key is missing.
         """
-        # Load configuration from environment variables if not provided
-        self.api_key = api_key or os.getenv("OUTLINE_API_KEY")
-        self.api_url = api_url or os.getenv(
-            "OUTLINE_API_URL", "https://app.getoutline.com/api"
-        )
+        # Load raw values from arguments or environment
+        raw_api_key = api_key or os.getenv("OUTLINE_API_KEY")
+        raw_api_url = api_url or os.getenv("OUTLINE_API_URL", "https://app.getoutline.com/api")
+
+        # Sanitize API key: strip spaces and surrounding quotes
+        if raw_api_key is not None:
+            sanitized_key = raw_api_key.strip()
+            sanitized_key = sanitized_key.strip('"').strip("'")
+        else:
+            sanitized_key = None
+
+        # Sanitize API URL: strip spaces/quotes, remove trailing slashes and ensure it ends with '/api'
+        if raw_api_url is not None:
+            sanitized_url = raw_api_url.strip()
+            sanitized_url = sanitized_url.strip('"').strip("'")
+            sanitized_url = sanitized_url.rstrip('/')
+            if not sanitized_url.endswith('/api'):
+                sanitized_url = sanitized_url + '/api'
+        else:
+            sanitized_url = 'https://app.getoutline.com/api'
+
+        self.api_key = sanitized_key
+        self.api_url = sanitized_url
 
         # Ensure API key is provided
         if not self.api_key:
@@ -109,9 +127,9 @@ class OutlineClient:
         Uses stored rate limit headers to sleep until reset time if needed.
         """
         if self._rate_limit_remaining == 0 and self._rate_limit_reset:
-            # Calculate wait time until reset
+            # Calculate wait time until reset (use float arithmetic)
             now = datetime.now().timestamp()
-            wait_seconds = max(0, self._rate_limit_reset - now)
+            wait_seconds = max(0.0, float(self._rate_limit_reset) - now)
 
             if wait_seconds > 0:
                 # Add small buffer to account for clock skew
