@@ -39,13 +39,47 @@ class OutlineClient:
         Raises:
             OutlineError: If API key is missing.
         """
-        # Load configuration from environment variables if not provided
-        self.api_key = api_key or os.getenv("OUTLINE_API_KEY")
-        self.api_url = api_url or os.getenv(
-            "OUTLINE_API_URL", "https://app.getoutline.com/api"
-        )
+        # Load raw values from arguments or environment
+        raw_api_key = api_key or os.getenv("OUTLINE_API_KEY")
+        raw_api_url = api_url or os.getenv("OUTLINE_API_URL")
 
-        # Ensure API key is provided
+        # Sanitize API key: strip spaces and surrounding quotes
+        if raw_api_key is not None:
+            sanitized_key = raw_api_key.strip()
+            # Strip only a matching pair of surrounding quotes (" or ')
+            for quote in ('"', "'"):
+                if (
+                    sanitized_key.startswith(quote)
+                    and sanitized_key.endswith(quote)
+                    and len(sanitized_key) >= 2
+                ):
+                    sanitized_key = sanitized_key[1:-1]
+                    break
+        else:
+            sanitized_key = None
+
+        # Sanitize API URL: strip spaces/quotes, remove trailing slashes and ensure it ends with '/api'
+        if raw_api_url is not None:
+            sanitized_url = raw_api_url.strip()
+            # Strip only a matching pair of surrounding quotes for URL
+            for quote in ('"', "'"):
+                if (
+                    sanitized_url.startswith(quote)
+                    and sanitized_url.endswith(quote)
+                    and len(sanitized_url) >= 2
+                ):
+                    sanitized_url = sanitized_url[1:-1]
+                    break
+            sanitized_url = sanitized_url.rstrip('/')
+            if not sanitized_url.endswith('/api'):
+                sanitized_url = sanitized_url + '/api'
+        else:
+            sanitized_url = 'https://app.getoutline.com/api'
+
+        self.api_key = sanitized_key
+        self.api_url = sanitized_url
+
+        # Ensure API key is provided (sanitized_key will be None or empty string if invalid)
         if not self.api_key:
             raise OutlineError("Missing API key. Set OUTLINE_API_KEY env var.")
 
@@ -109,9 +143,9 @@ class OutlineClient:
         Uses stored rate limit headers to sleep until reset time if needed.
         """
         if self._rate_limit_remaining == 0 and self._rate_limit_reset:
-            # Calculate wait time until reset
+            # Calculate wait time until reset (use float arithmetic)
             now = datetime.now().timestamp()
-            wait_seconds = max(0, self._rate_limit_reset - now)
+            wait_seconds = max(0.0, float(self._rate_limit_reset) - now)
 
             if wait_seconds > 0:
                 # Add small buffer to account for clock skew
@@ -124,13 +158,20 @@ class OutlineClient:
         Args:
             response: The HTTP response object
         """
-        if "RateLimit-Remaining" in response.headers:
-            self._rate_limit_remaining = int(
-                response.headers["RateLimit-Remaining"]
-            )
+        # Normalize header names to lower-case for case-insensitive match
+        headers = {k.lower(): v for k, v in response.headers.items()}
 
-        if "RateLimit-Reset" in response.headers:
-            self._rate_limit_reset = int(response.headers["RateLimit-Reset"])
+        if 'ratelimit-remaining' in headers:
+            try:
+                self._rate_limit_remaining = int(headers['ratelimit-remaining'])
+            except (TypeError, ValueError):
+                self._rate_limit_remaining = None
+
+        if 'ratelimit-reset' in headers:
+            try:
+                self._rate_limit_reset = int(headers['ratelimit-reset'])
+            except (TypeError, ValueError):
+                self._rate_limit_reset = None
 
     async def post(
         self, endpoint: str, data: Optional[Dict[str, Any]] = None
@@ -155,7 +196,8 @@ class OutlineClient:
         async with self._rate_limit_lock:
             await self._wait_if_rate_limited()
 
-        url = f"{self.api_url}/{endpoint}"
+        # Safely join base URL and endpoint to avoid duplicate slashes
+        url = f"{self.api_url.rstrip('/')}/{endpoint.lstrip('/')}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -165,32 +207,57 @@ class OutlineClient:
         if self._client_pool is None:
             raise OutlineError("Client pool not initialized")
 
-        try:
-            response = await self._client_pool.post(
-                url, headers=headers, json=data or {}
-            )
+        max_retries = 3
+        attempt = 0
+        last_exception: Optional[Exception] = None
 
-            # Update rate limit state from response headers
-            self._update_rate_limits(response)
-
-            # Raise exception for 4XX/5XX responses
-            response.raise_for_status()
-            return response.json()
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                # Rate limited - provide helpful error
-                retry_after = e.response.headers.get("Retry-After", "unknown")
-                raise OutlineError(
-                    f"Rate limited. Retry after: {retry_after} seconds"
+        while attempt < max_retries:
+            try:
+                response = await self._client_pool.post(
+                    url, headers=headers, json=data or {}
                 )
-            raise OutlineError(
-                f"HTTP {e.response.status_code}: {e.response.text}"
-            )
-        except httpx.TimeoutException as e:
-            raise OutlineError(f"Request timeout: {str(e)}")
-        except httpx.RequestError as e:
-            raise OutlineError(f"API request failed: {str(e)}")
+
+                # Update rate limit state from response headers
+                self._update_rate_limits(response)
+
+                # Raise exception for 4XX/5XX responses
+                response.raise_for_status()
+                return response.json()
+
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                # If rate limited, respect Retry-After or backoff and retry
+                status = getattr(e.response, 'status_code', None)
+                if status == 429:
+                    retry_after = e.response.headers.get('Retry-After') if e.response is not None else None
+                    if retry_after:
+                        try:
+                            sleep_seconds = float(retry_after)
+                        except (TypeError, ValueError):
+                            sleep_seconds = 1.0 * (2 ** attempt)
+                    else:
+                        sleep_seconds = 1.0 * (2 ** attempt)
+
+                    await asyncio.sleep(sleep_seconds)
+                    attempt += 1
+                    continue
+
+                # non-retryable status
+                raise OutlineError(f"HTTP {e.response.status_code}: {e.response.text}")
+
+            except httpx.TimeoutException as e:
+                raise OutlineError(f"Request timeout: {str(e)}")
+            except httpx.RequestError as e:
+                # Network/connection errors are not retried here
+                raise OutlineError(f"API request failed: {str(e)}")
+
+        # If we exhausted retries, raise the last captured HTTPStatusError as OutlineError
+        if isinstance(last_exception, httpx.HTTPStatusError) and last_exception.response is not None:
+            status = last_exception.response.status_code
+            text = last_exception.response.text
+            raise OutlineError(f"HTTP {status}: {text}")
+
+        raise OutlineError("API request failed after retries")
 
     async def auth_info(self) -> Dict[str, Any]:
         """

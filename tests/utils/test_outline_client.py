@@ -3,6 +3,7 @@ Tests for the Outline API client.
 """
 
 import os
+import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -41,6 +42,16 @@ class TestOutlineClient:
             os.environ["OUTLINE_API_URL"] = self.original_api_url
         else:
             os.environ.pop("OUTLINE_API_URL", None)
+
+    @pytest.fixture(autouse=True)
+    def _cleanup_client_pool(self):
+        """Ensure the shared httpx client pool is closed after each test to avoid cross-test side effects."""
+        yield
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(OutlineClient.close_pool())
+        finally:
+            loop.close()
 
     @pytest.mark.asyncio
     async def test_init_from_env_variables(self):
@@ -212,7 +223,7 @@ class TestOutlineClient:
         # First response: 429, second response: success
         mock_response_429 = MagicMock()
         mock_response_429.status_code = 429
-        mock_response_429.headers = {"Retry-After": "1000"}
+        mock_response_429.headers = {"Retry-After": "0.01"}
         mock_response_429.raise_for_status.side_effect = httpx.HTTPStatusError(
             "Too Many Requests",
             request=MagicMock(),
@@ -227,7 +238,7 @@ class TestOutlineClient:
         with patch.object(
             client._client_pool,
             "post",
-            new=AsyncMock(side_effect=[mock_response_success]),
+            new=AsyncMock(side_effect=[mock_response_429, mock_response_success]),
         ):
             # Should succeed after retry
             result = await client.post("test_endpoint")
@@ -266,3 +277,44 @@ class TestOutlineClient:
         # Verify transport exists
         transport = client._client_pool._transport
         assert transport is not None
+
+    @pytest.mark.asyncio
+    async def test_api_url_normalization(self):
+        """OUTLINE_API_URL without trailing /api should be normalized."""
+        os.environ["OUTLINE_API_URL"] = "https://outline.company.com"
+        os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
+
+        client = OutlineClient()
+        assert client.api_url == "https://outline.company.com/api"
+
+    @pytest.mark.asyncio
+    async def test_api_key_sanitized(self):
+        """OUTLINE_API_KEY with surrounding quotes/spaces should be sanitized."""
+        os.environ["OUTLINE_API_KEY"] = "  \"quoted_key\"  "
+        os.environ["OUTLINE_API_URL"] = MOCK_API_URL
+
+        client = OutlineClient()
+        assert client.api_key == "quoted_key"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("input_url,expected", [
+        ("https://outline.company.com", "https://outline.company.com/api"),
+        ("https://outline.company.com/api", "https://outline.company.com/api"),
+        ("https://outline.company.com/", "https://outline.company.com/api"),
+        ("https://outline.company.com/api/", "https://outline.company.com/api"),
+        ("  \"https://outline.company.com\"  ", "https://outline.company.com/api"),
+        ("https://outline.company.com//", "https://outline.company.com/api"),
+        (None, "https://app.getoutline.com/api"),
+    ])
+    async def test_api_url_normalization_param(self, input_url, expected):
+        """Parametrized checks for various OUTLINE_API_URL inputs and expected normalization."""
+        if input_url is None:
+            os.environ.pop("OUTLINE_API_URL", None)
+        else:
+            os.environ["OUTLINE_API_URL"] = input_url
+
+        os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
+
+        client = OutlineClient()
+        assert client.api_url == expected
+
