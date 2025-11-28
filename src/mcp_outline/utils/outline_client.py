@@ -46,14 +46,22 @@ class OutlineClient:
         # Sanitize API key: strip spaces and surrounding quotes
         if raw_api_key is not None:
             sanitized_key = raw_api_key.strip()
-            sanitized_key = sanitized_key.strip('"').strip("'")
+            # Strip only a matching pair of surrounding quotes (" or ')
+            for quote in ('"', "'"):
+                if sanitized_key.startswith(quote) and sanitized_key.endswith(quote) and len(sanitized_key) >= 2:
+                    sanitized_key = sanitized_key[1:-1]
+                    break
         else:
             sanitized_key = None
 
         # Sanitize API URL: strip spaces/quotes, remove trailing slashes and ensure it ends with '/api'
         if raw_api_url is not None:
             sanitized_url = raw_api_url.strip()
-            sanitized_url = sanitized_url.strip('"').strip("'")
+            # Strip only a matching pair of surrounding quotes for URL
+            for quote in ('"', "'"):
+                if sanitized_url.startswith(quote) and sanitized_url.endswith(quote) and len(sanitized_url) >= 2:
+                    sanitized_url = sanitized_url[1:-1]
+                    break
             sanitized_url = sanitized_url.rstrip('/')
             if not sanitized_url.endswith('/api'):
                 sanitized_url = sanitized_url + '/api'
