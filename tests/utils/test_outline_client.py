@@ -2,8 +2,8 @@
 Tests for the Outline API client.
 """
 
-import os
 import asyncio
+import os
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -45,7 +45,10 @@ class TestOutlineClient:
 
     @pytest.fixture(autouse=True)
     def _cleanup_client_pool(self):
-        """Ensure the shared httpx client pool is closed after each test to avoid cross-test side effects."""
+        """Ensure the shared httpx client pool is closed after each test.
+
+        This avoids cross-test side effects.
+        """
         yield
         loop = asyncio.new_event_loop()
         try:
@@ -291,7 +294,7 @@ class TestOutlineClient:
 
     @pytest.mark.asyncio
     async def test_api_key_sanitized(self):
-        """OUTLINE_API_KEY with surrounding quotes/spaces should be sanitized."""
+        """Sanitize OUTLINE_API_KEY with surrounding quotes/spaces."""
         os.environ["OUTLINE_API_KEY"] = '  "quoted_key"  '
         os.environ["OUTLINE_API_URL"] = MOCK_API_URL
 
@@ -327,7 +330,10 @@ class TestOutlineClient:
         ],
     )
     async def test_api_url_normalization_param(self, input_url, expected):
-        """Parametrized checks for various OUTLINE_API_URL inputs and expected normalization."""
+        """Parametrized checks for various OUTLINE_API_URL inputs.
+
+        Verifies expected normalization for each input.
+        """
         if input_url is None:
             os.environ.pop("OUTLINE_API_URL", None)
         else:

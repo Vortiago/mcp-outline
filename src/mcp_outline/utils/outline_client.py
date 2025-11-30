@@ -58,7 +58,10 @@ class OutlineClient:
         else:
             sanitized_key = None
 
-        # Sanitize API URL: strip spaces/quotes, remove trailing slashes and ensure it ends with '/api'
+        # Sanitize API URL:
+        # - strip spaces/quotes
+        # - remove trailing slashes
+        # - ensure it ends with '/api'
         if raw_api_url is not None:
             sanitized_url = raw_api_url.strip()
             # Strip only a matching pair of surrounding quotes for URL
@@ -71,15 +74,21 @@ class OutlineClient:
                     sanitized_url = sanitized_url[1:-1]
                     break
             sanitized_url = sanitized_url.rstrip("/")
-            if not sanitized_url.endswith("/api"):
-                sanitized_url = sanitized_url + "/api"
+            # Treat empty/whitespace-only values as missing
+            # and fall back to default
+            if not sanitized_url:
+                sanitized_url = "https://app.getoutline.com/api"
+            else:
+                if not sanitized_url.endswith("/api"):
+                    sanitized_url = sanitized_url + "/api"
         else:
             sanitized_url = "https://app.getoutline.com/api"
 
         self.api_key = sanitized_key
         self.api_url = sanitized_url
 
-        # Ensure API key is provided (sanitized_key will be None or empty string if invalid)
+        # Ensure API key is provided.
+        # sanitized_key will be None or empty string if invalid
         if not self.api_key:
             raise OutlineError("Missing API key. Set OUTLINE_API_KEY env var.")
 
@@ -259,7 +268,9 @@ class OutlineClient:
                 # Network/connection errors are not retried here
                 raise OutlineError(f"API request failed: {str(e)}")
 
-        # If we exhausted retries, raise the last captured HTTPStatusError as OutlineError
+        # If retries exhausted, raise last captured HTTPStatusError
+        # If retries are exhausted, raise the last captured
+        # HTTPStatusError as an OutlineError
         if (
             isinstance(last_exception, httpx.HTTPStatusError)
             and last_exception.response is not None
