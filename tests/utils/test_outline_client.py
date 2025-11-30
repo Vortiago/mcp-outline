@@ -372,6 +372,15 @@ class TestOutlineClient:
         assert client.api_key == "quoted_key"
 
     @pytest.mark.asyncio
+    async def test_api_key_sanitized_single_quotes(self):
+        """Sanitize OUTLINE_API_KEY with surrounding single quotes/spaces."""
+        os.environ["OUTLINE_API_KEY"] = "  'quoted_key'  "
+        os.environ["OUTLINE_API_URL"] = MOCK_API_URL
+
+        client = OutlineClient()
+        assert client.api_key == "quoted_key"
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "input_url,expected",
         [
