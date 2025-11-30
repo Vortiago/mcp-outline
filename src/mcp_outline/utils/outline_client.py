@@ -253,6 +253,12 @@ class OutlineClient:
                     else:
                         sleep_seconds = 1.0 * (2**attempt)
 
+                    # If this was the last allowed attempt, don't sleep —
+                    # break so the final HTTPStatusError is surfaced below.
+                    if attempt + 1 >= max_retries:
+                        last_exception = e
+                        break
+
                     await asyncio.sleep(sleep_seconds)
                     attempt += 1
                     continue
