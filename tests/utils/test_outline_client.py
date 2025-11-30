@@ -47,14 +47,33 @@ class TestOutlineClient:
     def _cleanup_client_pool(self):
         """Ensure the shared httpx client pool is closed after each test.
 
-        This avoids cross-test side effects.
+        Uses a defensive approach: tries to run close_pool() on the current
+        event loop if possible; otherwise creates a temporary loop. This
+        avoids creating a new loop unconditionally and prevents "event loop
+        already running" errors in pytest-asyncio/anyio environments.
         """
         yield
-        loop = asyncio.new_event_loop()
+        coro = OutlineClient.close_pool()
         try:
-            loop.run_until_complete(OutlineClient.close_pool())
-        finally:
-            loop.close()
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # No running loop in this thread; create a temporary one
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(coro)
+            finally:
+                loop.close()
+        else:
+            # We have an event loop object
+            if loop.is_running():
+                # Can't run in the running loop; use a temporary loop
+                new_loop = asyncio.new_event_loop()
+                try:
+                    new_loop.run_until_complete(coro)
+                finally:
+                    new_loop.close()
+            else:
+                loop.run_until_complete(coro)
 
     @pytest.mark.asyncio
     async def test_init_from_env_variables(self):
