@@ -70,11 +70,11 @@ class OutlineClient:
                 ):
                     sanitized_url = sanitized_url[1:-1]
                     break
-            sanitized_url = sanitized_url.rstrip('/')
-            if not sanitized_url.endswith('/api'):
-                sanitized_url = sanitized_url + '/api'
+            sanitized_url = sanitized_url.rstrip("/")
+            if not sanitized_url.endswith("/api"):
+                sanitized_url = sanitized_url + "/api"
         else:
-            sanitized_url = 'https://app.getoutline.com/api'
+            sanitized_url = "https://app.getoutline.com/api"
 
         self.api_key = sanitized_key
         self.api_url = sanitized_url
@@ -161,15 +161,17 @@ class OutlineClient:
         # Normalize header names to lower-case for case-insensitive match
         headers = {k.lower(): v for k, v in response.headers.items()}
 
-        if 'ratelimit-remaining' in headers:
+        if "ratelimit-remaining" in headers:
             try:
-                self._rate_limit_remaining = int(headers['ratelimit-remaining'])
+                self._rate_limit_remaining = int(
+                    headers["ratelimit-remaining"]
+                )
             except (TypeError, ValueError):
                 self._rate_limit_remaining = None
 
-        if 'ratelimit-reset' in headers:
+        if "ratelimit-reset" in headers:
             try:
-                self._rate_limit_reset = int(headers['ratelimit-reset'])
+                self._rate_limit_reset = int(headers["ratelimit-reset"])
             except (TypeError, ValueError):
                 self._rate_limit_reset = None
 
@@ -227,23 +229,29 @@ class OutlineClient:
             except httpx.HTTPStatusError as e:
                 last_exception = e
                 # If rate limited, respect Retry-After or backoff and retry
-                status = getattr(e.response, 'status_code', None)
+                status = getattr(e.response, "status_code", None)
                 if status == 429:
-                    retry_after = e.response.headers.get('Retry-After') if e.response is not None else None
+                    retry_after = (
+                        e.response.headers.get("Retry-After")
+                        if e.response is not None
+                        else None
+                    )
                     if retry_after:
                         try:
                             sleep_seconds = float(retry_after)
                         except (TypeError, ValueError):
-                            sleep_seconds = 1.0 * (2 ** attempt)
+                            sleep_seconds = 1.0 * (2**attempt)
                     else:
-                        sleep_seconds = 1.0 * (2 ** attempt)
+                        sleep_seconds = 1.0 * (2**attempt)
 
                     await asyncio.sleep(sleep_seconds)
                     attempt += 1
                     continue
 
                 # non-retryable status
-                raise OutlineError(f"HTTP {e.response.status_code}: {e.response.text}")
+                raise OutlineError(
+                    f"HTTP {e.response.status_code}: {e.response.text}"
+                )
 
             except httpx.TimeoutException as e:
                 raise OutlineError(f"Request timeout: {str(e)}")
@@ -252,7 +260,10 @@ class OutlineClient:
                 raise OutlineError(f"API request failed: {str(e)}")
 
         # If we exhausted retries, raise the last captured HTTPStatusError as OutlineError
-        if isinstance(last_exception, httpx.HTTPStatusError) and last_exception.response is not None:
+        if (
+            isinstance(last_exception, httpx.HTTPStatusError)
+            and last_exception.response is not None
+        ):
             status = last_exception.response.status_code
             text = last_exception.response.text
             raise OutlineError(f"HTTP {status}: {text}")

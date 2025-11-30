@@ -238,7 +238,9 @@ class TestOutlineClient:
         with patch.object(
             client._client_pool,
             "post",
-            new=AsyncMock(side_effect=[mock_response_429, mock_response_success]),
+            new=AsyncMock(
+                side_effect=[mock_response_429, mock_response_success]
+            ),
         ):
             # Should succeed after retry
             result = await client.post("test_endpoint")
@@ -290,22 +292,40 @@ class TestOutlineClient:
     @pytest.mark.asyncio
     async def test_api_key_sanitized(self):
         """OUTLINE_API_KEY with surrounding quotes/spaces should be sanitized."""
-        os.environ["OUTLINE_API_KEY"] = "  \"quoted_key\"  "
+        os.environ["OUTLINE_API_KEY"] = '  "quoted_key"  '
         os.environ["OUTLINE_API_URL"] = MOCK_API_URL
 
         client = OutlineClient()
         assert client.api_key == "quoted_key"
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("input_url,expected", [
-        ("https://outline.company.com", "https://outline.company.com/api"),
-        ("https://outline.company.com/api", "https://outline.company.com/api"),
-        ("https://outline.company.com/", "https://outline.company.com/api"),
-        ("https://outline.company.com/api/", "https://outline.company.com/api"),
-        ("  \"https://outline.company.com\"  ", "https://outline.company.com/api"),
-        ("https://outline.company.com//", "https://outline.company.com/api"),
-        (None, "https://app.getoutline.com/api"),
-    ])
+    @pytest.mark.parametrize(
+        "input_url,expected",
+        [
+            ("https://outline.company.com", "https://outline.company.com/api"),
+            (
+                "https://outline.company.com/api",
+                "https://outline.company.com/api",
+            ),
+            (
+                "https://outline.company.com/",
+                "https://outline.company.com/api",
+            ),
+            (
+                "https://outline.company.com/api/",
+                "https://outline.company.com/api",
+            ),
+            (
+                '  "https://outline.company.com"  ',
+                "https://outline.company.com/api",
+            ),
+            (
+                "https://outline.company.com//",
+                "https://outline.company.com/api",
+            ),
+            (None, "https://app.getoutline.com/api"),
+        ],
+    )
     async def test_api_url_normalization_param(self, input_url, expected):
         """Parametrized checks for various OUTLINE_API_URL inputs and expected normalization."""
         if input_url is None:
@@ -317,4 +337,3 @@ class TestOutlineClient:
 
         client = OutlineClient()
         assert client.api_url == expected
-
