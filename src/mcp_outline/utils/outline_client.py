@@ -81,9 +81,9 @@ class OutlineClient:
                 sanitized_url = "https://app.getoutline.com/api"
             else:
                 parsed = urlparse(sanitized_url)
-                path = parsed.path.rstrip('/')
-                segments = [seg for seg in path.split('/') if seg]
-                if 'api' not in [seg.lower() for seg in segments]:
+                path = parsed.path.rstrip("/")
+                segments = [seg for seg in path.split("/") if seg]
+                if "api" not in [seg.lower() for seg in segments]:
                     sanitized_url = sanitized_url + "/api"
         else:
             sanitized_url = "https://app.getoutline.com/api"
@@ -257,6 +257,9 @@ class OutlineClient:
                     else:
                         sleep_seconds = 1.0 * (2**attempt)
 
+                    # safety cap for unusually large Retry-After values
+                    sleep_seconds = min(sleep_seconds, 60.0)
+
                     # If this was the last allowed attempt, don't sleep —
                     # break so the final HTTPStatusError is surfaced below.
                     if attempt + 1 >= max_retries:
@@ -267,27 +270,36 @@ class OutlineClient:
                     attempt += 1
                     continue
 
-                # non-retryable status
-                raise OutlineError(
-                    f"HTTP {e.response.status_code}: {e.response.text}"
-                )
+                # non-retryable status: surface after retry loop
+                # for unified handling
+                last_exception = e
+                break
 
-            except httpx.TimeoutException as e:
-                raise OutlineError(f"Request timeout: {str(e)}")
-            except httpx.RequestError as e:
-                # Network/connection errors are not retried here
-                raise OutlineError(f"API request failed: {str(e)}")
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                # Network/connection errors are not retried here — fail fast but
+                # centralize raising to preserve exception chaining
+                last_exception = e
+                break
 
-        # If retries exhausted, raise last captured HTTPStatusError
-        # If retries are exhausted, raise the last captured
-        # HTTPStatusError as an OutlineError
+        # If retries exhausted or we broke out with a captured exception,
+        # raise a unified OutlineError
         if (
             isinstance(last_exception, httpx.HTTPStatusError)
-            and last_exception.response is not None
+            and getattr(last_exception, "response", None) is not None
         ):
             status = last_exception.response.status_code
             text = last_exception.response.text
-            raise OutlineError(f"HTTP {status}: {text}")
+            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+
+        if isinstance(last_exception, httpx.TimeoutException):
+            raise OutlineError(
+                f"Request timeout: {str(last_exception)}"
+            ) from last_exception
+
+        if isinstance(last_exception, httpx.RequestError):
+            raise OutlineError(
+                f"API request failed: {str(last_exception)}"
+            ) from last_exception
 
         raise OutlineError("API request failed after retries")
 
