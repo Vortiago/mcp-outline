@@ -269,6 +269,46 @@ class TestOutlineClient:
             assert result == {"data": {"test": "value"}}
 
     @pytest.mark.asyncio
+    async def test_retry_exhausted_on_consecutive_429s(self):
+        """Ensure retries are exhausted and an OutlineError
+        is raised after repeated 429 responses."""
+        client = OutlineClient()
+
+        mock_response_429 = MagicMock()
+        mock_response_429.status_code = 429
+        mock_response_429.headers = {"Retry-After": "0.01"}
+        mock_response_429.text = "Too Many Requests"
+        mock_response_429.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Too Many Requests",
+            request=MagicMock(),
+            response=mock_response_429,
+        )
+
+        # Simulate three consecutive 429 responses to exhaust retries
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(
+                side_effect=[
+                    mock_response_429,
+                    mock_response_429,
+                    mock_response_429,
+                ]
+            ),
+        ):
+            with patch(
+                "mcp_outline.utils.outline_client.asyncio.sleep"
+            ) as mock_sleep:
+                with pytest.raises(OutlineError) as exc_info:
+                    await client.post("test_endpoint")
+
+                # Should have attempted to sleep twice before exhausting retries
+                assert mock_sleep.call_count == 2
+
+                # Error message should include HTTP status
+                assert "429" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_rate_limit_headers_missing(self):
         """Test handling when rate limit headers are not present."""
         client = OutlineClient()
