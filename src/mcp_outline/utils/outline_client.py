@@ -244,11 +244,7 @@ class OutlineClient:
                 # If rate limited, respect Retry-After or backoff and retry
                 status = getattr(e.response, "status_code", None)
                 if status == 429:
-                    retry_after = (
-                        e.response.headers.get("Retry-After")
-                        if e.response is not None
-                        else None
-                    )
+                    retry_after = e.response.headers.get("Retry-After")
                     if retry_after:
                         try:
                             sleep_seconds = float(retry_after)
