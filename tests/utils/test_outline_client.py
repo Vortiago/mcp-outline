@@ -101,6 +101,17 @@ class TestOutlineClient:
             OutlineClient(api_key=None)
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("value", ['""', "''"])
+    async def test_api_key_only_quotes_triggers_missing(self, value):
+        """API keys that are only quotes should be treated
+        as missing and raise OutlineError."""
+        os.environ["OUTLINE_API_KEY"] = value
+        os.environ["OUTLINE_API_URL"] = MOCK_API_URL
+
+        with pytest.raises(OutlineError):
+            OutlineClient()
+
+    @pytest.mark.asyncio
     async def test_post_request(self):
         """Test POST request method."""
         # Setup mock response
