@@ -9,6 +9,7 @@ import asyncio
 import os
 from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 
@@ -79,7 +80,10 @@ class OutlineClient:
             if not sanitized_url:
                 sanitized_url = "https://app.getoutline.com/api"
             else:
-                if not sanitized_url.endswith("/api"):
+                parsed = urlparse(sanitized_url)
+                path = parsed.path.rstrip('/')
+                segments = [seg for seg in path.split('/') if seg]
+                if 'api' not in [seg.lower() for seg in segments]:
                     sanitized_url = sanitized_url + "/api"
         else:
             sanitized_url = "https://app.getoutline.com/api"
