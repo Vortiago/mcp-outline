@@ -101,7 +101,7 @@ class TestOutlineClient:
             OutlineClient(api_key=None)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("value", ['""', "''"])
+    @pytest.mark.parametrize("value", ['""', "''", "   "])
     async def test_api_key_only_quotes_triggers_missing(self, value):
         """API keys that are only quotes should be treated
         as missing and raise OutlineError."""
@@ -313,7 +313,7 @@ class TestOutlineClient:
                 with pytest.raises(OutlineError) as exc_info:
                     await client.post("test_endpoint")
 
-                # Should have attempted to sleep twice before exhausting retries
+                # Should have slept twice before exhausting retries
                 assert mock_sleep.call_count == 2
 
                 # Error message should include HTTP status

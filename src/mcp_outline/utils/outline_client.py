@@ -9,7 +9,6 @@ import asyncio
 import os
 from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional
-from urllib.parse import urlparse
 
 import httpx
 
@@ -18,6 +17,28 @@ class OutlineError(Exception):
     """Exception for all Outline API errors."""
 
     pass
+
+
+def _sanitize_value(value: Optional[str]) -> Optional[str]:
+    """Strip whitespace and surrounding quotes from a value.
+
+    Args:
+        value: The raw string value to sanitize.
+
+    Returns:
+        The sanitized string, or None if input was None.
+    """
+    if value is None:
+        return None
+    sanitized = value.strip()
+    for quote in ('"', "'"):
+        if (
+            sanitized.startswith(quote)
+            and sanitized.endswith(quote)
+            and len(sanitized) >= 2
+        ):
+            return sanitized[1:-1]
+    return sanitized
 
 
 class OutlineClient:
@@ -40,53 +61,22 @@ class OutlineClient:
         Raises:
             OutlineError: If API key is missing.
         """
-        # Load raw values from arguments or environment
+        # Load and sanitize values from arguments or environment
         raw_api_key = api_key or os.getenv("OUTLINE_API_KEY")
         raw_api_url = api_url or os.getenv("OUTLINE_API_URL")
 
         # Sanitize API key: strip spaces and surrounding quotes
-        if raw_api_key is not None:
-            sanitized_key = raw_api_key.strip()
-            # Strip only a matching pair of surrounding quotes (" or ')
-            for quote in ('"', "'"):
-                if (
-                    sanitized_key.startswith(quote)
-                    and sanitized_key.endswith(quote)
-                    and len(sanitized_key) >= 2
-                ):
-                    sanitized_key = sanitized_key[1:-1]
-                    break
-        else:
-            sanitized_key = None
+        sanitized_key = _sanitize_value(raw_api_key)
 
-        # Sanitize API URL:
-        # - strip spaces/quotes
-        # - remove trailing slashes
-        # - ensure it ends with '/api'
-        if raw_api_url is not None:
-            sanitized_url = raw_api_url.strip()
-            # Strip only a matching pair of surrounding quotes for URL
-            for quote in ('"', "'"):
-                if (
-                    sanitized_url.startswith(quote)
-                    and sanitized_url.endswith(quote)
-                    and len(sanitized_url) >= 2
-                ):
-                    sanitized_url = sanitized_url[1:-1]
-                    break
+        # Sanitize API URL and ensure it ends with '/api'
+        sanitized_url = _sanitize_value(raw_api_url)
+        if sanitized_url:
             sanitized_url = sanitized_url.rstrip("/")
-            # Treat empty/whitespace-only values as missing
-            # and fall back to default
-            if not sanitized_url:
-                sanitized_url = "https://app.getoutline.com/api"
-            else:
-                parsed = urlparse(sanitized_url)
-                path = parsed.path.rstrip("/")
-                segments = [seg for seg in path.split("/") if seg]
-                if "api" not in [seg.lower() for seg in segments]:
-                    sanitized_url = sanitized_url + "/api"
-        else:
+        # Treat empty/whitespace-only values as missing
+        if not sanitized_url:
             sanitized_url = "https://app.getoutline.com/api"
+        elif not sanitized_url.lower().endswith("/api"):
+            sanitized_url = sanitized_url + "/api"
 
         self.api_key = sanitized_key
         self.api_url = sanitized_url
@@ -211,8 +201,8 @@ class OutlineClient:
         async with self._rate_limit_lock:
             await self._wait_if_rate_limited()
 
-        # Safely join base URL and endpoint to avoid duplicate slashes
-        url = f"{self.api_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        # Join base URL and endpoint (api_url is already normalized)
+        url = f"{self.api_url}/{endpoint.lstrip('/')}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -272,7 +262,7 @@ class OutlineClient:
                 break
 
             except (httpx.TimeoutException, httpx.RequestError) as e:
-                # Network/connection errors are not retried here — fail fast but
+                # Network/connection errors are not retried; fail fast but
                 # centralize raising to preserve exception chaining
                 last_exception = e
                 break
