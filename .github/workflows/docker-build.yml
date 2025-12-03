@@ -84,15 +84,16 @@ jobs:
             -e OUTLINE_API_URL=http://localhost:3030/api \
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:test
 
-          # Wait for container to be ready (max 30 seconds)
-          echo "Waiting for container to be ready..."
+          # Wait for container to be healthy (max 30 seconds)
+          # Note: /health checks server is running, /ready checks Outline connectivity
+          echo "Waiting for container to be healthy..."
           for i in {1..30}; do
-            if curl -sf http://localhost:3000/ready > /dev/null 2>&1; then
+            if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
               echo "✅ Container is healthy"
               break
             fi
             if [ $i -eq 30 ]; then
-              echo "❌ Container failed to become ready"
+              echo "❌ Container failed to become healthy"
               docker logs test-container
               exit 1
             fi
