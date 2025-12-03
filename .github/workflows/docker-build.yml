@@ -12,7 +12,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -24,6 +23,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set image name to lowercase
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,7 +46,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
           tags: |
             # Tag with version on release tags (v1.0.0 -> 1.0.0)
             type=semver,pattern={{version}}
@@ -57,12 +63,13 @@ jobs:
             # Tag with commit SHA (short form)
             type=sha,format=short
 
-      - name: Build Docker image
+      - name: Build Docker image (amd64 for testing)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/amd64
+          tags: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:test
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -70,8 +77,43 @@ jobs:
 
       - name: Test Docker image
         run: |
-          # Run a basic test to ensure the image starts correctly
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} --version || echo "Version check not available"
+          # Start container in background
+          docker run -d --name test-container \
+            -p 3000:3000 \
+            -e OUTLINE_API_KEY=test-key \
+            -e OUTLINE_API_URL=http://localhost:3030/api \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:test
+
+          # Wait for container to be healthy (max 30 seconds)
+          # Note: /health checks server is running, /ready checks Outline connectivity
+          echo "Waiting for container to be healthy..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+              echo "✅ Container is healthy"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Container failed to become healthy"
+              docker logs test-container
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Cleanup
+          docker stop test-container
+          docker rm test-container
+
+      - name: Build Docker image (multi-arch validation)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Push Docker image to registry
         if: startsWith(github.ref, 'refs/tags/v')
@@ -79,6 +121,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -87,8 +130,8 @@ jobs:
       - name: Image published
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "✅ Docker image published to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          echo "✅ Docker image published to ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}"
           echo "📦 Tags: ${{ steps.meta.outputs.tags }}"
           echo ""
           echo "To use this image:"
-          echo "  docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}"
+          echo "  docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.meta.outputs.version }}"
