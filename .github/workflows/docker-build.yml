@@ -12,7 +12,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -24,6 +23,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set image name to lowercase
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -43,7 +46,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
           tags: |
             # Tag with version on release tags (v1.0.0 -> 1.0.0)
             type=semver,pattern={{version}}
@@ -66,7 +69,7 @@ jobs:
           context: .
           push: false
           platforms: linux/amd64
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+          tags: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:test
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -79,7 +82,7 @@ jobs:
             -p 3000:3000 \
             -e OUTLINE_API_KEY=test-key \
             -e OUTLINE_API_URL=http://localhost:3030/api \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:test
 
           # Wait for container to be ready (max 30 seconds)
           echo "Waiting for container to be ready..."
@@ -126,8 +129,8 @@ jobs:
       - name: Image published
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "✅ Docker image published to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          echo "✅ Docker image published to ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}"
           echo "📦 Tags: ${{ steps.meta.outputs.tags }}"
           echo ""
           echo "To use this image:"
-          echo "  docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}"
+          echo "  docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.meta.outputs.version }}"
