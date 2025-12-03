@@ -60,7 +60,47 @@ jobs:
             # Tag with commit SHA (short form)
             type=sha,format=short
 
-      - name: Build Docker image
+      - name: Build Docker image (amd64 for testing)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+
+      - name: Test Docker image
+        run: |
+          # Start container in background
+          docker run -d --name test-container \
+            -p 3000:3000 \
+            -e OUTLINE_API_KEY=test-key \
+            -e OUTLINE_API_URL=http://localhost:3030/api \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+
+          # Wait for container to be ready (max 30 seconds)
+          echo "Waiting for container to be ready..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/ready > /dev/null 2>&1; then
+              echo "✅ Container is healthy"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Container failed to become ready"
+              docker logs test-container
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Cleanup
+          docker stop test-container
+          docker rm test-container
+
+      - name: Build Docker image (multi-arch validation)
         uses: docker/build-push-action@v6
         with:
           context: .
