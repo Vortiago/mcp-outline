@@ -202,7 +202,7 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
-    async def list_collections(limit: int = 50) -> str:
+    async def list_collections(limit: int = 500) -> str:
         """
         Retrieves and displays all available collections in the workspace.
 
