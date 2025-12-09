@@ -452,7 +452,7 @@ The server automatically handles rate limiting with retry logic. If you see pers
 
 ## Contributing
 
-Contributions welcome! Please submit a Pull Request.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions.
 
 ## License
 
