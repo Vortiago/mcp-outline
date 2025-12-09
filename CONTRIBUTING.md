@@ -13,17 +13,19 @@ cd mcp-outline
 uv sync --extra dev
 
 # 3. Install pre-commit hooks (important!)
-pre-commit install
+uv run pre-commit install
 ```
 
 That's it! The pre-commit hooks will automatically format and lint your code on every commit.
 
 ## Making Changes
 
-1. Create a branch: `git checkout -b my-feature`
-2. Make your changes
-3. Commit - pre-commit runs automatically and fixes formatting
-4. Push and open a PR
+1. Fork the repo on GitHub
+2. Clone your fork and run the Quick Setup above
+3. Create a branch: `git checkout -b my-feature`
+4. Make your changes
+5. Commit - pre-commit runs automatically and fixes formatting
+6. Push to your fork and open a PR
 
 ## Running Checks Manually
 
