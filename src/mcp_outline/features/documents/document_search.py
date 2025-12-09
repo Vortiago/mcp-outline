@@ -212,6 +212,10 @@ def register_tools(mcp) -> None:
         - Explore the organization of the knowledge base
         - Find a specific collection by name
 
+        Args:
+            limit: Maximum number of results to return
+            offset: Number of results to skip (pagination)
+
         Returns:
             Formatted string containing collection names, IDs, and descriptions
 
