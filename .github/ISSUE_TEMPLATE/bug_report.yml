@@ -1,0 +1,38 @@
+name: Bug Report
+description: Report a bug
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug
+      placeholder: Tell us what went wrong
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce the issue?
+      placeholder: |
+        1. Configure...
+        2. Run...
+        3. See error...
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Any relevant version info
+      placeholder: |
+        - Python version:
+        - MCP client (Claude Desktop, etc):
+        - OS:
