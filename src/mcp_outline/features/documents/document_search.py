@@ -202,7 +202,7 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
-    async def list_collections() -> str:
+    async def list_collections(limit: int = 50) -> str:
         """
         Retrieves and displays all available collections in the workspace.
 
@@ -217,7 +217,7 @@ def register_tools(mcp) -> None:
         """
         try:
             client = await get_outline_client()
-            collections = await client.list_collections()
+            collections = await client.list_collections(limit=limit)
             return _format_collections(collections)
         except OutlineClientError as e:
             return f"Error listing collections: {str(e)}"
