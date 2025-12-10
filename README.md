@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vortiago-mcp-outline-badge.png)](https://mseep.ai/app/vortiago-mcp-outline)
+
 # MCP Outline Server
 
 [![PyPI](https://img.shields.io/pypi/v/mcp-outline)](https://pypi.org/project/mcp-outline/)
