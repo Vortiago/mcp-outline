@@ -4,14 +4,15 @@ Document organization for the MCP Outline server.
 This module provides MCP tools for organizing documents.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def register_tools(mcp) -> None:
@@ -33,7 +34,7 @@ def register_tools(mcp) -> None:
         document_id: str,
         collection_id: Optional[str] = None,
         parent_document_id: Optional[str] = None,
-    ) -> str:
+    ) -> CallToolResult:
         """
         Relocates a document to a different collection or parent document.
 
@@ -61,12 +62,13 @@ def register_tools(mcp) -> None:
 
             # Require at least one destination parameter
             if collection_id is None and parent_document_id is None:
-                return (
+                return create_tool_response(
                     "Error: You must specify either a collection_id or "
-                    "parent_document_id."
+                    "parent_document_id.",
+                    {"error": "missing_target", "document_id": document_id},
                 )
 
-            data = {"id": document_id}
+            data: Dict[str, Any] = {"id": document_id}
 
             if collection_id:
                 data["collectionId"] = collection_id
@@ -78,10 +80,34 @@ def register_tools(mcp) -> None:
 
             # Check for successful response
             if response.get("data"):
-                return "Document moved successfully."
+                doc_data = response.get("data", {})
+                doc_title = doc_data.get("title", "Untitled")
+
+                structured_data: Dict[str, Any] = {
+                    "document_id": document_id,
+                    "title": doc_title,
+                }
+                if collection_id:
+                    structured_data["new_collection_id"] = collection_id
+                if parent_document_id:
+                    structured_data["new_parent_id"] = parent_document_id
+
+                return create_tool_response(
+                    "Document moved successfully.",
+                    structured_data,
+                )
             else:
-                return "Failed to move document."
+                return create_tool_response(
+                    "Failed to move document.",
+                    {"error": "move_failed", "document_id": document_id},
+                )
         except OutlineClientError as e:
-            return f"Error moving document: {str(e)}"
+            return create_tool_response(
+                f"Error moving document: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )

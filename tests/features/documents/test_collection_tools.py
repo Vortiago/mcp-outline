@@ -5,11 +5,19 @@ Tests for collection management tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.collection_tools import (
     _format_file_operation,
 )
 from mcp_outline.features.documents.common import OutlineClientError
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -120,9 +128,9 @@ class TestCreateCollection:
         mock_client.create_collection.assert_called_once_with(
             "Test Collection", "A test collection", None
         )
-        assert "Collection created successfully" in result
-        assert "Test Collection" in result
-        assert "col123" in result
+        assert "Collection created successfully" in extract_text(result)
+        assert "Test Collection" in extract_text(result)
+        assert "col123" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -145,7 +153,7 @@ class TestCreateCollection:
         mock_client.create_collection.assert_called_once_with(
             "Test Collection", "A test collection", "#FF0000"
         )
-        assert "Collection created successfully" in result
+        assert "Collection created successfully" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -163,7 +171,7 @@ class TestCreateCollection:
             name="Test Collection"
         )
 
-        assert "Failed to create collection" in result
+        assert "Failed to create collection" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -183,8 +191,8 @@ class TestCreateCollection:
             name="Test Collection"
         )
 
-        assert "Error creating collection" in result
-        assert "API error" in result
+        assert "Error creating collection" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestUpdateCollection:
@@ -209,8 +217,8 @@ class TestUpdateCollection:
         mock_client.update_collection.assert_called_once_with(
             "col123", "Updated Collection", None, None
         )
-        assert "Collection updated successfully" in result
-        assert "Test Collection" in result
+        assert "Collection updated successfully" in extract_text(result)
+        assert "Test Collection" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -234,7 +242,7 @@ class TestUpdateCollection:
         mock_client.update_collection.assert_called_once_with(
             "col123", "New Name", "New Description", "#00FF00"
         )
-        assert "Collection updated successfully" in result
+        assert "Collection updated successfully" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -253,8 +261,8 @@ class TestUpdateCollection:
 
         # Should not call the client
         mock_client.update_collection.assert_not_called()
-        assert "Error" in result
-        assert "at least one field to update" in result
+        assert "Error" in extract_text(result)
+        assert "at least one field to update" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -272,7 +280,7 @@ class TestUpdateCollection:
             collection_id="col123", name="Updated Name"
         )
 
-        assert "Failed to update collection" in result
+        assert "Failed to update collection" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -292,8 +300,8 @@ class TestUpdateCollection:
             collection_id="col123", name="Updated Name"
         )
 
-        assert "Error updating collection" in result
-        assert "API error" in result
+        assert "Error updating collection" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestDeleteCollection:
@@ -317,7 +325,8 @@ class TestDeleteCollection:
 
         mock_client.delete_collection.assert_called_once_with("col123")
         assert (
-            "Collection and all its documents deleted successfully" in result
+            "Collection and all its documents deleted successfully"
+            in extract_text(result)
         )
 
     @pytest.mark.asyncio
@@ -336,7 +345,7 @@ class TestDeleteCollection:
             "col123"
         )
 
-        assert "Failed to delete collection" in result
+        assert "Failed to delete collection" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -356,8 +365,8 @@ class TestDeleteCollection:
             "col123"
         )
 
-        assert "Error deleting collection" in result
-        assert "API error" in result
+        assert "Error deleting collection" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestExportCollection:
@@ -384,8 +393,8 @@ class TestExportCollection:
         mock_client.export_collection.assert_called_once_with(
             "col123", "outline-markdown"
         )
-        assert "Export Operation" in result
-        assert "complete" in result
+        assert "Export Operation" in extract_text(result)
+        assert "complete" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -406,7 +415,7 @@ class TestExportCollection:
         )
 
         mock_client.export_collection.assert_called_once_with("col123", "json")
-        assert "Export Operation" in result
+        assert "Export Operation" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -424,7 +433,7 @@ class TestExportCollection:
             "col123"
         )
 
-        assert "Failed to start export operation" in result
+        assert "Failed to start export operation" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -444,8 +453,8 @@ class TestExportCollection:
             "col123"
         )
 
-        assert "Error exporting collection" in result
-        assert "API error" in result
+        assert "Error exporting collection" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestExportAllCollections:
@@ -472,8 +481,8 @@ class TestExportAllCollections:
         mock_client.export_all_collections.assert_called_once_with(
             "outline-markdown"
         )
-        assert "Export Operation" in result
-        assert "complete" in result
+        assert "Export Operation" in extract_text(result)
+        assert "complete" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -494,7 +503,7 @@ class TestExportAllCollections:
         ](format="html")
 
         mock_client.export_all_collections.assert_called_once_with("html")
-        assert "Export Operation" in result
+        assert "Export Operation" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -512,7 +521,7 @@ class TestExportAllCollections:
             "export_all_collections"
         ]()
 
-        assert "Failed to start export operation" in result
+        assert "Failed to start export operation" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -532,5 +541,5 @@ class TestExportAllCollections:
             "export_all_collections"
         ]()
 
-        assert "Error exporting collections" in result
-        assert "API error" in result
+        assert "Error exporting collections" in extract_text(result)
+        assert "API error" in extract_text(result)

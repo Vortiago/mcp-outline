@@ -5,9 +5,17 @@ Tests for AI-powered document tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.ai_tools import _format_ai_answer
 from mcp_outline.features.documents.common import OutlineClientError
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -126,8 +134,9 @@ class TestAskAIAboutDocuments:
         mock_client.answer_question.assert_called_once_with(
             "What is the vacation policy?", None, None
         )
-        assert "vacation policy allows 15 days" in result
-        assert "Employee Handbook" in result
+        text = extract_text(result)
+        assert "vacation policy allows 15 days" in text
+        assert "Employee Handbook" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
@@ -148,7 +157,7 @@ class TestAskAIAboutDocuments:
         mock_client.answer_question.assert_called_once_with(
             "What is the vacation policy?", "col123", None
         )
-        assert "vacation policy" in result
+        assert "vacation policy" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
@@ -169,7 +178,7 @@ class TestAskAIAboutDocuments:
         mock_client.answer_question.assert_called_once_with(
             "What is the vacation policy?", None, "doc123"
         )
-        assert "vacation policy" in result
+        assert "vacation policy" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
@@ -192,7 +201,7 @@ class TestAskAIAboutDocuments:
         mock_client.answer_question.assert_called_once_with(
             "What is the vacation policy?", "col123", "doc456"
         )
-        assert "vacation policy" in result
+        assert "vacation policy" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
@@ -208,7 +217,7 @@ class TestAskAIAboutDocuments:
             question="What is the vacation policy?"
         )
 
-        assert "No answer was found" in result
+        assert "No answer was found" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
@@ -224,9 +233,10 @@ class TestAskAIAboutDocuments:
             question="What is the vacation policy?"
         )
 
+        text = extract_text(result)
         assert (
-            "AI answering is not enabled" in result
-            or "no relevant information" in result
+            "AI answering is not enabled" in text
+            or "no relevant information" in text
         )
 
     @pytest.mark.asyncio
@@ -245,8 +255,9 @@ class TestAskAIAboutDocuments:
             question="What is the vacation policy?"
         )
 
-        assert "Error getting answer" in result
-        assert "API error" in result
+        text = extract_text(result)
+        assert "Error getting answer" in text
+        assert "API error" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.ai_tools.get_outline_client")
@@ -264,4 +275,4 @@ class TestAskAIAboutDocuments:
             question="What is the vacation policy?"
         )
 
-        assert "Unexpected error" in result
+        assert "Unexpected error" in extract_text(result)

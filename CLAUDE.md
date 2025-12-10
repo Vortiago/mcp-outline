@@ -256,4 +256,66 @@ uv run pytest tests/ -v -m integration
 **Tree Formatting**: Recursive formatting with indentation for hierarchies
 
 **Document ID Resolution**: `get_document_id_from_title` for user-friendly lookups
+
+## Context Optimization
+
+The server provides tools and parameters to minimize context usage when working with large documents.
+
+### Document Reading Strategy
+
+Instead of always reading full documents, use progressive disclosure:
+
+1. **`get_document_outline`**: Returns table of contents (headings only) for large docs (~100 tokens vs ~5000+ for full doc). Small docs (<1000 chars) automatically return full content.
+
+2. **`read_document_section`**: Extracts specific section by heading name (case-insensitive). Returns content from that heading until the next same-level or higher heading.
+
+3. **`read_document`**: Use when you need the complete content.
+
+### Search Result Detail Levels
+
+`search_documents` accepts `detail_level` parameter:
+- `"ids"`: Just document IDs and titles (~50 tokens)
+- `"summary"`: IDs, titles, relevance scores (~200 tokens) - **default**
+- `"full"`: IDs, titles, relevance, and context snippets (~500+ tokens)
+
+### Collection Structure Depth
+
+`get_collection_structure` accepts `max_depth` parameter:
+- `1`: Top-level documents only (~100 tokens)
+- `2`: Top-level + first level children (~500 tokens)
+- `-1`: Full tree, unlimited depth - **default**
+
+### Response Size Handling (Opt-in)
+
+Enable response size warnings/truncation with `OUTLINE_RESPONSE_LIMITS=true`:
+- Soft limit (warning): 5000 tokens - adds info message about large response
+- Hard limit (truncation): 22500 tokens - truncates and suggests alternatives
+
+Configure thresholds:
+```bash
+OUTLINE_RESPONSE_LIMITS=true                     # Enable warnings/truncation
+OUTLINE_RESPONSE_SOFT_LIMIT_TOKENS=5000         # Warn above this (default)
+OUTLINE_RESPONSE_HARD_LIMIT_TOKENS=22500        # Truncate above this (default)
+```
+
+## Structured Output
+
+All tools return `CallToolResult` with both human-readable text and structured data:
+
+```python
+from mcp_outline.utils.response_handler import create_tool_response
+
+@mcp.tool()
+async def my_tool(param: str) -> CallToolResult:
+    results = await client.operation(param)
+    return create_tool_response(
+        _format_results(results),  # Human-readable text
+        {"results": results}       # Structured data for programmatic use
+    )
+```
+
+Consumers can access:
+- `result.content[0].text` - Human-readable text (unchanged behavior)
+- `result.structuredContent` - Raw data for programmatic use
 - When tagging version numbers look at changes since last version. Follow this rule for version number, go from left to right. First one hit is the new version number. Anye feat!: => major version, any feat: => minor version, Only fix: => patch version. Use annotated tag with a short summary of what the release contains.
+- Since we are a hobby project with limited nodes, we default to 1 / no replicas.

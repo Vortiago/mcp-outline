@@ -5,11 +5,19 @@ Tests for document collaboration tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.common import OutlineClientError
 from mcp_outline.features.documents.document_collaboration import (
     _format_comments,
 )
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -162,9 +170,9 @@ class TestDocumentCollaborationTools:
         )
 
         # Verify result contains expected information
-        assert "# Document Comments" in result
-        assert "Comment by Test User" in result
-        assert "This is a test comment" in result
+        assert "# Document Comments" in extract_text(result)
+        assert "Comment by Test User" in extract_text(result)
+        assert "This is a test comment" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -185,7 +193,7 @@ class TestDocumentCollaborationTools:
         ]("doc123")
 
         # Verify result contains expected message
-        assert "No comments found" in result
+        assert "No comments found" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -211,9 +219,9 @@ class TestDocumentCollaborationTools:
         )
 
         # Verify result contains expected information
-        assert "# Comment by Test User" in result
-        assert "This is a test comment" in result
-        assert "2023-01-01" in result
+        assert "# Comment by Test User" in extract_text(result)
+        assert "This is a test comment" in extract_text(result)
+        assert "2023-01-01" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -234,7 +242,7 @@ class TestDocumentCollaborationTools:
         )
 
         # Verify result contains expected message
-        assert "Comment not found" in result
+        assert "Comment not found" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -260,11 +268,11 @@ class TestDocumentCollaborationTools:
         )
 
         # Verify result contains expected information
-        assert "# Documents Linking to This Document" in result
-        assert "Referencing Document 1" in result
-        assert "doc1" in result
-        assert "Referencing Document 2" in result
-        assert "doc2" in result
+        assert "# Documents Linking to This Document" in extract_text(result)
+        assert "Referencing Document 1" in extract_text(result)
+        assert "doc1" in extract_text(result)
+        assert "Referencing Document 2" in extract_text(result)
+        assert "doc2" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -285,7 +293,7 @@ class TestDocumentCollaborationTools:
         ]("doc123")
 
         # Verify result contains expected message
-        assert "No documents link to this document" in result
+        assert "No documents link to this document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -306,5 +314,5 @@ class TestDocumentCollaborationTools:
         ]("doc123")
 
         # Verify error is handled and returned
-        assert "Error retrieving backlinks" in result
-        assert "API error" in result
+        assert "Error retrieving backlinks" in extract_text(result)
+        assert "API error" in extract_text(result)

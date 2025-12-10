@@ -7,12 +7,13 @@ This module provides MCP tools for managing collections.
 import os
 from typing import Any, Dict, Optional
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def _format_file_operation(file_operation: Optional[Dict[str, Any]]) -> str:
@@ -78,7 +79,7 @@ def register_tools(mcp) -> None:
     )
     async def export_collection(
         collection_id: str, format: str = "outline-markdown"
-    ) -> str:
+    ) -> CallToolResult:
         """
         Exports all documents in a collection to a downloadable file.
 
@@ -110,13 +111,29 @@ def register_tools(mcp) -> None:
             )
 
             if not file_operation:
-                return "Failed to start export operation."
+                return create_tool_response(
+                    "Failed to start export operation.",
+                    {"error": "export_failed", "collection_id": collection_id},
+                )
 
-            return _format_file_operation(file_operation)
+            return create_tool_response(
+                _format_file_operation(file_operation),
+                {
+                    "file_operation": file_operation,
+                    "collection_id": collection_id,
+                    "format": format,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error exporting collection: {str(e)}"
+            return create_tool_response(
+                f"Error exporting collection: {str(e)}",
+                {"error": str(e), "collection_id": collection_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "collection_id": collection_id},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -125,7 +142,9 @@ def register_tools(mcp) -> None:
             idempotentHint=True,
         )
     )
-    async def export_all_collections(format: str = "outline-markdown") -> str:
+    async def export_all_collections(
+        format: str = "outline-markdown",
+    ) -> CallToolResult:
         """
         Exports the entire workspace content to a downloadable file.
 
@@ -154,13 +173,28 @@ def register_tools(mcp) -> None:
             file_operation = await client.export_all_collections(format)
 
             if not file_operation:
-                return "Failed to start export operation."
+                return create_tool_response(
+                    "Failed to start export operation.",
+                    {"error": "export_failed"},
+                )
 
-            return _format_file_operation(file_operation)
+            return create_tool_response(
+                _format_file_operation(file_operation),
+                {
+                    "file_operation": file_operation,
+                    "format": format,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error exporting collections: {str(e)}"
+            return create_tool_response(
+                f"Error exporting collections: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     # Conditional registration for write operations
     if not read_only:
@@ -174,7 +208,7 @@ def register_tools(mcp) -> None:
         )
         async def create_collection(
             name: str, description: str = "", color: Optional[str] = None
-        ) -> str:
+        ) -> CallToolResult:
             """
             Creates a new collection for organizing documents.
 
@@ -201,19 +235,32 @@ def register_tools(mcp) -> None:
                 )
 
                 if not collection:
-                    return "Failed to create collection."
+                    return create_tool_response(
+                        "Failed to create collection.",
+                        {"error": "create_failed"},
+                    )
 
                 collection_id = collection.get("id", "unknown")
                 collection_name = collection.get("name", "Untitled")
 
-                return (
+                return create_tool_response(
                     f"Collection created successfully: {collection_name} "
-                    f"(ID: {collection_id})"
+                    f"(ID: {collection_id})",
+                    {
+                        "collection_id": collection_id,
+                        "name": collection_name,
+                    },
                 )
             except OutlineClientError as e:
-                return f"Error creating collection: {str(e)}"
+                return create_tool_response(
+                    f"Error creating collection: {str(e)}",
+                    {"error": str(e)},
+                )
             except Exception as e:
-                return f"Unexpected error: {str(e)}"
+                return create_tool_response(
+                    f"Unexpected error: {str(e)}",
+                    {"error": str(e)},
+                )
 
         @mcp.tool(
             annotations=ToolAnnotations(
@@ -227,7 +274,7 @@ def register_tools(mcp) -> None:
             name: Optional[str] = None,
             description: Optional[str] = None,
             color: Optional[str] = None,
-        ) -> str:
+        ) -> CallToolResult:
             """
             Modifies an existing collection's properties.
 
@@ -251,8 +298,12 @@ def register_tools(mcp) -> None:
 
                 # Make sure at least one field is being updated
                 if name is None and description is None and color is None:
-                    return (
-                        "Error: You must specify at least one field to update."
+                    return create_tool_response(
+                        "Error: Specify at least one field to update.",
+                        {
+                            "error": "no_fields_specified",
+                            "collection_id": collection_id,
+                        },
                     )
 
                 collection = await client.update_collection(
@@ -260,15 +311,33 @@ def register_tools(mcp) -> None:
                 )
 
                 if not collection:
-                    return "Failed to update collection."
+                    return create_tool_response(
+                        "Failed to update collection.",
+                        {
+                            "error": "update_failed",
+                            "collection_id": collection_id,
+                        },
+                    )
 
                 collection_name = collection.get("name", "Untitled")
 
-                return f"Collection updated successfully: {collection_name}"
+                return create_tool_response(
+                    f"Collection updated successfully: {collection_name}",
+                    {
+                        "collection_id": collection_id,
+                        "name": collection_name,
+                    },
+                )
             except OutlineClientError as e:
-                return f"Error updating collection: {str(e)}"
+                return create_tool_response(
+                    f"Error updating collection: {str(e)}",
+                    {"error": str(e), "collection_id": collection_id},
+                )
             except Exception as e:
-                return f"Unexpected error: {str(e)}"
+                return create_tool_response(
+                    f"Unexpected error: {str(e)}",
+                    {"error": str(e), "collection_id": collection_id},
+                )
 
     # Delete collection requires both read_only and disable_delete checks
     if not read_only and not disable_delete:
@@ -280,7 +349,7 @@ def register_tools(mcp) -> None:
                 idempotentHint=True,
             )
         )
-        async def delete_collection(collection_id: str) -> str:
+        async def delete_collection(collection_id: str) -> CallToolResult:
             """
             Permanently removes a collection and all its documents.
 
@@ -304,13 +373,29 @@ def register_tools(mcp) -> None:
                 success = await client.delete_collection(collection_id)
 
                 if success:
-                    return (
+                    return create_tool_response(
                         "Collection and all its documents deleted "
-                        "successfully."
+                        "successfully.",
+                        {
+                            "collection_id": collection_id,
+                            "deleted": True,
+                        },
                     )
                 else:
-                    return "Failed to delete collection."
+                    return create_tool_response(
+                        "Failed to delete collection.",
+                        {
+                            "error": "delete_failed",
+                            "collection_id": collection_id,
+                        },
+                    )
             except OutlineClientError as e:
-                return f"Error deleting collection: {str(e)}"
+                return create_tool_response(
+                    f"Error deleting collection: {str(e)}",
+                    {"error": str(e), "collection_id": collection_id},
+                )
             except Exception as e:
-                return f"Unexpected error: {str(e)}"
+                return create_tool_response(
+                    f"Unexpected error: {str(e)}",
+                    {"error": str(e), "collection_id": collection_id},
+                )

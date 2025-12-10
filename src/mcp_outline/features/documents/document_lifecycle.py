@@ -6,13 +6,15 @@ documents.
 """
 
 import os
+from typing import Any, Dict, List
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def register_tools(mcp) -> None:
@@ -33,7 +35,7 @@ def register_tools(mcp) -> None:
             readOnlyHint=False, destructiveHint=True, idempotentHint=True
         )
     )
-    async def archive_document(document_id: str) -> str:
+    async def archive_document(document_id: str) -> CallToolResult:
         """
         Archives a document to remove it from active use while preserving it.
 
@@ -58,22 +60,38 @@ def register_tools(mcp) -> None:
             document = await client.archive_document(document_id)
 
             if not document:
-                return "Failed to archive document."
+                return create_tool_response(
+                    "Failed to archive document.",
+                    {"error": "archive_failed", "document_id": document_id},
+                )
 
             doc_title = document.get("title", "Untitled")
 
-            return f"Document archived successfully: {doc_title}"
+            return create_tool_response(
+                f"Document archived successfully: {doc_title}",
+                {
+                    "document_id": document_id,
+                    "title": doc_title,
+                    "status": "archived",
+                },
+            )
         except OutlineClientError as e:
-            return f"Error archiving document: {str(e)}"
+            return create_tool_response(
+                f"Error archiving document: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=False, destructiveHint=False, idempotentHint=True
         )
     )
-    async def unarchive_document(document_id: str) -> str:
+    async def unarchive_document(document_id: str) -> CallToolResult:
         """
         Restores a previously archived document to active status.
 
@@ -94,15 +112,31 @@ def register_tools(mcp) -> None:
             document = await client.unarchive_document(document_id)
 
             if not document:
-                return "Failed to unarchive document."
+                return create_tool_response(
+                    "Failed to unarchive document.",
+                    {"error": "unarchive_failed", "document_id": document_id},
+                )
 
             doc_title = document.get("title", "Untitled")
 
-            return f"Document unarchived successfully: {doc_title}"
+            return create_tool_response(
+                f"Document unarchived successfully: {doc_title}",
+                {
+                    "document_id": document_id,
+                    "title": doc_title,
+                    "status": "active",
+                },
+            )
         except OutlineClientError as e:
-            return f"Error unarchiving document: {str(e)}"
+            return create_tool_response(
+                f"Error unarchiving document: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
 
     if not disable_delete:
 
@@ -113,7 +147,7 @@ def register_tools(mcp) -> None:
         )
         async def delete_document(
             document_id: str, permanent: bool = False
-        ) -> str:
+        ) -> CallToolResult:
             """
             Moves a document to trash or permanently deletes it.
 
@@ -146,9 +180,22 @@ def register_tools(mcp) -> None:
                         document_id
                     )
                     if success:
-                        return "Document permanently deleted."
+                        return create_tool_response(
+                            "Document permanently deleted.",
+                            {
+                                "document_id": document_id,
+                                "status": "deleted",
+                                "permanent": True,
+                            },
+                        )
                     else:
-                        return "Failed to permanently delete document."
+                        return create_tool_response(
+                            "Failed to permanently delete document.",
+                            {
+                                "error": "delete_failed",
+                                "document_id": document_id,
+                            },
+                        )
                 else:
                     # First get the document details for the success message
                     document = await client.get_document(document_id)
@@ -161,21 +208,41 @@ def register_tools(mcp) -> None:
 
                     # Check for successful response
                     if response.get("success", False):
-                        return f"Document moved to trash: {doc_title}"
+                        return create_tool_response(
+                            f"Document moved to trash: {doc_title}",
+                            {
+                                "document_id": document_id,
+                                "title": doc_title,
+                                "status": "deleted",
+                                "permanent": False,
+                            },
+                        )
                     else:
-                        return "Failed to move document to trash."
+                        return create_tool_response(
+                            "Failed to move document to trash.",
+                            {
+                                "error": "delete_failed",
+                                "document_id": document_id,
+                            },
+                        )
 
             except OutlineClientError as e:
-                return f"Error deleting document: {str(e)}"
+                return create_tool_response(
+                    f"Error deleting document: {str(e)}",
+                    {"error": str(e), "document_id": document_id},
+                )
             except Exception as e:
-                return f"Unexpected error: {str(e)}"
+                return create_tool_response(
+                    f"Unexpected error: {str(e)}",
+                    {"error": str(e), "document_id": document_id},
+                )
 
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=False, destructiveHint=False, idempotentHint=True
         )
     )
-    async def restore_document(document_id: str) -> str:
+    async def restore_document(document_id: str) -> CallToolResult:
         """
         Recovers a document from the trash back to active status.
 
@@ -196,22 +263,38 @@ def register_tools(mcp) -> None:
             document = await client.restore_document(document_id)
 
             if not document:
-                return "Failed to restore document from trash."
+                return create_tool_response(
+                    "Failed to restore document from trash.",
+                    {"error": "restore_failed", "document_id": document_id},
+                )
 
             doc_title = document.get("title", "Untitled")
 
-            return f"Document restored successfully: {doc_title}"
+            return create_tool_response(
+                f"Document restored successfully: {doc_title}",
+                {
+                    "document_id": document_id,
+                    "title": doc_title,
+                    "status": "restored",
+                },
+            )
         except OutlineClientError as e:
-            return f"Error restoring document: {str(e)}"
+            return create_tool_response(
+                f"Error restoring document: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=True, destructiveHint=False, idempotentHint=True
         )
     )
-    async def list_archived_documents() -> str:
+    async def list_archived_documents() -> CallToolResult:
         """
         Displays all documents that have been archived.
 
@@ -232,18 +315,42 @@ def register_tools(mcp) -> None:
             )
 
             documents = response.get("data", [])
-            return _format_documents_list(documents, "Archived Documents")
+
+            # Build structured document list
+            doc_list: List[Dict[str, Any]] = []
+            for doc in documents:
+                doc_list.append(
+                    {
+                        "document_id": doc.get("id", ""),
+                        "title": doc.get("title", "Untitled"),
+                        "updated_at": doc.get("updatedAt", ""),
+                    }
+                )
+
+            return create_tool_response(
+                _format_documents_list(documents, "Archived Documents"),
+                {
+                    "documents": doc_list,
+                    "count": len(doc_list),
+                },
+            )
         except OutlineClientError as e:
-            return f"Error listing archived documents: {str(e)}"
+            return create_tool_response(
+                f"Error listing archived documents: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=True, destructiveHint=False, idempotentHint=True
         )
     )
-    async def list_trash() -> str:
+    async def list_trash() -> CallToolResult:
         """
         Displays all documents currently in the trash.
 
@@ -263,8 +370,31 @@ def register_tools(mcp) -> None:
                 _format_documents_list,
             )
 
-            return _format_documents_list(documents, "Documents in Trash")
+            # Build structured document list
+            doc_list: List[Dict[str, Any]] = []
+            for doc in documents:
+                doc_list.append(
+                    {
+                        "document_id": doc.get("id", ""),
+                        "title": doc.get("title", "Untitled"),
+                        "deleted_at": doc.get("deletedAt", ""),
+                    }
+                )
+
+            return create_tool_response(
+                _format_documents_list(documents, "Documents in Trash"),
+                {
+                    "documents": doc_list,
+                    "count": len(doc_list),
+                },
+            )
         except OutlineClientError as e:
-            return f"Error listing trash: {str(e)}"
+            return create_tool_response(
+                f"Error listing trash: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )

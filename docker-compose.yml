@@ -92,6 +92,7 @@ services:
       - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
       - OUTLINE_API_URL=http://outline:3030/api
       - OUTLINE_DISABLE_AI_TOOLS=true
+      - OUTLINE_STRUCTURED_OUTPUT=true
       - MCP_PORT=${MCP_PORT:-3000}
     depends_on:
       - outline

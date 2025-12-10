@@ -5,8 +5,16 @@ Tests for document content tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.common import OutlineClientError
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -103,9 +111,9 @@ class TestDocumentContentTools:
         )
 
         # Verify result contains expected information
-        assert "Document created successfully" in result
-        assert "Test Document" in result
-        assert "doc123" in result
+        assert "Document created successfully" in extract_text(result)
+        assert "Test Document" in extract_text(result)
+        assert "doc123" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -155,7 +163,7 @@ class TestDocumentContentTools:
         )
 
         # Verify result contains error message
-        assert "Failed to create document" in result
+        assert "Failed to create document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -176,8 +184,8 @@ class TestDocumentContentTools:
         )
 
         # Verify error is handled and returned
-        assert "Error creating document" in result
-        assert "API error" in result
+        assert "Error creating document" in extract_text(result)
+        assert "API error" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -211,8 +219,8 @@ class TestDocumentContentTools:
         )
 
         # Verify result contains expected information
-        assert "Document updated successfully" in result
-        assert "Updated Document" in result
+        assert "Document updated successfully" in extract_text(result)
+        assert "Updated Document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -265,8 +273,8 @@ class TestDocumentContentTools:
         )
 
         # Verify result contains expected information
-        assert "Comment added successfully" in result
-        assert "comment123" in result
+        assert "Comment added successfully" in extract_text(result)
+        assert "comment123" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -287,7 +295,7 @@ class TestDocumentContentTools:
         )
 
         # Verify result contains error message
-        assert "Failed to create comment" in result
+        assert "Failed to create comment" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -308,5 +316,5 @@ class TestDocumentContentTools:
         )
 
         # Verify error is handled and returned
-        assert "Error adding comment" in result
-        assert "API error" in result
+        assert "Error adding comment" in extract_text(result)
+        assert "API error" in extract_text(result)

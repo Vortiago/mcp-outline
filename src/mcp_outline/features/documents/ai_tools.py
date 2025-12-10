@@ -4,14 +4,15 @@ AI-powered tools for interacting with documents.
 This module provides MCP tools for AI-powered features in Outline.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def _format_ai_answer(response: Dict[str, Any]) -> str:
@@ -62,7 +63,7 @@ def register_tools(mcp) -> None:
         question: str,
         collection_id: Optional[str] = None,
         document_id: Optional[str] = None,
-    ) -> str:
+    ) -> CallToolResult:
         """
         Queries document content using natural language questions.
 
@@ -86,8 +87,39 @@ def register_tools(mcp) -> None:
             response = await client.answer_question(
                 question, collection_id, document_id
             )
-            return _format_ai_answer(response)
+
+            # Extract structured data for the response
+            search = response.get("search", {})
+            answer = search.get("answer", "")
+            documents = response.get("documents", [])
+
+            # Build sources list for structured output
+            sources: List[Dict[str, str]] = []
+            for doc in documents:
+                sources.append(
+                    {
+                        "document_id": doc.get("id", ""),
+                        "title": doc.get("title", "Untitled"),
+                    }
+                )
+
+            return create_tool_response(
+                _format_ai_answer(response),
+                {
+                    "answer": answer,
+                    "sources": sources,
+                    "question": question,
+                    "collection_id": collection_id,
+                    "document_id": document_id,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error getting answer: {str(e)}"
+            return create_tool_response(
+                f"Error getting answer: {str(e)}",
+                {"error": str(e), "question": question},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "question": question},
+            )

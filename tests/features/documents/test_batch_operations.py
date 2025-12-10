@@ -5,8 +5,16 @@ Tests for batch operations tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.common import OutlineClientError
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -76,10 +84,10 @@ class TestBatchArchiveDocuments:
             ["doc1", "doc2", "doc3"]
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 3" in result
-        assert "Failed: 0" in result
-        assert "✓" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 3" in extract_text(result)
+        assert "Failed: 0" in extract_text(result)
+        assert "✓" in extract_text(result)
         assert mock_client.archive_document.call_count == 3
 
     @pytest.mark.asyncio
@@ -100,11 +108,11 @@ class TestBatchArchiveDocuments:
             ["doc1", "doc2", "doc3"]
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 0" in result
-        assert "Failed: 3" in result
-        assert "✗" in result
-        assert "API error" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 0" in extract_text(result)
+        assert "Failed: 3" in extract_text(result)
+        assert "✗" in extract_text(result)
+        assert "API error" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -126,12 +134,12 @@ class TestBatchArchiveDocuments:
             ["doc1", "doc2", "doc3"]
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 2" in result
-        assert "Failed: 1" in result
-        assert "Document 1" in result
-        assert "Document 3" in result
-        assert "Not found" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 2" in extract_text(result)
+        assert "Failed: 1" in extract_text(result)
+        assert "Document 1" in extract_text(result)
+        assert "Document 3" in extract_text(result)
+        assert "Not found" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -148,7 +156,7 @@ class TestBatchArchiveDocuments:
             []
         )
 
-        assert "Error: No document IDs provided" in result
+        assert "Error: No document IDs provided" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -169,9 +177,9 @@ class TestBatchArchiveDocuments:
             ["doc1"]
         )
 
-        assert "Total: 1" in result
-        assert "Succeeded: 1" in result
-        assert "Failed: 0" in result
+        assert "Total: 1" in extract_text(result)
+        assert "Succeeded: 1" in extract_text(result)
+        assert "Failed: 0" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -189,8 +197,8 @@ class TestBatchArchiveDocuments:
             ["doc1"]
         )
 
-        assert "Failed: 1" in result
-        assert "No document returned from API" in result
+        assert "Failed: 1" in extract_text(result)
+        assert "No document returned from API" in extract_text(result)
 
 
 class TestBatchMoveDocuments:
@@ -214,9 +222,9 @@ class TestBatchMoveDocuments:
             ["doc1", "doc2"], collection_id="col123"
         )
 
-        assert "Total: 2" in result
-        assert "Succeeded: 2" in result
-        assert "Failed: 0" in result
+        assert "Total: 2" in extract_text(result)
+        assert "Succeeded: 2" in extract_text(result)
+        assert "Failed: 0" in extract_text(result)
         assert mock_client.post.call_count == 2
 
     @pytest.mark.asyncio
@@ -231,8 +239,8 @@ class TestBatchMoveDocuments:
             ["doc1", "doc2"]
         )
 
-        assert "Error" in result
-        assert "collection_id or parent_document_id" in result
+        assert "Error" in extract_text(result)
+        assert "collection_id or parent_document_id" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -252,7 +260,7 @@ class TestBatchMoveDocuments:
             ["doc1"], parent_document_id="parent123"
         )
 
-        assert "Succeeded: 1" in result
+        assert "Succeeded: 1" in extract_text(result)
         mock_client.post.assert_called_once()
         call_args = mock_client.post.call_args[0]
         assert call_args[0] == "documents.move"
@@ -278,10 +286,10 @@ class TestBatchMoveDocuments:
             ["doc1", "doc2", "doc3"], collection_id="col123"
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 2" in result
-        assert "Failed: 1" in result
-        assert "Permission denied" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 2" in extract_text(result)
+        assert "Failed: 1" in extract_text(result)
+        assert "Permission denied" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -295,7 +303,7 @@ class TestBatchMoveDocuments:
             [], collection_id="col123"
         )
 
-        assert "Error: No document IDs provided" in result
+        assert "Error: No document IDs provided" in extract_text(result)
 
 
 class TestBatchDeleteDocuments:
@@ -321,9 +329,9 @@ class TestBatchDeleteDocuments:
             ["doc1", "doc2"], permanent=False
         )
 
-        assert "Total: 2" in result
-        assert "Succeeded: 2" in result
-        assert "Failed: 0" in result
+        assert "Total: 2" in extract_text(result)
+        assert "Succeeded: 2" in extract_text(result)
+        assert "Failed: 0" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -341,8 +349,8 @@ class TestBatchDeleteDocuments:
             ["doc1", "doc2"], permanent=True
         )
 
-        assert "Total: 2" in result
-        assert "Succeeded: 2" in result
+        assert "Total: 2" in extract_text(result)
+        assert "Succeeded: 2" in extract_text(result)
         assert mock_client.permanently_delete_document.call_count == 2
 
     @pytest.mark.asyncio
@@ -365,9 +373,9 @@ class TestBatchDeleteDocuments:
             ["doc1", "doc2"], permanent=False
         )
 
-        assert "Total: 2" in result
-        assert "Succeeded: 1" in result
-        assert "Failed: 1" in result
+        assert "Total: 2" in extract_text(result)
+        assert "Succeeded: 1" in extract_text(result)
+        assert "Failed: 1" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -379,7 +387,7 @@ class TestBatchDeleteDocuments:
         """Test batch_delete_documents with empty list."""
         result = await register_batch_tools.tools["batch_delete_documents"]([])
 
-        assert "Error: No document IDs provided" in result
+        assert "Error: No document IDs provided" in extract_text(result)
 
 
 class TestBatchUpdateDocuments:
@@ -409,9 +417,9 @@ class TestBatchUpdateDocuments:
             updates
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 3" in result
-        assert "Failed: 0" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 3" in extract_text(result)
+        assert "Failed: 0" in extract_text(result)
         assert mock_client.post.call_count == 3
 
     @pytest.mark.asyncio
@@ -434,7 +442,7 @@ class TestBatchUpdateDocuments:
             updates
         )
 
-        assert "Succeeded: 1" in result
+        assert "Succeeded: 1" in extract_text(result)
         call_args = mock_client.post.call_args[0]
         assert call_args[1]["append"] is True
 
@@ -455,8 +463,8 @@ class TestBatchUpdateDocuments:
             updates
         )
 
-        assert "Failed: 1" in result
-        assert "Missing document ID" in result
+        assert "Failed: 1" in extract_text(result)
+        assert "Missing document ID" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -482,10 +490,10 @@ class TestBatchUpdateDocuments:
             updates
         )
 
-        assert "Total: 2" in result
-        assert "Succeeded: 1" in result
-        assert "Failed: 1" in result
-        assert "Permission denied" in result
+        assert "Total: 2" in extract_text(result)
+        assert "Succeeded: 1" in extract_text(result)
+        assert "Failed: 1" in extract_text(result)
+        assert "Permission denied" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -497,7 +505,7 @@ class TestBatchUpdateDocuments:
         """Test batch_update_documents with empty list."""
         result = await register_batch_tools.tools["batch_update_documents"]([])
 
-        assert "Error: No updates provided" in result
+        assert "Error: No updates provided" in extract_text(result)
 
 
 class TestBatchCreateDocuments:
@@ -533,12 +541,12 @@ class TestBatchCreateDocuments:
             documents
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 3" in result
-        assert "Failed: 0" in result
-        assert "new1" in result
-        assert "new2" in result
-        assert "new3" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 3" in extract_text(result)
+        assert "Failed: 0" in extract_text(result)
+        assert "new1" in extract_text(result)
+        assert "new2" in extract_text(result)
+        assert "new3" in extract_text(result)
         assert mock_client.post.call_count == 3
 
     @pytest.mark.asyncio
@@ -558,8 +566,8 @@ class TestBatchCreateDocuments:
             documents
         )
 
-        assert "Failed: 1" in result
-        assert "Missing required field: title" in result
+        assert "Failed: 1" in extract_text(result)
+        assert "Missing required field: title" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -578,8 +586,8 @@ class TestBatchCreateDocuments:
             documents
         )
 
-        assert "Failed: 1" in result
-        assert "Missing required field: collection_id" in result
+        assert "Failed: 1" in extract_text(result)
+        assert "Missing required field: collection_id" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -607,7 +615,7 @@ class TestBatchCreateDocuments:
             documents
         )
 
-        assert "Succeeded: 1" in result
+        assert "Succeeded: 1" in extract_text(result)
         call_args = mock_client.post.call_args[0]
         assert call_args[1]["parentDocumentId"] == "parent123"
 
@@ -637,12 +645,12 @@ class TestBatchCreateDocuments:
             documents
         )
 
-        assert "Total: 3" in result
-        assert "Succeeded: 2" in result
-        assert "Failed: 1" in result
-        assert "Quota exceeded" in result
-        assert "new1" in result
-        assert "new3" in result
+        assert "Total: 3" in extract_text(result)
+        assert "Succeeded: 2" in extract_text(result)
+        assert "Failed: 1" in extract_text(result)
+        assert "Quota exceeded" in extract_text(result)
+        assert "new1" in extract_text(result)
+        assert "new3" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -654,7 +662,7 @@ class TestBatchCreateDocuments:
         """Test batch_create_documents with empty list."""
         result = await register_batch_tools.tools["batch_create_documents"]([])
 
-        assert "Error: No documents provided" in result
+        assert "Error: No documents provided" in extract_text(result)
 
 
 class TestHelperFunctions:

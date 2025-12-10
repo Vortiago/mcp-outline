@@ -5,8 +5,16 @@ Tests for document lifecycle tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.common import OutlineClientError
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -81,8 +89,8 @@ class TestArchiveDocument:
         )
 
         mock_client.archive_document.assert_called_once_with("doc123")
-        assert "Document archived successfully" in result
-        assert "Test Document" in result
+        assert "Document archived successfully" in extract_text(result)
+        assert "Test Document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -100,7 +108,7 @@ class TestArchiveDocument:
             "doc123"
         )
 
-        assert "Failed to archive document" in result
+        assert "Failed to archive document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -120,8 +128,8 @@ class TestArchiveDocument:
             "doc123"
         )
 
-        assert "Error archiving document" in result
-        assert "API error" in result
+        assert "Error archiving document" in extract_text(result)
+        assert "API error" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -141,7 +149,7 @@ class TestArchiveDocument:
             "doc123"
         )
 
-        assert "Unexpected error" in result
+        assert "Unexpected error" in extract_text(result)
 
 
 class TestUnarchiveDocument:
@@ -164,8 +172,8 @@ class TestUnarchiveDocument:
         )
 
         mock_client.unarchive_document.assert_called_once_with("doc123")
-        assert "Document unarchived successfully" in result
-        assert "Test Document" in result
+        assert "Document unarchived successfully" in extract_text(result)
+        assert "Test Document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -183,7 +191,7 @@ class TestUnarchiveDocument:
             "doc123"
         )
 
-        assert "Failed to unarchive document" in result
+        assert "Failed to unarchive document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -203,8 +211,8 @@ class TestUnarchiveDocument:
             "doc123"
         )
 
-        assert "Error unarchiving document" in result
-        assert "API error" in result
+        assert "Error unarchiving document" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestDeleteDocument:
@@ -231,8 +239,8 @@ class TestDeleteDocument:
         mock_client.post.assert_called_once_with(
             "documents.delete", {"id": "doc123"}
         )
-        assert "Document moved to trash" in result
-        assert "Test Document" in result
+        assert "Document moved to trash" in extract_text(result)
+        assert "Test Document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -251,7 +259,7 @@ class TestDeleteDocument:
             "doc123"
         )
 
-        assert "Failed to move document to trash" in result
+        assert "Failed to move document to trash" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -272,7 +280,7 @@ class TestDeleteDocument:
         mock_client.permanently_delete_document.assert_called_once_with(
             "doc123"
         )
-        assert "Document permanently deleted" in result
+        assert "Document permanently deleted" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -290,7 +298,7 @@ class TestDeleteDocument:
             "doc123", permanent=True
         )
 
-        assert "Failed to permanently delete document" in result
+        assert "Failed to permanently delete document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -308,8 +316,8 @@ class TestDeleteDocument:
             "doc123"
         )
 
-        assert "Error deleting document" in result
-        assert "API error" in result
+        assert "Error deleting document" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestRestoreDocument:
@@ -332,8 +340,8 @@ class TestRestoreDocument:
         )
 
         mock_client.restore_document.assert_called_once_with("doc123")
-        assert "Document restored successfully" in result
-        assert "Test Document" in result
+        assert "Document restored successfully" in extract_text(result)
+        assert "Test Document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -351,7 +359,7 @@ class TestRestoreDocument:
             "doc123"
         )
 
-        assert "Failed to restore document from trash" in result
+        assert "Failed to restore document from trash" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -371,8 +379,8 @@ class TestRestoreDocument:
             "doc123"
         )
 
-        assert "Error restoring document" in result
-        assert "API error" in result
+        assert "Error restoring document" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestListArchivedDocuments:
@@ -395,9 +403,9 @@ class TestListArchivedDocuments:
         ]()
 
         mock_client.post.assert_called_once_with("documents.archived")
-        assert "Archived Documents" in result
-        assert "Archived Doc 1" in result
-        assert "Archived Doc 2" in result
+        assert "Archived Documents" in extract_text(result)
+        assert "Archived Doc 1" in extract_text(result)
+        assert "Archived Doc 2" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -415,7 +423,7 @@ class TestListArchivedDocuments:
             "list_archived_documents"
         ]()
 
-        assert "archived documents" in result.lower()
+        assert "archived documents" in extract_text(result).lower()
 
     @pytest.mark.asyncio
     @patch(
@@ -433,8 +441,8 @@ class TestListArchivedDocuments:
             "list_archived_documents"
         ]()
 
-        assert "Error listing archived documents" in result
-        assert "API error" in result
+        assert "Error listing archived documents" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestListTrash:
@@ -455,9 +463,9 @@ class TestListTrash:
         result = await register_lifecycle_tools.tools["list_trash"]()
 
         mock_client.list_trash.assert_called_once()
-        assert "Documents in Trash" in result
-        assert "Archived Doc 1" in result
-        assert "Archived Doc 2" in result
+        assert "Documents in Trash" in extract_text(result)
+        assert "Archived Doc 1" in extract_text(result)
+        assert "Archived Doc 2" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -473,7 +481,7 @@ class TestListTrash:
 
         result = await register_lifecycle_tools.tools["list_trash"]()
 
-        assert "documents in trash" in result.lower()
+        assert "documents in trash" in extract_text(result).lower()
 
     @pytest.mark.asyncio
     @patch(
@@ -489,8 +497,8 @@ class TestListTrash:
 
         result = await register_lifecycle_tools.tools["list_trash"]()
 
-        assert "Error listing trash" in result
-        assert "API error" in result
+        assert "Error listing trash" in extract_text(result)
+        assert "API error" in extract_text(result)
 
 
 class TestConditionalRegistration:

@@ -5,6 +5,7 @@ Tests for document search tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.common import OutlineClientError
 from mcp_outline.features.documents.document_search import (
@@ -13,6 +14,13 @@ from mcp_outline.features.documents.document_search import (
     _format_documents_list,
     _format_search_results,
 )
+
+
+def extract_text(result) -> str:
+    """Extract text content from a tool result (string or CallToolResult)."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -77,15 +85,42 @@ class TestDocumentSearchFormatters:
     """Tests for document search formatting functions."""
 
     def test_format_search_results_with_data(self):
-        """Test formatting search results with valid data."""
+        """Test formatting search results with valid data (summary level)."""
         result = _format_search_results(SAMPLE_SEARCH_RESULTS)
 
         # Verify the result contains the expected information
         assert "# Search Results" in result
         assert "Test Document 1" in result
         assert "doc1" in result
+        # Summary level doesn't include context by default
+        assert "Test Document 2" in result
+
+    def test_format_search_results_full_detail(self):
+        """Test formatting search results with full detail level."""
+        result = _format_search_results(
+            SAMPLE_SEARCH_RESULTS, detail_level="full"
+        )
+
+        # Full detail level should include context
+        assert "# Search Results" in result
+        assert "Test Document 1" in result
+        assert "doc1" in result
         assert "This is a test document." in result
         assert "Test Document 2" in result
+        assert "Another test document." in result
+
+    def test_format_search_results_ids_only(self):
+        """Test formatting search results with ids detail level."""
+        result = _format_search_results(
+            SAMPLE_SEARCH_RESULTS, detail_level="ids"
+        )
+
+        # IDs level should just show titles and IDs
+        assert "# Search Results" in result
+        assert "Test Document 1" in result
+        assert "doc1" in result
+        # Should be compact format without ## headers
+        assert "- Test Document 1 (ID: doc1)" in result
 
     def test_format_search_results_empty(self):
         """Test formatting empty search results."""
@@ -131,6 +166,20 @@ class TestDocumentSearchFormatters:
         assert "doc1" in result
         assert "Child Document" in result
         assert "doc2" in result
+
+    def test_format_collection_documents_with_max_depth(self):
+        """Test formatting collection documents with depth limit."""
+        result = _format_collection_documents(
+            SAMPLE_COLLECTION_DOCUMENTS, max_depth=1
+        )
+
+        # Should only show top-level documents
+        assert "# Collection Structure" in result
+        assert "Showing depth: 1" in result
+        assert "Root Document" in result
+        assert "doc1" in result
+        # Child should not be fully shown, just indicated
+        assert "... (1 child document(s))" in result
 
     def test_format_collection_documents_empty(self):
         """Test formatting empty collection document structure."""
@@ -182,8 +231,9 @@ class TestDocumentSearchTools:
         )
 
         # Verify result contains expected information
-        assert "Test Document 1" in result
-        assert "doc1" in result
+        text = extract_text(result)
+        assert "Test Document 1" in text
+        assert "doc1" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -228,8 +278,9 @@ class TestDocumentSearchTools:
         )
 
         # Verify error is handled and returned
-        assert "Error searching documents" in result
-        assert "API error" in result
+        text = extract_text(result)
+        assert "Error searching documents" in text
+        assert "API error" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -249,8 +300,9 @@ class TestDocumentSearchTools:
         mock_client.list_collections.assert_called_once()
 
         # Verify result contains expected information
-        assert "Test Collection 1" in result
-        assert "coll1" in result
+        text = extract_text(result)
+        assert "Test Collection 1" in text
+        assert "coll1" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -274,8 +326,9 @@ class TestDocumentSearchTools:
         mock_client.get_collection_documents.assert_called_once_with("coll1")
 
         # Verify result contains expected information
-        assert "Root Document" in result
-        assert "Child Document" in result
+        text = extract_text(result)
+        assert "Root Document" in text
+        assert "Child Document" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -305,8 +358,9 @@ class TestDocumentSearchTools:
         )
 
         # Verify result contains expected information
-        assert "Document ID: doc1" in result
-        assert "Exact Match" in result
+        text = extract_text(result)
+        assert "Document ID: doc1" in text
+        assert "Exact Match" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -328,8 +382,9 @@ class TestDocumentSearchTools:
         ]("Test Doc")
 
         # Verify result contains expected information
-        assert "Best match" in result
-        assert "doc1" in result
+        text = extract_text(result)
+        assert "Best match" in text
+        assert "doc1" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -351,8 +406,9 @@ class TestDocumentSearchTools:
         ]("Nonexistent")
 
         # Verify result contains expected information
-        assert "No documents found" in result
-        assert "Nonexistent" in result
+        text = extract_text(result)
+        assert "No documents found" in text
+        assert "Nonexistent" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -379,7 +435,8 @@ class TestDocumentSearchTools:
         )
 
         # Verify pagination info in output
-        assert "Showing results 21-22" in result
+        text = extract_text(result)
+        assert "Showing results 21-22" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -409,8 +466,9 @@ class TestDocumentSearchTools:
         )
 
         # Verify it suggests more results may be available
-        assert "More results may be available" in result
-        assert "offset=25" in result
+        text = extract_text(result)
+        assert "More results may be available" in text
+        assert "offset=25" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -432,7 +490,199 @@ class TestDocumentSearchTools:
         )
 
         # Verify it doesn't suggest more results
-        assert "More results may be available" not in result
+        text = extract_text(result)
+        assert "More results may be available" not in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_with_detail_level_ids(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test search_documents with detail_level='ids'."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["search_documents"](
+            "test query", None, 25, 0, "ids"
+        )
+
+        text = extract_text(result)
+        # IDs format uses compact list format
+        assert "- Test Document 1 (ID: doc1)" in text
+        # Should NOT have full headers or context
+        assert "## 1." not in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_with_detail_level_full(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test search_documents with detail_level='full'."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["search_documents"](
+            "test query", None, 25, 0, "full"
+        )
+
+        text = extract_text(result)
+        # Full format includes context
+        assert "This is a test document." in text
+        assert "Another test document." in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_generic_exception(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test search_documents handles generic exceptions."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.side_effect = RuntimeError("Unexpected")
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["search_documents"](
+            "test query"
+        )
+
+        text = extract_text(result)
+        assert "Unexpected error" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_collection_structure_with_max_depth(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_collection_structure with max_depth parameter."""
+        mock_client = AsyncMock()
+        mock_client.get_collection_documents.return_value = (
+            SAMPLE_COLLECTION_DOCUMENTS
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["get_collection_structure"](
+            "coll1", 1
+        )
+
+        text = extract_text(result)
+        # Should show depth limit
+        assert "Showing depth: 1" in text
+        # Should indicate hidden children
+        assert "child document(s)" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_collection_structure_error(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_collection_structure handles errors."""
+        mock_client = AsyncMock()
+        mock_client.get_collection_documents.side_effect = OutlineClientError(
+            "Collection not found"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["get_collection_structure"](
+            "invalid"
+        )
+
+        text = extract_text(result)
+        assert "Error" in text
+        assert "Collection not found" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_collection_structure_generic_exception(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_collection_structure handles generic exceptions."""
+        mock_client = AsyncMock()
+        mock_client.get_collection_documents.side_effect = RuntimeError("Oops")
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["get_collection_structure"](
+            "coll1"
+        )
+
+        text = extract_text(result)
+        assert "Unexpected error" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_collections_error(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test list_collections handles errors."""
+        mock_client = AsyncMock()
+        mock_client.list_collections.side_effect = OutlineClientError(
+            "API error"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["list_collections"]()
+
+        text = extract_text(result)
+        assert "Error" in text
+        assert "API error" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_collections_generic_exception(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test list_collections handles generic exceptions."""
+        mock_client = AsyncMock()
+        mock_client.list_collections.side_effect = RuntimeError("Unexpected")
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools["list_collections"]()
+
+        text = extract_text(result)
+        assert "Unexpected error" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_document_id_from_title_error(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_document_id_from_title handles errors."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.side_effect = OutlineClientError(
+            "API error"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Some Title")
+
+        text = extract_text(result)
+        assert "Error" in text
+        assert "API error" in text
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_get_document_id_from_title_generic_exception(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test get_document_id_from_title handles generic exceptions."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.side_effect = RuntimeError("Unexpected")
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "get_document_id_from_title"
+        ]("Some Title")
+
+        text = extract_text(result)
+        assert "Unexpected error" in text
 
 
 class TestDocumentSearchPaginationFormatters:
@@ -574,7 +824,10 @@ class TestDocumentSearchEdgeCases:
                 "context": "Some context",
             }
         ]
-        result = _format_search_results(results_with_missing_fields)
+        # Use full detail to test context handling
+        result = _format_search_results(
+            results_with_missing_fields, detail_level="full"
+        )
 
         # Should use default values
         assert "Untitled" in result
@@ -615,9 +868,10 @@ class TestDocumentSearchEdgeCases:
         )
 
         # Should still show results
-        assert "Test Document 1" in result
+        text = extract_text(result)
+        assert "Test Document 1" in text
         # Should not show pagination info (since pagination key is missing)
-        assert "Showing results" not in result
+        assert "Showing results" not in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -637,7 +891,8 @@ class TestDocumentSearchEdgeCases:
         )
 
         # Should show no results message
-        assert "No documents found" in result
+        text = extract_text(result)
+        assert "No documents found" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -655,7 +910,8 @@ class TestDocumentSearchEdgeCases:
         )
 
         # Should handle gracefully with empty results
-        assert "No documents found" in result
+        text = extract_text(result)
+        assert "No documents found" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -676,7 +932,8 @@ class TestDocumentSearchEdgeCases:
         )
 
         # Should handle gracefully
-        assert "No documents found" in result
+        text = extract_text(result)
+        assert "No documents found" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -694,8 +951,9 @@ class TestDocumentSearchEdgeCases:
         ]("Some Title")
 
         # Should handle gracefully
-        assert "No documents found" in result
-        assert "Some Title" in result
+        text = extract_text(result)
+        assert "No documents found" in text
+        assert "Some Title" in text
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
@@ -716,6 +974,7 @@ class TestDocumentSearchEdgeCases:
         ]("Some Title")
 
         # Should handle gracefully with defaults
-        assert "Best match" in result
-        assert "unknown" in result  # Default id
-        assert "Untitled" in result  # Default title
+        text = extract_text(result)
+        assert "Best match" in text
+        assert "unknown" in text  # Default id
+        assert "Untitled" in text  # Default title

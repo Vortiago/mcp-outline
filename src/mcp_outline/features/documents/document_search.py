@@ -4,21 +4,33 @@ Document search tools for the MCP Outline server.
 This module provides MCP tools for searching and listing documents.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def _format_search_results(
     results: List[Dict[str, Any]],
     pagination: Optional[Dict[str, Any]] = None,
+    detail_level: str = "summary",
 ) -> str:
-    """Format search results into readable text with pagination info."""
+    """
+    Format search results into readable text with pagination info.
+
+    Args:
+        results: List of search result dictionaries
+        pagination: Optional pagination metadata
+        detail_level: Level of detail to include:
+            - "ids": Just document IDs and titles (minimal context)
+            - "summary": IDs, titles, relevance scores (default)
+            - "full": IDs, titles, relevance, and context snippets
+    """
     if not results:
         return "No documents found matching your search."
 
@@ -48,15 +60,27 @@ def _format_search_results(
         doc_id = document.get("id", "")
         context = result.get("context", "")
 
-        output += f"## {i}. {title}\n"
-        output += f"ID: {doc_id}\n"
-        # Show ranking if present (including 0.0)
-        if "ranking" in result:
-            ranking = result["ranking"]
-            output += f"Relevance: {ranking:.2f}\n"
-        if context:
-            output += f"Context: {context}\n"
-        output += "\n"
+        if detail_level == "ids":
+            # Minimal: just ID and title on one line
+            output += f"- {title} (ID: {doc_id})\n"
+        elif detail_level == "summary":
+            # Default: ID, title, relevance (no context)
+            output += f"## {i}. {title}\n"
+            output += f"ID: {doc_id}\n"
+            if "ranking" in result:
+                ranking = result["ranking"]
+                output += f"Relevance: {ranking:.2f}\n"
+            output += "\n"
+        else:  # "full"
+            # Full: include context snippets
+            output += f"## {i}. {title}\n"
+            output += f"ID: {doc_id}\n"
+            if "ranking" in result:
+                ranking = result["ranking"]
+                output += f"Relevance: {ranking:.2f}\n"
+            if context:
+                output += f"Context: {context}\n"
+            output += "\n"
 
     return output
 
@@ -103,12 +127,23 @@ def _format_collections(collections: List[Dict[str, Any]]) -> str:
     return output
 
 
-def _format_collection_documents(doc_nodes: List[Dict[str, Any]]) -> str:
-    """Format collection document structure into readable text."""
+def _format_collection_documents(
+    doc_nodes: List[Dict[str, Any]], max_depth: int = -1
+) -> str:
+    """
+    Format collection document structure into readable text.
+
+    Args:
+        doc_nodes: List of document node dictionaries
+        max_depth: Maximum depth to traverse (-1 for unlimited)
+            - 1: Top-level documents only
+            - 2: Top-level + first level children
+            - -1: Full tree (default)
+    """
     if not doc_nodes:
         return "No documents found in this collection."
 
-    def format_node(node, depth=0):
+    def format_node(node: Dict[str, Any], depth: int = 0) -> str:
         # Extract node details
         title = node.get("title", "Untitled")
         node_id = node.get("id", "")
@@ -118,13 +153,20 @@ def _format_collection_documents(doc_nodes: List[Dict[str, Any]]) -> str:
         indent = "  " * depth
         text = f"{indent}- {title} (ID: {node_id})\n"
 
-        # Recursively format children
-        for child in children:
-            text += format_node(child, depth + 1)
+        # Recursively format children (if within depth limit)
+        if max_depth == -1 or depth < max_depth - 1:
+            for child in children:
+                text += format_node(child, depth + 1)
+        elif children:
+            # Indicate there are more children not shown
+            child_count = len(children)
+            text += f"{indent}  ... ({child_count} child document(s))\n"
 
         return text
 
     output = "# Collection Structure\n\n"
+    if max_depth > 0:
+        output += f"_Showing depth: {max_depth}_\n\n"
     for node in doc_nodes:
         output += format_node(node)
 
@@ -147,19 +189,20 @@ def register_tools(mcp) -> None:
         collection_id: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
-    ) -> str:
+        detail_level: Literal["ids", "summary", "full"] = "summary",
+    ) -> CallToolResult:
         """
         Searches for documents using keywords or phrases across your knowledge
         base.
 
         IMPORTANT: The search performs full-text search across all document
         content and titles. Results are ranked by relevance, with exact
-        matches
-        and title matches typically ranked higher. The search will return
-        snippets of content (context) where the search terms appear in the
-        document. You can limit the search to a specific collection by
-        providing
-        the collection_id.
+        matches and title matches typically ranked higher.
+
+        DETAIL LEVELS (for context optimization):
+        - "ids": Just document IDs and titles (minimal context usage)
+        - "summary": IDs, titles, relevance scores (default, moderate context)
+        - "full": IDs, titles, relevance, and context snippets (full context)
 
         PAGINATION: By default, returns up to 25 results at a time. If more
         results exist, use the 'offset' parameter to fetch additional pages.
@@ -178,10 +221,11 @@ def register_tools(mcp) -> None:
             collection_id: Optional collection to limit the search to
             limit: Maximum results to return (default: 25, max: 100)
             offset: Number of results to skip for pagination (default: 0)
+            detail_level: Amount of detail to return ("ids", "summary", "full")
 
         Returns:
-            Formatted string containing search results with document titles,
-            contexts, and pagination information
+            Search results with document titles, IDs, and optionally relevance
+            scores and context snippets based on detail_level
         """
         try:
             client = await get_outline_client()
@@ -193,16 +237,30 @@ def register_tools(mcp) -> None:
             results = response.get("data", [])
             pagination = response.get("pagination", {})
 
-            return _format_search_results(results, pagination)
+            return create_tool_response(
+                _format_search_results(results, pagination, detail_level),
+                {
+                    "results": results,
+                    "pagination": pagination,
+                    "query": query,
+                    "detail_level": detail_level,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error searching documents: {str(e)}"
+            return create_tool_response(
+                f"Error searching documents: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error during search: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error during search: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
-    async def list_collections() -> str:
+    async def list_collections() -> CallToolResult:
         """
         Retrieves and displays all available collections in the workspace.
 
@@ -213,23 +271,39 @@ def register_tools(mcp) -> None:
         - Find a specific collection by name
 
         Returns:
-            Formatted string containing collection names, IDs, and descriptions
+            Collection names, IDs, and descriptions
         """
         try:
             client = await get_outline_client()
             collections = await client.list_collections()
-            return _format_collections(collections)
+            return create_tool_response(
+                _format_collections(collections),
+                {"collections": collections},
+            )
         except OutlineClientError as e:
-            return f"Error listing collections: {str(e)}"
+            return create_tool_response(
+                f"Error listing collections: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error listing collections: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error listing collections: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
-    async def get_collection_structure(collection_id: str) -> str:
+    async def get_collection_structure(
+        collection_id: str, max_depth: int = -1
+    ) -> CallToolResult:
         """
         Retrieves the hierarchical document structure of a collection.
+
+        DEPTH CONTROL (for context optimization):
+        - max_depth=1: Top-level documents only (~100 tokens)
+        - max_depth=2: Top-level + children (~500 tokens)
+        - max_depth=-1: Full tree, unlimited depth (default)
 
         Use this tool when you need to:
         - Understand how documents are organized in a collection
@@ -239,34 +313,47 @@ def register_tools(mcp) -> None:
 
         Args:
             collection_id: The collection ID to examine
+            max_depth: Maximum depth to show (-1 for unlimited)
 
         Returns:
-            Formatted string showing the hierarchical structure of documents
+            Hierarchical structure of documents in the collection
         """
         try:
             client = await get_outline_client()
             docs = await client.get_collection_documents(collection_id)
-            return _format_collection_documents(docs)
+            return create_tool_response(
+                _format_collection_documents(docs, max_depth),
+                {
+                    "documents": docs,
+                    "collection_id": collection_id,
+                    "max_depth": max_depth,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error getting collection structure: {str(e)}"
+            return create_tool_response(
+                f"Error getting collection structure: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
     async def get_document_id_from_title(
         query: str, collection_id: Optional[str] = None
-    ) -> str:
+    ) -> CallToolResult:
         """
         Locates a document ID by searching for its title.
 
         IMPORTANT: This tool first checks for exact title matches
         (case-insensitive). If none are found, it returns the best partial
         match instead. This is useful when you're not sure of the exact title
-        but need
-        to reference a document in other operations. Results are more accurate
-        when you provide more of the actual title in your query.
+        but need to reference a document in other operations. Results are more
+        accurate when you provide more of the actual title in your query.
 
         Use this tool when you need to:
         - Find a document's ID when you only know its title
@@ -289,7 +376,10 @@ def register_tools(mcp) -> None:
             results = response.get("data", [])
 
             if not results:
-                return f"No documents found matching '{query}'"
+                return create_tool_response(
+                    f"No documents found matching '{query}'",
+                    {"query": query, "found": False},
+                )
 
             # Check if we have an exact title match
             exact_matches = [
@@ -305,14 +395,34 @@ def register_tools(mcp) -> None:
                 doc = exact_matches[0].get("document", {})
                 doc_id = doc.get("id", "unknown")
                 title = doc.get("title", "Untitled")
-                return f"Document ID: {doc_id} (Title: {title})"
+                return create_tool_response(
+                    f"Document ID: {doc_id} (Title: {title})",
+                    {
+                        "document_id": doc_id,
+                        "title": title,
+                        "exact_match": True,
+                    },
+                )
 
             # Otherwise return the top match
             doc = results[0].get("document", {})
             doc_id = doc.get("id", "unknown")
             title = doc.get("title", "Untitled")
-            return f"Best match - Document ID: {doc_id} (Title: {title})"
+            return create_tool_response(
+                f"Best match - Document ID: {doc_id} (Title: {title})",
+                {
+                    "document_id": doc_id,
+                    "title": title,
+                    "exact_match": False,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error searching for document: {str(e)}"
+            return create_tool_response(
+                f"Error searching for document: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )

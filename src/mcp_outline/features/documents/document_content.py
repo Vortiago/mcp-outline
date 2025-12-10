@@ -6,12 +6,13 @@ This module provides MCP tools for creating and updating document content.
 
 from typing import Any, Dict, Optional
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def register_tools(mcp) -> None:
@@ -35,7 +36,7 @@ def register_tools(mcp) -> None:
         text: str = "",
         parent_document_id: Optional[str] = None,
         publish: bool = True,
-    ) -> str:
+    ) -> CallToolResult:
         """
         Creates a new document in a specified collection.
 
@@ -76,16 +77,35 @@ def register_tools(mcp) -> None:
             document = response.get("data", {})
 
             if not document:
-                return "Failed to create document."
+                return create_tool_response(
+                    "Failed to create document.",
+                    {"error": "create_failed"},
+                )
 
             doc_id = document.get("id", "unknown")
             doc_title = document.get("title", "Untitled")
+            doc_url = document.get("url", "")
 
-            return f"Document created successfully: {doc_title} (ID: {doc_id})"
+            return create_tool_response(
+                f"Document created successfully: {doc_title} (ID: {doc_id})",
+                {
+                    "document_id": doc_id,
+                    "title": doc_title,
+                    "collection_id": collection_id,
+                    "url": doc_url,
+                    "published": publish,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error creating document: {str(e)}"
+            return create_tool_response(
+                f"Error creating document: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -99,7 +119,7 @@ def register_tools(mcp) -> None:
         title: Optional[str] = None,
         text: Optional[str] = None,
         append: bool = False,
-    ) -> str:
+    ) -> CallToolResult:
         """
         Modifies an existing document's title or content.
 
@@ -145,15 +165,33 @@ def register_tools(mcp) -> None:
             document = response.get("data", {})
 
             if not document:
-                return "Failed to update document."
+                return create_tool_response(
+                    "Failed to update document.",
+                    {"error": "update_failed", "document_id": document_id},
+                )
 
             doc_title = document.get("title", "Untitled")
+            doc_url = document.get("url", "")
 
-            return f"Document updated successfully: {doc_title}"
+            return create_tool_response(
+                f"Document updated successfully: {doc_title}",
+                {
+                    "document_id": document_id,
+                    "title": doc_title,
+                    "url": doc_url,
+                    "appended": append if text is not None else False,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error updating document: {str(e)}"
+            return create_tool_response(
+                f"Error updating document: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -164,7 +202,7 @@ def register_tools(mcp) -> None:
     )
     async def add_comment(
         document_id: str, text: str, parent_comment_id: Optional[str] = None
-    ) -> str:
+    ) -> CallToolResult:
         """
         Adds a comment to a document or replies to an existing comment.
 
@@ -194,15 +232,42 @@ def register_tools(mcp) -> None:
             comment = response.get("data", {})
 
             if not comment:
-                return "Failed to create comment."
+                return create_tool_response(
+                    "Failed to create comment.",
+                    {"error": "create_failed", "document_id": document_id},
+                )
 
             comment_id = comment.get("id", "unknown")
+            created_at = comment.get("createdAt", "")
 
             if parent_comment_id:
-                return f"Reply added successfully (ID: {comment_id})"
+                return create_tool_response(
+                    f"Reply added successfully (ID: {comment_id})",
+                    {
+                        "comment_id": comment_id,
+                        "document_id": document_id,
+                        "parent_comment_id": parent_comment_id,
+                        "created_at": created_at,
+                        "is_reply": True,
+                    },
+                )
             else:
-                return f"Comment added successfully (ID: {comment_id})"
+                return create_tool_response(
+                    f"Comment added successfully (ID: {comment_id})",
+                    {
+                        "comment_id": comment_id,
+                        "document_id": document_id,
+                        "created_at": created_at,
+                        "is_reply": False,
+                    },
+                )
         except OutlineClientError as e:
-            return f"Error adding comment: {str(e)}"
+            return create_tool_response(
+                f"Error adding comment: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )

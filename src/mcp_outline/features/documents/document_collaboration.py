@@ -7,12 +7,13 @@ collaboration.
 
 from typing import Any, Dict, List
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def _format_comments(
@@ -86,7 +87,7 @@ def register_tools(mcp) -> None:
         include_anchor_text: bool = False,
         limit: int = 25,
         offset: int = 0,
-    ) -> str:
+    ) -> CallToolResult:
         """
         Retrieves comments on a specific document with pagination support.
 
@@ -127,18 +128,33 @@ def register_tools(mcp) -> None:
             pagination = response.get("pagination", {})
 
             total_count = pagination.get("total", len(comments))
-            return _format_comments(comments, total_count, limit, offset)
+            return create_tool_response(
+                _format_comments(comments, total_count, limit, offset),
+                {
+                    "comments": comments,
+                    "document_id": document_id,
+                    "total": total_count,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error listing comments: {str(e)}"
+            return create_tool_response(
+                f"Error listing comments: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
     async def get_comment(
         comment_id: str, include_anchor_text: bool = False
-    ) -> str:
+    ) -> CallToolResult:
         """
         Retrieves a specific comment by its ID.
 
@@ -165,7 +181,10 @@ def register_tools(mcp) -> None:
             comment = response.get("data", {})
 
             if not comment:
-                return "Comment not found."
+                return create_tool_response(
+                    "Comment not found.",
+                    {"error": "not_found", "comment_id": comment_id},
+                )
 
             user = comment.get("createdBy", {}).get("name", "Unknown User")
             created_at = comment.get("createdAt", "")
@@ -192,16 +211,28 @@ def register_tools(mcp) -> None:
             else:
                 output += "\n(No comment content found)\n"
 
-            return output
+            return create_tool_response(
+                output,
+                {
+                    "comment": comment,
+                    "comment_id": comment_id,
+                },
+            )
         except OutlineClientError as e:
-            return f"Error getting comment: {str(e)}"
+            return create_tool_response(
+                f"Error getting comment: {str(e)}",
+                {"error": str(e), "comment_id": comment_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "comment_id": comment_id},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
-    async def get_document_backlinks(document_id: str) -> str:
+    async def get_document_backlinks(document_id: str) -> CallToolResult:
         """
         Finds all documents that link to a specific document.
 
@@ -226,9 +257,19 @@ def register_tools(mcp) -> None:
             documents = response.get("data", [])
 
             if not documents:
-                return "No documents link to this document."
+                return create_tool_response(
+                    "No documents link to this document.",
+                    {
+                        "backlinks": [],
+                        "document_id": document_id,
+                        "count": 0,
+                    },
+                )
 
             output = "# Documents Linking to This Document\n\n"
+
+            # Build backlinks list for structured output
+            backlinks: List[Dict[str, Any]] = []
 
             for i, document in enumerate(documents, 1):
                 title = document.get("title", "Untitled Document")
@@ -241,8 +282,29 @@ def register_tools(mcp) -> None:
                     output += f"Last Updated: {updated_at}\n"
                 output += "\n"
 
-            return output
+                backlinks.append(
+                    {
+                        "document_id": doc_id,
+                        "title": title,
+                        "updated_at": updated_at,
+                    }
+                )
+
+            return create_tool_response(
+                output,
+                {
+                    "backlinks": backlinks,
+                    "document_id": document_id,
+                    "count": len(backlinks),
+                },
+            )
         except OutlineClientError as e:
-            return f"Error retrieving backlinks: {str(e)}"
+            return create_tool_response(
+                f"Error retrieving backlinks: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e), "document_id": document_id},
+            )

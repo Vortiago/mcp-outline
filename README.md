@@ -62,6 +62,8 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
+| `OUTLINE_RESPONSE_LIMITS` | No | `false` | `true` = enable response size warnings/truncation |
+| `OUTLINE_STRUCTURED_OUTPUT` | No | `false` | `true` = enable structuredContent in responses ([details](docs/structured-output.md)) |
 | `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
 | `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |
 | `MCP_PORT` | No | `3000` | HTTP server port (only for `sse` and `streamable-http` modes) |
@@ -81,7 +83,7 @@ Set `OUTLINE_READ_ONLY=true` to enable viewer-only access. Only search, read, ex
 
 **Available tools:**
 - Search & Discovery: `search_documents`, `list_collections`, `get_collection_structure`, `get_document_id_from_title`
-- Document Reading: `read_document`, `export_document`
+- Document Reading: `read_document`, `get_document_outline`, `read_document_section`, `export_document`
 - Comments: `list_document_comments`, `get_comment`
 - Collaboration: `get_document_backlinks`
 - Collections: `export_collection`, `export_all_collections`
@@ -275,13 +277,15 @@ Then connect from client:
 > **Note**: Tool availability depends on your [Access Control](#access-control) settings. Some tools are disabled in read-only mode or when delete operations are restricted.
 
 ### Search & Discovery
-- `search_documents(query, collection_id?, limit?, offset?)` - Search documents by keywords with pagination
+- `search_documents(query, collection_id?, limit?, offset?, detail_level?)` - Search documents by keywords with pagination. `detail_level`: `"ids"` (minimal), `"summary"` (default), `"full"` (with context)
 - `list_collections()` - List all collections
-- `get_collection_structure(collection_id)` - Get document hierarchy within a collection
+- `get_collection_structure(collection_id, max_depth?)` - Get document hierarchy within a collection. `max_depth`: `1` (top-level only), `2`, or `-1` (unlimited, default)
 - `get_document_id_from_title(query, collection_id?)` - Find document ID by title search
 
 ### Document Reading
-- `read_document(document_id)` - Get document content
+- `read_document(document_id)` - Get full document content
+- `get_document_outline(document_id)` - Get table of contents (headings only) for large documents. Returns full content for small docs (<1000 chars)
+- `read_document_section(document_id, heading)` - Read a specific section by heading name (case-insensitive)
 - `export_document(document_id)` - Export document as markdown
 
 ### Document Management

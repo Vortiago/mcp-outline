@@ -7,12 +7,13 @@ documents efficiently.
 
 from typing import Any, Dict, List, Optional
 
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, ToolAnnotations
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.response_handler import create_tool_response
 
 
 def _create_result_entry(
@@ -125,7 +126,9 @@ def register_tools(mcp) -> None:
             idempotentHint=True,
         )
     )
-    async def batch_archive_documents(document_ids: List[str]) -> str:
+    async def batch_archive_documents(
+        document_ids: List[str],
+    ) -> CallToolResult:
         """
         Archives multiple documents in a single batch operation.
 
@@ -151,7 +154,10 @@ def register_tools(mcp) -> None:
             Summary of batch operation with success/failure details
         """
         if not document_ids:
-            return "Error: No document IDs provided."
+            return create_tool_response(
+                "Error: No document IDs provided.",
+                {"error": "no_document_ids"},
+            )
 
         results: List[Dict[str, Any]] = []
         succeeded = 0
@@ -198,14 +204,29 @@ def register_tools(mcp) -> None:
                     )
                     failed += 1
 
-            return _format_batch_results(
-                "archive", len(document_ids), succeeded, failed, results
+            return create_tool_response(
+                _format_batch_results(
+                    "archive", len(document_ids), succeeded, failed, results
+                ),
+                {
+                    "operation": "archive",
+                    "total": len(document_ids),
+                    "succeeded": succeeded,
+                    "failed": failed,
+                    "results": results,
+                },
             )
 
         except OutlineClientError as e:
-            return f"Error initializing client: {str(e)}"
+            return create_tool_response(
+                f"Error initializing client: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -218,7 +239,7 @@ def register_tools(mcp) -> None:
         document_ids: List[str],
         collection_id: Optional[str] = None,
         parent_document_id: Optional[str] = None,
-    ) -> str:
+    ) -> CallToolResult:
         """
         Moves multiple documents to a different collection or parent.
 
@@ -246,12 +267,16 @@ def register_tools(mcp) -> None:
             Summary of batch operation with success/failure details
         """
         if not document_ids:
-            return "Error: No document IDs provided."
+            return create_tool_response(
+                "Error: No document IDs provided.",
+                {"error": "no_document_ids"},
+            )
 
         if collection_id is None and parent_document_id is None:
-            return (
+            return create_tool_response(
                 "Error: You must specify either a collection_id or "
-                "parent_document_id."
+                "parent_document_id.",
+                {"error": "missing_target"},
             )
 
         results: List[Dict[str, Any]] = []
@@ -310,14 +335,35 @@ def register_tools(mcp) -> None:
                     )
                     failed += 1
 
-            return _format_batch_results(
-                "move", len(document_ids), succeeded, failed, results
+            structured_data: Dict[str, Any] = {
+                "operation": "move",
+                "total": len(document_ids),
+                "succeeded": succeeded,
+                "failed": failed,
+                "results": results,
+            }
+            if collection_id:
+                structured_data["target_collection_id"] = collection_id
+            if parent_document_id:
+                structured_data["target_parent_id"] = parent_document_id
+
+            return create_tool_response(
+                _format_batch_results(
+                    "move", len(document_ids), succeeded, failed, results
+                ),
+                structured_data,
             )
 
         except OutlineClientError as e:
-            return f"Error initializing client: {str(e)}"
+            return create_tool_response(
+                f"Error initializing client: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -328,7 +374,7 @@ def register_tools(mcp) -> None:
     )
     async def batch_delete_documents(
         document_ids: List[str], permanent: bool = False
-    ) -> str:
+    ) -> CallToolResult:
         """
         Deletes multiple documents, moving them to trash or permanently.
 
@@ -354,7 +400,10 @@ def register_tools(mcp) -> None:
             Summary of batch operation with success/failure details
         """
         if not document_ids:
-            return "Error: No document IDs provided."
+            return create_tool_response(
+                "Error: No document IDs provided.",
+                {"error": "no_document_ids"},
+            )
 
         results: List[Dict[str, Any]] = []
         succeeded = 0
@@ -430,14 +479,30 @@ def register_tools(mcp) -> None:
                     failed += 1
 
             operation = "permanently delete" if permanent else "delete"
-            return _format_batch_results(
-                operation, len(document_ids), succeeded, failed, results
+            return create_tool_response(
+                _format_batch_results(
+                    operation, len(document_ids), succeeded, failed, results
+                ),
+                {
+                    "operation": operation,
+                    "total": len(document_ids),
+                    "succeeded": succeeded,
+                    "failed": failed,
+                    "permanent": permanent,
+                    "results": results,
+                },
             )
 
         except OutlineClientError as e:
-            return f"Error initializing client: {str(e)}"
+            return create_tool_response(
+                f"Error initializing client: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -446,7 +511,9 @@ def register_tools(mcp) -> None:
             idempotentHint=True,
         )
     )
-    async def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
+    async def batch_update_documents(
+        updates: List[Dict[str, Any]],
+    ) -> CallToolResult:
         """
         Updates multiple documents with different changes.
 
@@ -477,7 +544,10 @@ def register_tools(mcp) -> None:
             Summary of batch operation with success/failure details
         """
         if not updates:
-            return "Error: No updates provided."
+            return create_tool_response(
+                "Error: No updates provided.",
+                {"error": "no_updates"},
+            )
 
         results: List[Dict[str, Any]] = []
         succeeded = 0
@@ -548,14 +618,29 @@ def register_tools(mcp) -> None:
                     )
                     failed += 1
 
-            return _format_batch_results(
-                "update", len(updates), succeeded, failed, results
+            return create_tool_response(
+                _format_batch_results(
+                    "update", len(updates), succeeded, failed, results
+                ),
+                {
+                    "operation": "update",
+                    "total": len(updates),
+                    "succeeded": succeeded,
+                    "failed": failed,
+                    "results": results,
+                },
             )
 
         except OutlineClientError as e:
-            return f"Error initializing client: {str(e)}"
+            return create_tool_response(
+                f"Error initializing client: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )
 
     @mcp.tool(
         annotations=ToolAnnotations(
@@ -564,7 +649,9 @@ def register_tools(mcp) -> None:
             idempotentHint=True,
         )
     )
-    async def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
+    async def batch_create_documents(
+        documents: List[Dict[str, Any]],
+    ) -> CallToolResult:
         """
         Creates multiple documents in a single batch operation.
 
@@ -598,7 +685,10 @@ def register_tools(mcp) -> None:
             success/failure details
         """
         if not documents:
-            return "Error: No documents provided."
+            return create_tool_response(
+                "Error: No documents provided.",
+                {"error": "no_documents"},
+            )
 
         results: List[Dict[str, Any]] = []
         succeeded = 0
@@ -695,9 +785,25 @@ def register_tools(mcp) -> None:
                 for doc_id in created_ids:
                     result_text += f"  - {doc_id}\n"
 
-            return result_text
+            return create_tool_response(
+                result_text,
+                {
+                    "operation": "create",
+                    "total": len(documents),
+                    "succeeded": succeeded,
+                    "failed": failed,
+                    "results": results,
+                    "created_ids": created_ids,
+                },
+            )
 
         except OutlineClientError as e:
-            return f"Error initializing client: {str(e)}"
+            return create_tool_response(
+                f"Error initializing client: {str(e)}",
+                {"error": str(e)},
+            )
         except Exception as e:
-            return f"Unexpected error: {str(e)}"
+            return create_tool_response(
+                f"Unexpected error: {str(e)}",
+                {"error": str(e)},
+            )

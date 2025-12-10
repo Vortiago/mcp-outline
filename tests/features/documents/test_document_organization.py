@@ -5,8 +5,16 @@ Tests for document organization tools.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from mcp.types import CallToolResult
 
 from mcp_outline.features.documents.common import OutlineClientError
+
+
+def extract_text(result) -> str:
+    """Extract text from CallToolResult or return string as-is."""
+    if isinstance(result, CallToolResult):
+        return result.content[0].text
+    return result
 
 
 # Mock FastMCP for registering tools
@@ -71,7 +79,7 @@ class TestMoveDocument:
         mock_client.post.assert_called_once_with(
             "documents.move", {"id": "doc123", "collectionId": "col456"}
         )
-        assert "Document moved successfully" in result
+        assert "Document moved successfully" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -92,7 +100,7 @@ class TestMoveDocument:
         mock_client.post.assert_called_once_with(
             "documents.move", {"id": "doc123", "parentDocumentId": "parent456"}
         )
-        assert "Document moved successfully" in result
+        assert "Document moved successfully" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -120,7 +128,7 @@ class TestMoveDocument:
                 "parentDocumentId": "parent789",
             },
         )
-        assert "Document moved successfully" in result
+        assert "Document moved successfully" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -139,8 +147,8 @@ class TestMoveDocument:
 
         # Should not call the client
         mock_client.post.assert_not_called()
-        assert "Error" in result
-        assert "collection_id or parent_document_id" in result
+        assert "Error" in extract_text(result)
+        assert "collection_id or parent_document_id" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -158,7 +166,7 @@ class TestMoveDocument:
             document_id="doc123", collection_id="col456"
         )
 
-        assert "Failed to move document" in result
+        assert "Failed to move document" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -176,8 +184,8 @@ class TestMoveDocument:
             document_id="doc123", collection_id="col456"
         )
 
-        assert "Error moving document" in result
-        assert "API error" in result
+        assert "Error moving document" in extract_text(result)
+        assert "API error" in extract_text(result)
 
     @pytest.mark.asyncio
     @patch(
@@ -195,4 +203,4 @@ class TestMoveDocument:
             document_id="doc123", collection_id="col456"
         )
 
-        assert "Unexpected error" in result
+        assert "Unexpected error" in extract_text(result)
