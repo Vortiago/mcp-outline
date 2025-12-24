@@ -18,10 +18,14 @@ def _format_document_content(document: Dict[str, Any]) -> str:
     """Format document content into readable text."""
     title = document.get("title", "Untitled Document")
     text = document.get("text", "")
+    url = document.get("url","")
 
     return f"""# {title}
 
 {text}
+
+
+url: {url}
 """
 
 
