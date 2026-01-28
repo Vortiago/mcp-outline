@@ -100,6 +100,10 @@ class OutlineClient:
                 os.getenv("OUTLINE_CONNECT_TIMEOUT", "5.0")
             )
 
+            # Check if SSL verification should be disabled (for self-signed certs)
+            verify_ssl_str = os.getenv("OUTLINE_VERIFY_SSL", "true").lower()
+            verify_ssl = verify_ssl_str not in ("false", "0", "no")
+
             limits = httpx.Limits(
                 max_keepalive_connections=max_keepalive,
                 max_connections=max_connections,
@@ -117,6 +121,7 @@ class OutlineClient:
                 limits=limits,
                 timeout=timeout_config,
                 follow_redirects=True,
+                verify=verify_ssl,
             )
 
     async def __aenter__(self):
