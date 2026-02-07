@@ -99,6 +99,7 @@ class OutlineClient:
             connect_timeout = float(
                 os.getenv("OUTLINE_CONNECT_TIMEOUT", "5.0")
             )
+            write_timeout = float(os.getenv("OUTLINE_WRITE_TIMEOUT", "30.0"))
 
             limits = httpx.Limits(
                 max_keepalive_connections=max_keepalive,
@@ -109,7 +110,7 @@ class OutlineClient:
             timeout_config = httpx.Timeout(
                 connect=connect_timeout,
                 read=timeout,
-                write=10.0,
+                write=write_timeout,
                 pool=5.0,
             )
 

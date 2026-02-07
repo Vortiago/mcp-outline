@@ -62,6 +62,11 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
+| `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
+| `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
+| `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
+| `OUTLINE_CONNECT_TIMEOUT` | No | `5.0` | Connection timeout in seconds |
+| `OUTLINE_WRITE_TIMEOUT` | No | `30.0` | Write timeout in seconds |
 | `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
 | `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |
 | `MCP_PORT` | No | `3000` | HTTP server port (only for `sse` and `streamable-http` modes) |

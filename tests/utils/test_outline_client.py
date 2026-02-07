@@ -25,6 +25,7 @@ class TestOutlineClient:
         # Save original environment variables
         self.original_api_key = os.environ.get("OUTLINE_API_KEY")
         self.original_api_url = os.environ.get("OUTLINE_API_URL")
+        self.original_write_timeout = os.environ.get("OUTLINE_WRITE_TIMEOUT")
 
         # Set test environment variables
         os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
@@ -42,6 +43,11 @@ class TestOutlineClient:
             os.environ["OUTLINE_API_URL"] = self.original_api_url
         else:
             os.environ.pop("OUTLINE_API_URL", None)
+
+        if self.original_write_timeout is not None:
+            os.environ["OUTLINE_WRITE_TIMEOUT"] = self.original_write_timeout
+        else:
+            os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
 
     @pytest.fixture(autouse=True)
     def _cleanup_client_pool(self):
@@ -352,6 +358,26 @@ class TestOutlineClient:
         # Verify transport exists
         transport = client._client_pool._transport
         assert transport is not None
+
+    @pytest.mark.asyncio
+    async def test_write_timeout_configurable(self):
+        """Test write timeout is configurable via env var."""
+        os.environ["OUTLINE_WRITE_TIMEOUT"] = "60.0"
+
+        client = OutlineClient()
+
+        timeout = client._client_pool._timeout
+        assert timeout.write == 60.0
+
+    @pytest.mark.asyncio
+    async def test_write_timeout_default(self):
+        """Test write timeout defaults to 30.0 seconds."""
+        os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
+
+        client = OutlineClient()
+
+        timeout = client._client_pool._timeout
+        assert timeout.write == 30.0
 
     @pytest.mark.asyncio
     async def test_api_url_normalization(self):

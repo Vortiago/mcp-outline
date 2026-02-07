@@ -140,6 +140,54 @@ class TestDocumentContentTools:
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
+    async def test_create_document_as_template(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test create_document tool with template flag."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_CREATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["create_document"](
+            title="Test Template",
+            collection_id="col123",
+            text="Template content.",
+            template=True,
+        )
+
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args[0]
+
+        assert call_args[0] == "documents.create"
+        assert "template" in call_args[1]
+        assert call_args[1]["template"] is True
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_create_document_template_not_sent_when_none(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test template is not included when not specified."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_CREATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["create_document"](
+            title="Test Document",
+            collection_id="col123",
+        )
+
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args[0]
+
+        assert "template" not in call_args[1]
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
     async def test_create_document_failure(
         self, mock_get_client, register_content_tools
     ):
@@ -239,6 +287,81 @@ class TestDocumentContentTools:
         assert call_args[0] == "documents.update"
         assert "append" in call_args[1]
         assert call_args[1]["append"] is True
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_update_document_set_template(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test update_document with template=True."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            template=True,
+        )
+
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {
+                "id": "doc123",
+                "template": True,
+            },
+        )
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_update_document_unset_template(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test update_document with template=False."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            template=False,
+        )
+
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {
+                "id": "doc123",
+                "template": False,
+            },
+        )
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_update_document_template_not_sent_when_none(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test template is not sent when not specified."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            title="Updated Title",
+        )
+
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {
+                "id": "doc123",
+                "title": "Updated Title",
+            },
+        )
 
     @pytest.mark.asyncio
     @patch(
