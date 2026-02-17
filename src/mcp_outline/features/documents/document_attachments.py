@@ -129,9 +129,11 @@ def register_tools(mcp) -> None:
             attachment_id: The attachment UUID
 
         Returns:
-            Multi-line string in this format (blank line before base64):
+            Multi-line string in this format (blank line after Content-Length
+            / before Content-Base64):
             Content-Type: <mime-type>
             Content-Length: <bytes>
+
             Content-Base64: <base64-encoded-data>
 
             Note: For large files (e.g. multi-MB PDFs), the base64 output

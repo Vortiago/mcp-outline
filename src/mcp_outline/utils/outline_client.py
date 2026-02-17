@@ -634,38 +634,77 @@ class OutlineClient:
         if self._client_pool is None:
             raise OutlineError("Client pool not initialized")
 
-        try:
-            response = await self._client_pool.post(
-                url,
-                headers=headers,
-                json={"id": attachment_id},
-                follow_redirects=False,
-            )
-            self._update_rate_limits(response)
+        max_retries = 3
+        attempt = 0
+        last_exception: Optional[Exception] = None
 
-            # 302 (and 301, 307, 308) is the normal success case: Outline
-            # returns the signed download URL in the Location header
-            if response.status_code in (301, 302, 307, 308):
-                location = response.headers.get("Location")
-                if not location:
-                    raise OutlineError(
-                        "No Location header in attachment redirect response"
-                    )
-                return location
+        while attempt < max_retries:
+            try:
+                response = await self._client_pool.post(
+                    url,
+                    headers=headers,
+                    json={"id": attachment_id},
+                    follow_redirects=False,
+                )
+                self._update_rate_limits(response)
 
-            response.raise_for_status()
+                # 302 (and 301, 307, 308) is the normal success case: Outline
+                # returns the signed download URL in the Location header
+                if response.status_code in (301, 302, 307, 308):
+                    location = response.headers.get("Location")
+                    if not location:
+                        raise OutlineError(
+                            "No Location header in attachment redirect "
+                            "response"
+                        )
+                    return location
+
+                response.raise_for_status()
+                raise OutlineError(
+                    f"Unexpected status {response.status_code} from "
+                    "attachments.redirect (expected 302)"
+                )
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                status = getattr(e.response, "status_code", None)
+                if status == 429:
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            sleep_seconds = float(retry_after)
+                        except (TypeError, ValueError):
+                            sleep_seconds = 1.0 * (2**attempt)
+                    else:
+                        sleep_seconds = 1.0 * (2**attempt)
+                    sleep_seconds = min(sleep_seconds, 60.0)
+                    if attempt + 1 >= max_retries:
+                        break
+                    await asyncio.sleep(sleep_seconds)
+                    attempt += 1
+                    continue
+                break
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                last_exception = e
+                break
+            except OutlineError:
+                raise
+
+        if (
+            isinstance(last_exception, httpx.HTTPStatusError)
+            and getattr(last_exception, "response", None) is not None
+        ):
+            status = last_exception.response.status_code
+            text = last_exception.response.text
+            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+        if isinstance(last_exception, httpx.TimeoutException):
             raise OutlineError(
-                f"Unexpected status {response.status_code} from "
-                "attachments.redirect (expected 302)"
-            )
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code
-            text = e.response.text
-            raise OutlineError(f"HTTP {status}: {text}") from e
-        except httpx.TimeoutException as e:
-            raise OutlineError(f"Request timeout: {str(e)}") from e
-        except httpx.RequestError as e:
-            raise OutlineError(f"API request failed: {str(e)}") from e
+                f"Request timeout: {str(last_exception)}"
+            ) from last_exception
+        if isinstance(last_exception, httpx.RequestError):
+            raise OutlineError(
+                f"API request failed: {str(last_exception)}"
+            ) from last_exception
+        raise OutlineError("API request failed after retries")
 
     async def fetch_attachment_content(
         self, attachment_id: str
@@ -697,25 +736,61 @@ class OutlineClient:
         if self._client_pool is None:
             raise OutlineError("Client pool not initialized")
 
-        try:
-            response = await self._client_pool.post(
-                url,
-                headers=headers,
-                json={"id": attachment_id},
-                follow_redirects=True,
-            )
-            self._update_rate_limits(response)
-            response.raise_for_status()
+        max_retries = 3
+        attempt = 0
+        last_exception: Optional[Exception] = None
 
-            content_type = response.headers.get(
-                "content-type", "application/octet-stream"
-            )
-            return response.content, content_type
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code
-            text = e.response.text
-            raise OutlineError(f"HTTP {status}: {text}") from e
-        except httpx.TimeoutException as e:
-            raise OutlineError(f"Request timeout: {str(e)}") from e
-        except httpx.RequestError as e:
-            raise OutlineError(f"API request failed: {str(e)}") from e
+        while attempt < max_retries:
+            try:
+                response = await self._client_pool.post(
+                    url,
+                    headers=headers,
+                    json={"id": attachment_id},
+                    follow_redirects=True,
+                )
+                self._update_rate_limits(response)
+                response.raise_for_status()
+
+                content_type = response.headers.get(
+                    "content-type", "application/octet-stream"
+                )
+                return response.content, content_type
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                status = getattr(e.response, "status_code", None)
+                if status == 429:
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            sleep_seconds = float(retry_after)
+                        except (TypeError, ValueError):
+                            sleep_seconds = 1.0 * (2**attempt)
+                    else:
+                        sleep_seconds = 1.0 * (2**attempt)
+                    sleep_seconds = min(sleep_seconds, 60.0)
+                    if attempt + 1 >= max_retries:
+                        break
+                    await asyncio.sleep(sleep_seconds)
+                    attempt += 1
+                    continue
+                break
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                last_exception = e
+                break
+
+        if (
+            isinstance(last_exception, httpx.HTTPStatusError)
+            and getattr(last_exception, "response", None) is not None
+        ):
+            status = last_exception.response.status_code
+            text = last_exception.response.text
+            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+        if isinstance(last_exception, httpx.TimeoutException):
+            raise OutlineError(
+                f"Request timeout: {str(last_exception)}"
+            ) from last_exception
+        if isinstance(last_exception, httpx.RequestError):
+            raise OutlineError(
+                f"API request failed: {str(last_exception)}"
+            ) from last_exception
+        raise OutlineError("API request failed after retries")

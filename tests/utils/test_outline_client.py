@@ -419,6 +419,11 @@ class TestOutlineClient:
         mock_response.status_code = 404
         mock_response.text = "Not found"
         mock_response.headers = {}
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Not found",
+            request=MagicMock(),
+            response=mock_response,
+        )
 
         with patch.object(
             client._client_pool,
@@ -431,6 +436,7 @@ class TestOutlineClient:
                 )
 
             assert "404" in str(exc_info.value)
+            assert "Not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_attachment_redirect_url_no_location(self):
