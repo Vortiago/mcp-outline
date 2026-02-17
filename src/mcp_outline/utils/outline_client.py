@@ -8,7 +8,7 @@ pooling and rate limiting.
 import asyncio
 import os
 from datetime import datetime
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 import httpx
 
@@ -605,3 +605,109 @@ class OutlineClient:
 
         response = await self.post("documents.answerQuestion", data)
         return response
+
+    async def get_attachment_redirect_url(self, attachment_id: str) -> str:
+        """
+        Get the redirect URL for an attachment without following redirects.
+
+        Calls attachments.redirect and returns the Location header (signed
+        URL) so clients can fetch the file themselves.
+
+        Args:
+            attachment_id: The attachment UUID.
+
+        Returns:
+            The redirect URL (Location header value).
+
+        Raises:
+            OutlineError: If the request fails or no Location header.
+        """
+        async with self._rate_limit_lock:
+            await self._wait_if_rate_limited()
+
+        url = f"{self.api_url}/attachments.redirect"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        if self._client_pool is None:
+            raise OutlineError("Client pool not initialized")
+
+        try:
+            response = await self._client_pool.post(
+                url,
+                headers=headers,
+                json={"id": attachment_id},
+                follow_redirects=False,
+            )
+            self._update_rate_limits(response)
+            response.raise_for_status()
+
+            location = response.headers.get("Location")
+            if not location:
+                raise OutlineError(
+                    "No Location header in attachment redirect response"
+                )
+            return location
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            text = e.response.text
+            raise OutlineError(f"HTTP {status}: {text}") from e
+        except httpx.TimeoutException as e:
+            raise OutlineError(f"Request timeout: {str(e)}") from e
+        except httpx.RequestError as e:
+            raise OutlineError(f"API request failed: {str(e)}") from e
+
+    async def fetch_attachment_content(
+        self, attachment_id: str
+    ) -> Tuple[bytes, str]:
+        """
+        Fetch attachment binary content by following the redirect.
+
+        Calls attachments.redirect, follows redirect to the signed URL, and
+        returns the raw file content with its content type.
+
+        Args:
+            attachment_id: The attachment UUID.
+
+        Returns:
+            Tuple of (content bytes, content_type string).
+
+        Raises:
+            OutlineError: If the request fails.
+        """
+        async with self._rate_limit_lock:
+            await self._wait_if_rate_limited()
+
+        url = f"{self.api_url}/attachments.redirect"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        if self._client_pool is None:
+            raise OutlineError("Client pool not initialized")
+
+        try:
+            response = await self._client_pool.post(
+                url,
+                headers=headers,
+                json={"id": attachment_id},
+                follow_redirects=True,
+            )
+            self._update_rate_limits(response)
+            response.raise_for_status()
+
+            content_type = response.headers.get(
+                "content-type", "application/octet-stream"
+            )
+            return response.content, content_type
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            text = e.response.text
+            raise OutlineError(f"HTTP {status}: {text}") from e
+        except httpx.TimeoutException as e:
+            raise OutlineError(f"Request timeout: {str(e)}") from e
+        except httpx.RequestError as e:
+            raise OutlineError(f"API request failed: {str(e)}") from e

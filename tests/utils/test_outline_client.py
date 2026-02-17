@@ -381,6 +381,110 @@ class TestOutlineClient:
         assert client.api_key == "quoted_key"
 
     @pytest.mark.asyncio
+    async def test_get_attachment_redirect_url_success(self):
+        """Test get_attachment_redirect_url returns Location header."""
+        client = OutlineClient()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 302
+        mock_response.headers = {
+            "Location": "https://storage.example.com/signed/file.pdf",
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ) as mock_post:
+            result = await client.get_attachment_redirect_url(
+                "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+            )
+
+            mock_post.assert_called_once()
+            call_kwargs = mock_post.call_args[1]
+            assert call_kwargs["json"] == {
+                "id": "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+            }
+            assert call_kwargs["follow_redirects"] is False
+
+            assert result == "https://storage.example.com/signed/file.pdf"
+
+    @pytest.mark.asyncio
+    async def test_get_attachment_redirect_url_no_location(self):
+        """Test get_attachment_redirect_url raises when no Location header."""
+        client = OutlineClient()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 302
+        mock_response.headers = {}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            with pytest.raises(OutlineError) as exc_info:
+                await client.get_attachment_redirect_url(
+                    "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+                )
+
+            assert "No Location header" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_fetch_attachment_content_success(self):
+        """Test fetch_attachment_content returns content and content-type."""
+        client = OutlineClient()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/pdf"}
+        mock_response.content = b"%PDF-1.4 binary content"
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ) as mock_post:
+            content, content_type = await client.fetch_attachment_content(
+                "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+            )
+
+            mock_post.assert_called_once()
+            call_kwargs = mock_post.call_args[1]
+            assert call_kwargs["json"] == {
+                "id": "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+            }
+            assert call_kwargs["follow_redirects"] is True
+
+            assert content == b"%PDF-1.4 binary content"
+            assert content_type == "application/pdf"
+
+    @pytest.mark.asyncio
+    async def test_fetch_attachment_content_default_content_type(self):
+        """Test fetch_attachment_content uses default when no content-type."""
+        client = OutlineClient()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {}
+        mock_response.content = b"binary"
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            content, content_type = await client.fetch_attachment_content(
+                "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+            )
+
+            assert content_type == "application/octet-stream"
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "input_url,expected",
         [

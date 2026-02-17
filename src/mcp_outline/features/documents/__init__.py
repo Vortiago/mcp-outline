@@ -6,6 +6,7 @@ from mcp_outline.features.documents import (
     ai_tools,
     batch_operations,
     collection_tools,
+    document_attachments,
     document_collaboration,
     document_content,
     document_lifecycle,
@@ -29,6 +30,7 @@ def register(
     # Always register read-only tools
     document_search.register_tools(mcp)
     document_reading.register_tools(mcp)
+    document_attachments.register_tools(mcp)
     document_collaboration.register_tools(mcp)
     collection_tools.register_tools(mcp)
 
