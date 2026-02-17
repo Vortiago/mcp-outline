@@ -411,6 +411,28 @@ class TestOutlineClient:
             assert result == "https://storage.example.com/signed/file.pdf"
 
     @pytest.mark.asyncio
+    async def test_get_attachment_redirect_url_404_raises(self):
+        """Test get_attachment_redirect_url raises for 4xx errors."""
+        client = OutlineClient()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.text = "Not found"
+        mock_response.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            with pytest.raises(OutlineError) as exc_info:
+                await client.get_attachment_redirect_url(
+                    "6fe06f93-e331-408d-b954-6bb4ed50e67d"
+                )
+
+            assert "404" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_get_attachment_redirect_url_no_location(self):
         """Test get_attachment_redirect_url raises when no Location header."""
         client = OutlineClient()

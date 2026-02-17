@@ -642,14 +642,22 @@ class OutlineClient:
                 follow_redirects=False,
             )
             self._update_rate_limits(response)
-            response.raise_for_status()
 
-            location = response.headers.get("Location")
-            if not location:
-                raise OutlineError(
-                    "No Location header in attachment redirect response"
-                )
-            return location
+            # 302 (and 301, 307, 308) is the normal success case: Outline
+            # returns the signed download URL in the Location header
+            if response.status_code in (301, 302, 307, 308):
+                location = response.headers.get("Location")
+                if not location:
+                    raise OutlineError(
+                        "No Location header in attachment redirect response"
+                    )
+                return location
+
+            response.raise_for_status()
+            raise OutlineError(
+                f"Unexpected status {response.status_code} from "
+                "attachments.redirect (expected 302)"
+            )
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             text = e.response.text

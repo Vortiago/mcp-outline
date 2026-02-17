@@ -129,8 +129,14 @@ def register_tools(mcp) -> None:
             attachment_id: The attachment UUID
 
         Returns:
-            Multi-line string with Content-Type, Content-Length, and
-            Content-Base64
+            Multi-line string in this format (blank line before base64):
+            Content-Type: <mime-type>
+            Content-Length: <bytes>
+            Content-Base64: <base64-encoded-data>
+
+            Note: For large files (e.g. multi-MB PDFs), the base64 output
+            may hit token limits. Prefer get_attachment_url to obtain a
+            download URL for large attachments, then fetch externally.
         """
         try:
             client = await get_outline_client()
@@ -140,7 +146,7 @@ def register_tools(mcp) -> None:
             b64 = base64.b64encode(content).decode("ascii")
             return (
                 f"Content-Type: {content_type}\n"
-                f"Content-Length: {len(content)}\n"
+                f"Content-Length: {len(content)}\n\n"
                 f"Content-Base64: {b64}"
             )
         except OutlineClientError as e:
