@@ -18,15 +18,12 @@ def _format_document_content(document: Dict[str, Any]) -> str:
     """Format document content into readable text."""
     title = document.get("title", "Untitled Document")
     text = document.get("text", "")
-    url = document.get("url","")
+    url = document.get("url", "")
 
-    return f"""# {title}
-
-{text}
-
-
-url: {url}
-"""
+    output = f"# {title}\n\n{text}"
+    if url:
+        output += f"\n\nURL: {url}"
+    return output
 
 
 def register_tools(mcp) -> None:
