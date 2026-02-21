@@ -60,7 +60,7 @@ services:
 
   # Outline - Document management platform
   outline:
-    image: docker.getoutline.com/outlinewiki/outline:1.1.0-0
+    image: docker.getoutline.com/outlinewiki/outline:1.5.0
     container_name: outline
     env_file: ./config/outline.env
     ports:

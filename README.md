@@ -374,6 +374,29 @@ uv run pyright src/
 uv run ruff check .
 ```
 
+### E2E Tests
+
+E2E tests run against a real Outline instance via Docker Compose:
+
+```bash
+# Start the stack (or let the fixture handle it)
+docker compose up -d outline
+
+# Run E2E tests
+uv run pytest tests/e2e/ -v -m e2e
+
+# Tear down
+docker compose down -v
+```
+
+The test fixtures automatically:
+- Create `config/outline.env` from the example if missing
+- Start Docker Compose if Outline isn't already running
+- Authenticate via OIDC/Dex to create an API key
+- Spawn the MCP server via stdio for each test
+
+See `.github/workflows/e2e.yml` for CI configuration.
+
 ### Running Locally
 
 ```bash

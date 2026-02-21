@@ -46,6 +46,6 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest tests/ -v --cov=src/mcp_outline --cov-report=term
+          uv run pytest tests/ -v -m "not e2e" --cov=src/mcp_outline --cov-report=term
         env:
           OUTLINE_API_KEY: "dummy"

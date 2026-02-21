@@ -44,8 +44,10 @@ package-dir = {"" = "src"}
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
+addopts = "-m 'not e2e'"
 markers = [
     "integration: Integration tests that start the MCP server",
+    "e2e: End-to-end tests requiring docker-compose stack",
 ]
 
 [tool.ruff]

@@ -272,6 +272,31 @@ async def test_tool():
 - Every new parameter needs at least two tests: one with value set, one verifying
   it's not sent when `None`/default
 
+### E2E Tests
+
+Run against a real Outline instance via Docker Compose:
+
+```bash
+# Start Outline stack
+docker compose up -d outline
+
+# Run E2E tests
+uv run pytest tests/e2e/ -v -m e2e
+```
+
+- **Marker**: `@pytest.mark.e2e` — excluded from normal `pytest` runs
+- **Fixture chain**: `outline_stack` (Docker lifecycle) → `outline_api_key`
+  (OIDC login + API key creation) → `mcp_server_params` → `mcp_session`
+  (stdio client factory)
+- **OIDC fixture**: Uses manual cookie management (`_parse_set_cookies`) to
+  prevent httpx's cookie jar from leaking Outline cookies to Dex (both run on
+  localhost but on different ports)
+- **Attachment tests**: Upload a real file via the Outline REST API
+  (`attachments.create` + `files.create`) using the API key, then test
+  the read-only MCP attachment tools against it
+- **Skipped tools**:
+  - AI tool (`ask_ai_about_documents`): Disabled via `OUTLINE_DISABLE_AI_TOOLS`
+
 ### Configuration
 
 `.env` file:
