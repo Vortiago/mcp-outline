@@ -8,7 +8,7 @@ pooling and rate limiting.
 import asyncio
 import os
 from datetime import datetime
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 import httpx
 
@@ -612,3 +612,192 @@ class OutlineClient:
 
         response = await self.post("documents.answerQuestion", data)
         return response
+
+    async def get_attachment_redirect_url(self, attachment_id: str) -> str:
+        """
+        Get the redirect URL for an attachment without following redirects.
+
+        Calls attachments.redirect and returns the Location header (signed
+        URL) so clients can fetch the file themselves.
+
+        Args:
+            attachment_id: The attachment UUID.
+
+        Returns:
+            The redirect URL (Location header value).
+
+        Raises:
+            OutlineError: If the request fails or no Location header.
+        """
+        async with self._rate_limit_lock:
+            await self._wait_if_rate_limited()
+
+        url = f"{self.api_url}/attachments.redirect"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        if self._client_pool is None:
+            raise OutlineError("Client pool not initialized")
+
+        max_retries = 3
+        attempt = 0
+        last_exception: Optional[Exception] = None
+
+        while attempt < max_retries:
+            try:
+                response = await self._client_pool.post(
+                    url,
+                    headers=headers,
+                    json={"id": attachment_id},
+                    follow_redirects=False,
+                )
+                self._update_rate_limits(response)
+
+                # 302 (and 301, 307, 308) is the normal success case: Outline
+                # returns the signed download URL in the Location header
+                if response.status_code in (301, 302, 307, 308):
+                    location = response.headers.get("Location")
+                    if not location:
+                        raise OutlineError(
+                            "No Location header in attachment redirect "
+                            "response"
+                        )
+                    return location
+
+                response.raise_for_status()
+                raise OutlineError(
+                    f"Unexpected status {response.status_code} from "
+                    "attachments.redirect (expected 302)"
+                )
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                status = getattr(e.response, "status_code", None)
+                if status == 429:
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            sleep_seconds = float(retry_after)
+                        except (TypeError, ValueError):
+                            sleep_seconds = 1.0 * (2**attempt)
+                    else:
+                        sleep_seconds = 1.0 * (2**attempt)
+                    sleep_seconds = min(sleep_seconds, 60.0)
+                    if attempt + 1 >= max_retries:
+                        break
+                    await asyncio.sleep(sleep_seconds)
+                    attempt += 1
+                    continue
+                break
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                last_exception = e
+                break
+            except OutlineError:
+                raise
+
+        if (
+            isinstance(last_exception, httpx.HTTPStatusError)
+            and getattr(last_exception, "response", None) is not None
+        ):
+            status = last_exception.response.status_code
+            text = last_exception.response.text
+            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+        if isinstance(last_exception, httpx.TimeoutException):
+            raise OutlineError(
+                f"Request timeout: {str(last_exception)}"
+            ) from last_exception
+        if isinstance(last_exception, httpx.RequestError):
+            raise OutlineError(
+                f"API request failed: {str(last_exception)}"
+            ) from last_exception
+        raise OutlineError("API request failed after retries")
+
+    async def fetch_attachment_content(
+        self, attachment_id: str
+    ) -> Tuple[bytes, str]:
+        """
+        Fetch attachment binary content by following the redirect.
+
+        Calls attachments.redirect, follows redirect to the signed URL, and
+        returns the raw file content with its content type.
+
+        Args:
+            attachment_id: The attachment UUID.
+
+        Returns:
+            Tuple of (content bytes, content_type string).
+
+        Raises:
+            OutlineError: If the request fails.
+        """
+        async with self._rate_limit_lock:
+            await self._wait_if_rate_limited()
+
+        url = f"{self.api_url}/attachments.redirect"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        if self._client_pool is None:
+            raise OutlineError("Client pool not initialized")
+
+        max_retries = 3
+        attempt = 0
+        last_exception: Optional[Exception] = None
+
+        while attempt < max_retries:
+            try:
+                response = await self._client_pool.post(
+                    url,
+                    headers=headers,
+                    json={"id": attachment_id},
+                    follow_redirects=True,
+                )
+                self._update_rate_limits(response)
+                response.raise_for_status()
+
+                content_type = response.headers.get(
+                    "content-type", "application/octet-stream"
+                )
+                return response.content, content_type
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                status = getattr(e.response, "status_code", None)
+                if status == 429:
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            sleep_seconds = float(retry_after)
+                        except (TypeError, ValueError):
+                            sleep_seconds = 1.0 * (2**attempt)
+                    else:
+                        sleep_seconds = 1.0 * (2**attempt)
+                    sleep_seconds = min(sleep_seconds, 60.0)
+                    if attempt + 1 >= max_retries:
+                        break
+                    await asyncio.sleep(sleep_seconds)
+                    attempt += 1
+                    continue
+                break
+            except (httpx.TimeoutException, httpx.RequestError) as e:
+                last_exception = e
+                break
+
+        if (
+            isinstance(last_exception, httpx.HTTPStatusError)
+            and getattr(last_exception, "response", None) is not None
+        ):
+            status = last_exception.response.status_code
+            text = last_exception.response.text
+            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+        if isinstance(last_exception, httpx.TimeoutException):
+            raise OutlineError(
+                f"Request timeout: {str(last_exception)}"
+            ) from last_exception
+        if isinstance(last_exception, httpx.RequestError):
+            raise OutlineError(
+                f"API request failed: {str(last_exception)}"
+            ) from last_exception
+        raise OutlineError("API request failed after retries")
