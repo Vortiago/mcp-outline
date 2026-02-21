@@ -32,27 +32,29 @@ jobs:
 
       - name: Prepare Outline config
         run: |
-          cp config/outline.env.example config/outline.env
+          cp config/outline.env.example tests/e2e/outline.env
           SECRET1=$(openssl rand -hex 32)
           SECRET2=$(openssl rand -hex 32)
-          sed -i "0,/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/s/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/$SECRET1/" config/outline.env
-          sed -i "0,/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/s/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/$SECRET2/" config/outline.env
+          sed -i "0,/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/s/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/$SECRET1/" tests/e2e/outline.env
+          sed -i "0,/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/s/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/$SECRET2/" tests/e2e/outline.env
+          sed -i 's|URL=http://localhost:3030|URL=http://localhost:3031|' tests/e2e/outline.env
+          sed -i 's|OIDC_AUTH_URI=http://localhost:5556/dex/auth|OIDC_AUTH_URI=http://localhost:5557/dex/auth|' tests/e2e/outline.env
 
       - name: Start Outline stack
-        run: docker compose up -d outline
+        run: docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d outline
 
       - name: Wait for Outline
         run: |
           echo "Waiting for Outline to become ready..."
           for i in $(seq 1 60); do
-            if curl -sf http://localhost:3030 > /dev/null 2>&1; then
+            if curl -sf http://localhost:3031 > /dev/null 2>&1; then
               echo "Outline is ready after $((i * 5))s"
               exit 0
             fi
             sleep 5
           done
           echo "Timeout waiting for Outline"
-          docker compose logs
+          docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs
           exit 1
 
       - name: Run E2E tests
@@ -67,4 +69,4 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml down -v

@@ -3,6 +3,10 @@ E2E test fixtures for the MCP Outline server.
 
 Manages Docker Compose stack lifecycle and API key creation
 via OIDC/Dex authentication.
+
+The E2E stack runs in an isolated Docker Compose project
+(mcp-outline-e2e) on separate ports (3031/5557) so it
+never conflicts with a developer's running instance.
 """
 
 import html
@@ -26,10 +30,24 @@ from mcp.client.stdio import (
 from .helpers import OUTLINE_URL
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+E2E_DIR = Path(__file__).resolve().parent
+E2E_PROJECT = "mcp-outline-e2e"
+
+# Base compose command for the E2E stack
+_COMPOSE_CMD = [
+    "docker",
+    "compose",
+    "-p",
+    E2E_PROJECT,
+    "-f",
+    "docker-compose.yml",
+    "-f",
+    "docker-compose.e2e.yml",
+]
 
 
 def _outline_is_ready():
-    """Check if Outline is responding."""
+    """Check if E2E Outline is responding."""
     try:
         resp = httpx.get(OUTLINE_URL, timeout=3.0)
         return resp.status_code < 500
@@ -37,20 +55,33 @@ def _outline_is_ready():
         return False
 
 
-def _ensure_env_file():
-    """Create config/outline.env from example if missing."""
-    env_path = PROJECT_ROOT / "config" / "outline.env"
+def _ensure_e2e_env_file():
+    """Generate tests/e2e/outline.env for the E2E stack."""
+    env_path = E2E_DIR / "outline.env"
     if env_path.exists():
         return env_path
 
     example = PROJECT_ROOT / "config" / "outline.env.example"
     content = example.read_text()
+
+    # Replace placeholder secrets
     for _ in range(2):
         content = content.replace(
             "REPLACE_WITH_openssl_rand_hex_32_OUTPUT",
             secrets.token_hex(32),
             1,
         )
+
+    # Override ports for E2E isolation
+    content = content.replace(
+        "URL=http://localhost:3030",
+        "URL=http://localhost:3031",
+    )
+    content = content.replace(
+        "OIDC_AUTH_URI=http://localhost:5556/dex/auth",
+        "OIDC_AUTH_URI=http://localhost:5557/dex/auth",
+    )
+
     env_path.write_text(content)
     return env_path
 
@@ -173,13 +204,13 @@ def _login_and_create_api_key():
 
 @pytest.fixture(scope="session")
 def outline_stack():
-    """Ensure Outline is running; manage lifecycle."""
+    """Ensure E2E Outline stack is running; manage lifecycle."""
     managed = False
 
     if not _outline_is_ready():
-        _ensure_env_file()
+        _ensure_e2e_env_file()
         subprocess.run(
-            ["docker", "compose", "up", "-d", "outline"],
+            [*_COMPOSE_CMD, "up", "-d", "outline"],
             cwd=str(PROJECT_ROOT),
             check=True,
         )
@@ -190,7 +221,7 @@ def outline_stack():
 
     if managed:
         subprocess.run(
-            ["docker", "compose", "down", "-v"],
+            [*_COMPOSE_CMD, "down", "-v"],
             cwd=str(PROJECT_ROOT),
             check=True,
         )
