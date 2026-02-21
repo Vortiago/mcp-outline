@@ -219,11 +219,15 @@ def register_tools(mcp) -> None:
         Returns:
             Formatted string containing collection names, IDs, and descriptions
 
-        If the response contains exactly 100 collections, you should execute the tool again using an offset of 100 to determine whether more results are available. Repeat this process, increasing the offset each time.
+        If the response contains as many collections as the
+        limit, execute the tool again with an increased offset
+        to check for more results.
         """
         try:
             client = await get_outline_client()
-            collections = await client.list_collections(limit=limit, offset=offset)
+            collections = await client.list_collections(
+                limit=limit, offset=offset
+            )
             return _format_collections(collections)
         except OutlineClientError as e:
             return f"Error listing collections: {str(e)}"

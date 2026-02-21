@@ -101,7 +101,8 @@ class OutlineClient:
             )
             write_timeout = float(os.getenv("OUTLINE_WRITE_TIMEOUT", "30.0"))
 
-            # Check if SSL verification should be disabled (for self-signed certs)
+            # Check if SSL verification should be disabled
+            # (for self-signed certs)
             verify_ssl_str = os.getenv("OUTLINE_VERIFY_SSL", "true").lower()
             verify_ssl = verify_ssl_str not in ("false", "0", "no")
 
@@ -348,18 +349,22 @@ class OutlineClient:
         response = await self.post("documents.search", data)
         return response
 
-    async def list_collections(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    async def list_collections(
+        self, limit: int = 100, offset: int = 0
+    ) -> List[Dict[str, Any]]:
         """
         List all available collections.
 
         Args:
             limit: Maximum number of results to return
             offset: Number of results to skip (pagination)
-            
+
         Returns:
             List of collections
         """
-        response = await self.post("collections.list", {"limit": limit, "offset": offset})
+        response = await self.post(
+            "collections.list", {"limit": limit, "offset": offset}
+        )
         return response.get("data", [])
 
     async def get_collection(self, collection_id: str) -> Dict[str, Any]:
