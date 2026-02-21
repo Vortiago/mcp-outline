@@ -202,7 +202,7 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
     )
-    async def list_collections() -> str:
+    async def list_collections(limit: int = 100, offset: int = 0) -> str:
         """
         Retrieves and displays all available collections in the workspace.
 
@@ -212,12 +212,18 @@ def register_tools(mcp) -> None:
         - Explore the organization of the knowledge base
         - Find a specific collection by name
 
+        Args:
+            limit: Maximum number of results to return
+            offset: Number of results to skip (pagination)
+
         Returns:
             Formatted string containing collection names, IDs, and descriptions
+
+        If the response contains exactly 100 collections, you should execute the tool again using an offset of 100 to determine whether more results are available. Repeat this process, increasing the offset each time.
         """
         try:
             client = await get_outline_client()
-            collections = await client.list_collections()
+            collections = await client.list_collections(limit=limit, offset=offset)
             return _format_collections(collections)
         except OutlineClientError as e:
             return f"Error listing collections: {str(e)}"

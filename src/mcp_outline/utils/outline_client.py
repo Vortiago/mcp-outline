@@ -342,17 +342,18 @@ class OutlineClient:
         response = await self.post("documents.search", data)
         return response
 
-    async def list_collections(self, limit: int = 20) -> List[Dict[str, Any]]:
+    async def list_collections(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """
         List all available collections.
 
         Args:
             limit: Maximum number of results to return
-
+            offset: Number of results to skip (pagination)
+            
         Returns:
             List of collections
         """
-        response = await self.post("collections.list", {"limit": limit})
+        response = await self.post("collections.list", {"limit": limit, "offset": offset})
         return response.get("data", [])
 
     async def get_collection(self, collection_id: str) -> Dict[str, Any]:
