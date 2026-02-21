@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  checks: write
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
@@ -55,12 +58,12 @@ jobs:
       - name: Run E2E tests
         run: uv run pytest tests/e2e/ -v -m e2e --junit-xml=e2e-results.xml
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
+      - name: Test report
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
-          name: e2e-test-results
-          path: e2e-results.xml
+          report_paths: e2e-results.xml
+          check_name: E2E Test Report
 
       - name: Tear down
         if: always()
