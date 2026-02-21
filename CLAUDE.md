@@ -48,8 +48,9 @@ This MCP server bridges AI assistants with Outline's document management platfor
 - `OUTLINE_API_URL` (optional, defaults to https://app.getoutline.com/api)
 - `OUTLINE_MAX_CONNECTIONS` (optional, default: 100) - Maximum concurrent connections
 - `OUTLINE_MAX_KEEPALIVE` (optional, default: 20) - Maximum idle connections in pool
-- `OUTLINE_TIMEOUT` (optional, default: 30.0) - Request timeout in seconds
+- `OUTLINE_TIMEOUT` (optional, default: 30.0) - Read timeout in seconds
 - `OUTLINE_CONNECT_TIMEOUT` (optional, default: 5.0) - Connection timeout in seconds
+- `OUTLINE_WRITE_TIMEOUT` (optional, default: 30.0) - Write timeout in seconds
 - Authentication via Bearer token
 
 **Connection Pooling**:
@@ -195,6 +196,15 @@ async def test_tool():
         assert "expected" in result
 ```
 
+**Test Conventions**:
+- `TestOutlineClient` uses `setup_method`/`teardown_method` to save and restore
+  ALL environment variables it touches. New env vars MUST be added to both methods.
+- Tool test classes use `MockMCP` fixture and `register_*_tools` pattern
+- Use `AsyncMock` for client mocking, not manual mocks
+- Test names: `test_<method>_<scenario>` (e.g., `test_create_document_as_template`)
+- Every new parameter needs at least two tests: one with value set, one verifying
+  it's not sent when `None`/default
+
 ### Configuration
 
 `.env` file:
@@ -203,8 +213,9 @@ OUTLINE_API_KEY=<your_key>                 # Required
 OUTLINE_API_URL=<custom_url>               # Optional
 OUTLINE_MAX_CONNECTIONS=100                # Optional - Max connections
 OUTLINE_MAX_KEEPALIVE=20                   # Optional - Max keepalive
-OUTLINE_TIMEOUT=30.0                       # Optional - Request timeout
+OUTLINE_TIMEOUT=30.0                       # Optional - Read timeout
 OUTLINE_CONNECT_TIMEOUT=5.0                # Optional - Connect timeout
+OUTLINE_WRITE_TIMEOUT=30.0                 # Optional - Write timeout
 OUTLINE_DISABLE_AI_TOOLS=true              # Optional - Disable AI tools
 OUTLINE_READ_ONLY=true                     # Optional - Disable all write operations
 OUTLINE_DISABLE_DELETE=true                # Optional - Disable delete operations only

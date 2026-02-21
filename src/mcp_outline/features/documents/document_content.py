@@ -35,6 +35,7 @@ def register_tools(mcp) -> None:
         text: str = "",
         parent_document_id: Optional[str] = None,
         publish: bool = True,
+        template: Optional[bool] = None,
     ) -> str:
         """
         Creates a new document in a specified collection.
@@ -44,6 +45,7 @@ def register_tools(mcp) -> None:
         - Create documentation, guides, or notes
         - Add a child document to an existing parent
         - Start a new document thread or topic
+        - Create a reusable template document
 
         Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
         as the code fence language identifier for proper rendering.
@@ -55,6 +57,9 @@ def register_tools(mcp) -> None:
             parent_document_id: Optional parent document ID for nesting
             publish: Whether to publish the document immediately (True) or
                 save as draft (False)
+            template: If True, creates the document as a template.
+                Templates appear in the "New from template" picker
+                rather than in the collection navigation.
 
         Returns:
             Result message with the new document ID
@@ -71,6 +76,9 @@ def register_tools(mcp) -> None:
 
             if parent_document_id:
                 data["parentDocumentId"] = parent_document_id
+
+            if template is not None:
+                data["template"] = template
 
             response = await client.post("documents.create", data)
             document = response.get("data", {})
@@ -99,6 +107,7 @@ def register_tools(mcp) -> None:
         title: Optional[str] = None,
         text: Optional[str] = None,
         append: bool = False,
+        template: Optional[bool] = None,
     ) -> str:
         """
         Modifies an existing document's title or content.
@@ -114,6 +123,7 @@ def register_tools(mcp) -> None:
         - Change a document's title
         - Append new content to an existing document
         - Fix errors or add information to documents
+        - Convert a document to or from a template
 
         Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
         as the code fence language identifier for proper rendering.
@@ -124,6 +134,11 @@ def register_tools(mcp) -> None:
             text: New content (if None, keeps existing content)
             append: If True, adds text to the end of document
                 instead of replacing
+            template: If True, converts the document to a template.
+                If False, converts a template back to a regular
+                document. Templates appear in the "New from
+                template" picker rather than in the collection
+                navigation.
 
         Returns:
             Result message confirming update
@@ -140,6 +155,9 @@ def register_tools(mcp) -> None:
             if text is not None:
                 data["text"] = text
                 data["append"] = append
+
+            if template is not None:
+                data["template"] = template
 
             response = await client.post("documents.update", data)
             document = response.get("data", {})

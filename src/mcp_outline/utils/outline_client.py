@@ -99,6 +99,7 @@ class OutlineClient:
             connect_timeout = float(
                 os.getenv("OUTLINE_CONNECT_TIMEOUT", "5.0")
             )
+            write_timeout = float(os.getenv("OUTLINE_WRITE_TIMEOUT", "30.0"))
 
             # Check if SSL verification should be disabled (for self-signed certs)
             verify_ssl_str = os.getenv("OUTLINE_VERIFY_SSL", "true").lower()
@@ -113,7 +114,7 @@ class OutlineClient:
             timeout_config = httpx.Timeout(
                 connect=connect_timeout,
                 read=timeout,
-                write=10.0,
+                write=write_timeout,
                 pool=5.0,
             )
 
