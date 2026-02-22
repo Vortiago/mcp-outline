@@ -94,6 +94,26 @@ async def test_batch_move_documents(mcp_session):
         assert "Batch Move Results" in text
         assert "Succeeded: 2" in text
 
+        # Verify documents appear in the target collection
+        tgt_structure = _text(
+            await session.call_tool(
+                "get_collection_structure",
+                arguments={"collection_id": tgt_id},
+            )
+        )
+        assert "Doc 0" in tgt_structure
+        assert "Doc 1" in tgt_structure
+
+        # Verify documents are gone from the source collection
+        src_structure = _text(
+            await session.call_tool(
+                "get_collection_structure",
+                arguments={"collection_id": src_id},
+            )
+        )
+        assert "Doc 0" not in src_structure
+        assert "Doc 1" not in src_structure
+
 
 async def test_batch_archive_documents(mcp_session):
     """Batch-archive two documents and verify both are counted as succeeded.

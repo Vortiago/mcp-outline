@@ -61,9 +61,7 @@ async def test_get_attachment_url(attachment_id, mcp_session):
             arguments={"attachment_id": attachment_id},
         )
         text = _text(result)
-        # Should return a URL, not an error
-        assert "Error" not in text
-        assert "http" in text or "/" in text
+        assert text.startswith("http"), f"Expected a URL, got: {text!r}"
 
 
 async def test_fetch_attachment(attachment_id, mcp_session):
