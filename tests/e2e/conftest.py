@@ -245,8 +245,18 @@ def mcp_server_params(outline_api_key):
     MCP server under test talks to the E2E stack, not the default cloud
     API. The API key from ``outline_api_key`` is injected via the
     ``OUTLINE_API_KEY`` environment variable.
+
+    All ``OUTLINE_*`` and ``MCP_*`` variables are stripped from the
+    parent environment before the three required ones are set. This
+    prevents flags like ``OUTLINE_READ_ONLY`` or
+    ``OUTLINE_DISABLE_AI_TOOLS`` from leaking out of a developer's
+    shell and silently altering which tools are registered.
     """
-    env = os.environ.copy()
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("OUTLINE_") and not k.startswith("MCP_")
+    }
     env["MCP_TRANSPORT"] = "stdio"
     env["OUTLINE_API_KEY"] = outline_api_key
     env["OUTLINE_API_URL"] = f"{OUTLINE_URL}/api"
