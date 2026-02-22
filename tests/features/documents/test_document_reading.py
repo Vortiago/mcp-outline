@@ -84,6 +84,26 @@ class TestDocumentReadingFormatters:
         result_empty = _format_document_content(empty_doc)
         assert "# Untitled Document" in result_empty
 
+    def test_format_document_content_with_url(self):
+        """Test that URL field is included in output when present."""
+        doc = {
+            "title": "Test Document",
+            "text": "Content.",
+            "url": "/doc/test-abc123",
+        }
+        result = _format_document_content(doc)
+        assert "URL: /doc/test-abc123" in result
+
+    def test_format_document_content_empty_url_omitted(self):
+        """Test that empty URL field does not produce a URL line."""
+        doc = {
+            "title": "Test Document",
+            "text": "Content.",
+            "url": "",
+        }
+        result = _format_document_content(doc)
+        assert "URL:" not in result
+
 
 class TestDocumentReadingTools:
     """Tests for document reading tools."""

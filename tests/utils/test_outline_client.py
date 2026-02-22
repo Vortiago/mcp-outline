@@ -25,6 +25,7 @@ class TestOutlineClient:
         self.original_api_key = os.environ.get("OUTLINE_API_KEY")
         self.original_api_url = os.environ.get("OUTLINE_API_URL")
         self.original_write_timeout = os.environ.get("OUTLINE_WRITE_TIMEOUT")
+        self.original_verify_ssl = os.environ.get("OUTLINE_VERIFY_SSL")
 
         # Set test environment variables
         os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
@@ -47,6 +48,11 @@ class TestOutlineClient:
             os.environ["OUTLINE_WRITE_TIMEOUT"] = self.original_write_timeout
         else:
             os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
+
+        if self.original_verify_ssl is not None:
+            os.environ["OUTLINE_VERIFY_SSL"] = self.original_verify_ssl
+        else:
+            os.environ.pop("OUTLINE_VERIFY_SSL", None)
 
     @pytest.fixture(autouse=True)
     def _cleanup_client_pool(self):
@@ -367,6 +373,60 @@ class TestOutlineClient:
             OutlineClient()
             kwargs = mock_client_cls.call_args.kwargs
             assert kwargs["timeout"].write == 30.0
+
+    @pytest.mark.asyncio
+    async def test_verify_ssl_enabled_by_default(self):
+        """SSL verification is enabled when OUTLINE_VERIFY_SSL is not set."""
+        os.environ.pop("OUTLINE_VERIFY_SSL", None)
+
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["verify"] is True
+
+    @pytest.mark.asyncio
+    async def test_verify_ssl_disabled_when_false(self):
+        """SSL verification is disabled when OUTLINE_VERIFY_SSL=false."""
+        os.environ["OUTLINE_VERIFY_SSL"] = "false"
+
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["verify"] is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("false", False),
+            ("False", False),
+            ("FALSE", False),
+            ("0", False),
+            ("no", False),
+            ("No", False),
+            ("true", True),
+            ("1", True),
+            ("yes", True),
+            ("anything_else", True),
+        ],
+    )
+    async def test_verify_ssl_env_var_variants(self, value, expected):
+        """OUTLINE_VERIFY_SSL parsing: case-insensitive, safe defaults."""
+        os.environ["OUTLINE_VERIFY_SSL"] = value
+
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["verify"] is expected
 
     @pytest.mark.asyncio
     async def test_api_url_normalization(self):
