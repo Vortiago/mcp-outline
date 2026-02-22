@@ -1,7 +1,9 @@
 """E2E tests for attachment tools.
 
-Uploads a real file via the Outline API, then tests the
-read-only MCP attachment tools against it.
+Uploads a real file via the Outline REST API (bypassing MCP), then tests
+the read-only MCP attachment tools against that uploaded file. The upload
+happens once per module via the ``attachment_id`` fixture.
+
 """
 
 import pytest
@@ -23,7 +25,11 @@ def attachment_id(outline_api_key):
 
 
 async def test_list_document_attachments(attachment_id, mcp_session):
-    """Create doc with attachment ref, list attachments."""
+    """Create a doc referencing an uploaded attachment and list attachments.
+
+    Guards against: list_document_attachments failing to parse attachment
+    references embedded in document markdown content.
+    """
     att_id = attachment_id
 
     async with mcp_session() as session:
@@ -46,7 +52,11 @@ async def test_list_document_attachments(attachment_id, mcp_session):
 
 
 async def test_get_attachment_url(attachment_id, mcp_session):
-    """Resolve attachment ID to a download URL."""
+    """Resolve an attachment ID to a signed download URL.
+
+    Guards against: get_attachment_url returning an error string instead of
+    a URL, or returning an empty response when Outline generates a redirect.
+    """
     att_id = attachment_id
 
     async with mcp_session() as session:
@@ -61,7 +71,11 @@ async def test_get_attachment_url(attachment_id, mcp_session):
 
 
 async def test_fetch_attachment(attachment_id, mcp_session):
-    """Fetch attachment content as base64."""
+    """Download an attachment and verify the base64-encoded response fields.
+
+    Guards against: fetch_attachment omitting Content-Type or Content-Base64
+    headers, which would break AI image-processing workflows.
+    """
     att_id = attachment_id
 
     async with mcp_session() as session:

@@ -22,6 +22,7 @@ mcp-outline = "mcp_outline.server:main"
 test-unit = "mcp_outline._scripts:test_unit"
 test-integration = "mcp_outline._scripts:test_integration"
 test-e2e = "mcp_outline._scripts:test_e2e"
+generate-test-docs = "mcp_outline._generate_docs:generate_test_docs"
 
 [project.urls]
 "Homepage" = "https://github.com/Vortiago/mcp-outline"

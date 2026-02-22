@@ -1,4 +1,10 @@
-"""E2E tests for comments & collaboration tools."""
+"""E2E tests for comments and collaboration tools.
+
+Covers threaded comments (add, list, get) and document backlinks. The
+backlink test uses a brief sleep because Outline indexes links
+asynchronously after a document is created.
+
+"""
 
 import re
 
@@ -16,7 +22,11 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 
 async def test_add_and_list_comments(mcp_session):
-    """Add, list, and get comments on a document."""
+    """Add a comment, list comments on the doc, then fetch the comment by ID.
+
+    Guards against: add_comment returning success while the comment is
+    not visible in list_document_comments or get_comment.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Comments")
         doc_id = await _create_document(
@@ -53,7 +63,14 @@ async def test_add_and_list_comments(mcp_session):
 
 
 async def test_get_document_backlinks(mcp_session):
-    """Verify backlinks between two linked documents."""
+    """Create two docs where B links to A, then verify A reports B as backlink.
+
+    Outline indexes backlinks asynchronously, so the assertion allows for
+    "No documents link" as an acceptable response if indexing hasn't caught
+    up within the sleep window.
+    Guards against: get_document_backlinks raising an error when no backlinks
+    have been indexed yet, rather than returning an empty result gracefully.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Backlinks")
         target_id = await _create_document(

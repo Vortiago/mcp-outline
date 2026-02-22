@@ -1,8 +1,9 @@
-"""
-Integration tests for health check endpoints.
+"""Integration tests for health check endpoints.
 
-Tests /health (liveness) and /ready (readiness) endpoints by starting
-the server as a subprocess in streamable-http mode.
+Tests the ``/health`` (liveness) and ``/ready`` (readiness) HTTP endpoints
+by starting the MCP server as a subprocess in ``streamable-http`` mode and
+polling until it binds to its port.
+
 """
 
 import os
@@ -52,7 +53,11 @@ def _start_server() -> subprocess.Popen:
 
 @pytest.mark.integration
 def test_health_liveness():
-    """GET /health returns 200 with {status: healthy}."""
+    """Start the server and verify GET /health returns 200 with status=healthy.
+
+    Guards against: the liveness endpoint being broken during refactors of the
+    server startup sequence, or the JSON response shape changing.
+    """
     process = _start_server()
     try:
         ready = _wait_for_server(HEALTH_BASE, STARTUP_TIMEOUT)
@@ -76,7 +81,12 @@ def test_health_liveness():
 
 @pytest.mark.integration
 def test_health_readiness_not_ready():
-    """GET /ready returns 503 when API key is invalid/unreachable."""
+    """Verify GET /ready returns 503 when the Outline API key is invalid.
+
+    Guards against: the readiness probe returning 200 even when the server
+    cannot reach the Outline API, which would cause false-positive health
+    checks in container orchestration.
+    """
     process = _start_server()
     try:
         ready = _wait_for_server(HEALTH_BASE, STARTUP_TIMEOUT)

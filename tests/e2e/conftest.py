@@ -1,12 +1,21 @@
-"""
-E2E test fixtures for the MCP Outline server.
+"""E2E test fixtures for the MCP Outline server.
 
-Manages Docker Compose stack lifecycle and API key creation
-via OIDC/Dex authentication.
+Manages the Docker Compose stack lifecycle and Outline API
+key creation via OIDC/Dex authentication. All fixtures are
+session-scoped: the stack starts once, one API key is
+created, and one set of server parameters is shared across
+every test in the session.
 
 The E2E stack runs in an isolated Docker Compose project
-(mcp-outline-e2e) on separate ports (3031/5557) so it
-never conflicts with a developer's running instance.
+(``mcp-outline-e2e``) on separate ports (3031/5557) so it
+never conflicts with a developer's running Outline instance.
+
+Cookie isolation: ``_login_and_create_api_key`` uses manual
+cookie management via ``_parse_set_cookies`` instead of
+httpx's built-in cookie jar. Both Outline and Dex run on
+``localhost`` but on different ports; httpx would otherwise
+send Outline session cookies to Dex, causing authentication
+failures.
 """
 
 import html
@@ -75,11 +84,17 @@ def _parse_set_cookies(response):
 
 
 def _login_and_create_api_key():
-    """Authenticate via OIDC/Dex and create an API key.
+    """Authenticate via OIDC/Dex and return a new API key value.
 
-    Uses manual cookie management to prevent httpx's cookie
-    jar from leaking Outline cookies to Dex (both run on
-    localhost but on different ports).
+    Four-step flow:
+    1. GET ``/auth/oidc`` on Outline to start the OIDC redirect
+       and capture the initial session cookies.
+    2. Follow the redirect to Dex, handle optional connector
+       selection, parse the login form, and POST credentials.
+    3. Follow the callback URL back to Outline using the saved
+       cookies (manual management — see module docstring).
+    4. POST to ``apiKeys.create`` using the ``accessToken``
+       cookie as a Bearer token and return the key value.
     """
     # Step 1: Start OIDC flow on Outline
     resp = httpx.get(
@@ -172,7 +187,16 @@ def _login_and_create_api_key():
 
 @pytest.fixture(scope="session")
 def outline_stack():
-    """Ensure E2E Outline stack is running; manage lifecycle."""
+    """Ensure the E2E Outline stack is running and manage its lifecycle.
+
+    If Outline is already responding on port 3031 (e.g. a developer's
+    manually started stack), this fixture reuses it and does **not**
+    tear it down on exit. If it is not running, the fixture starts it
+    via ``docker compose up -d`` and tears it down with ``down -v``
+    after the session completes.
+
+    Yields the Outline base URL (``http://localhost:3031``).
+    """
     managed = False
 
     if not _outline_is_ready():
@@ -202,13 +226,26 @@ def outline_stack():
 
 @pytest.fixture(scope="session")
 def outline_api_key(outline_stack):
-    """Create an Outline API key via OIDC login."""
+    """Create one Outline API key for the entire test session.
+
+    Session-scoped so the OIDC login flow runs exactly once regardless
+    of how many tests are collected. Depends on ``outline_stack`` to
+    guarantee Outline is reachable before the login attempt.
+
+    Returns the raw API key string (``sk-...``).
+    """
     return _login_and_create_api_key()
 
 
 @pytest.fixture(scope="session")
 def mcp_server_params(outline_api_key):
-    """MCP server parameters with real credentials."""
+    """Build ``StdioServerParameters`` pointing at the local E2E stack.
+
+    Sets ``OUTLINE_API_URL`` to the localhost Outline instance so the
+    MCP server under test talks to the E2E stack, not the default cloud
+    API. The API key from ``outline_api_key`` is injected via the
+    ``OUTLINE_API_KEY`` environment variable.
+    """
     env = os.environ.copy()
     env["MCP_TRANSPORT"] = "stdio"
     env["OUTLINE_API_KEY"] = outline_api_key
@@ -222,7 +259,18 @@ def mcp_server_params(outline_api_key):
 
 @pytest.fixture(scope="session")
 def mcp_session(mcp_server_params):
-    """Factory returning async context manager sessions."""
+    """Return a factory that creates one ``ClientSession`` per test.
+
+    Each call to the returned factory starts a fresh stdio subprocess
+    and MCP handshake, then yields the initialised session. Using a
+    factory (rather than a single shared session) keeps tests isolated:
+    one test's tool calls cannot affect another's server state.
+
+    Usage::
+
+        async with mcp_session() as session:
+            result = await session.call_tool("some_tool", arguments={})
+    """
 
     @asynccontextmanager
     async def _create():

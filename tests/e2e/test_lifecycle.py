@@ -1,4 +1,9 @@
-"""E2E tests for document lifecycle & organization tools."""
+"""E2E tests for document lifecycle and organization tools.
+
+Covers the three main state transitions a document can undergo: archive/
+unarchive, delete/restore (via trash), and cross-collection move.
+
+"""
 
 import pytest
 
@@ -8,7 +13,12 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 
 async def test_archive_and_unarchive_document(mcp_session):
-    """Archive, verify in list, then unarchive a document."""
+    """Archive a document, confirm it's in the archived list, then unarchive.
+
+    Guards against: archive_document succeeding but the document not appearing
+    in list_archived_documents, or unarchive_document failing to restore
+    normal readability.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Archive Coll")
         doc_id = await _create_document(
@@ -46,7 +56,11 @@ async def test_archive_and_unarchive_document(mcp_session):
 
 
 async def test_delete_and_restore_document(mcp_session):
-    """Trash a doc, verify in trash, then restore."""
+    """Move a document to trash, confirm it's in list_trash, then restore.
+
+    Guards against: delete_document permanently deleting rather than moving to
+    trash, or restore_document failing to make the document readable again.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Trash Coll")
         doc_id = await _create_document(
@@ -82,7 +96,11 @@ async def test_delete_and_restore_document(mcp_session):
 
 
 async def test_move_document(mcp_session):
-    """Move a document between collections."""
+    """Move a document to a target collection and verify via structure.
+
+    Guards against: move_document reporting success while the document
+    remains in the original collection or disappears from both.
+    """
     async with mcp_session() as session:
         src_id = await _create_collection(session, "E2E Move Source")
         tgt_id = await _create_collection(session, "E2E Move Target")

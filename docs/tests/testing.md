@@ -1,5 +1,9 @@
-# Tests for MCP Outline
-"""Test suite for the MCP Outline server.
+# Testing
+
+> Auto-generated from `tests/__init__.py`.
+> Edit docstrings in the source file to update this document.
+
+Test suite for the MCP Outline server.
 
 Three layers of test coverage, each with a distinct scope:
 
@@ -55,4 +59,11 @@ independent and there is no shared mutable state between tests.
 **Search/index back-off**: full-text search and title lookup index
 asynchronously. E2E tests that depend on indexing use a retry loop with
 ``await anyio.sleep(1)`` between attempts rather than a fixed sleep.
-"""
+
+```mermaid
+flowchart LR
+    U["Unit tests\nuv run test-unit\nmock OutlineClient"]
+    I["Integration tests\nuv run test-integration\nsubprocess MCP server"]
+    E["E2E tests\nuv run test-e2e\nDocker Compose stack"]
+    U --> I --> E
+```

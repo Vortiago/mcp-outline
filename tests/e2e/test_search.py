@@ -1,4 +1,11 @@
-"""E2E tests for search & navigation tools."""
+"""E2E tests for search and navigation tools.
+
+Covers collection listing (including pagination), collection structure,
+title-based document lookup, markdown export, and full-text search.
+Search-based tests retry with back-off because Outline indexes documents
+asynchronously.
+
+"""
 
 import anyio
 import pytest
@@ -13,7 +20,11 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 
 async def test_list_collections(mcp_session):
-    """list_collections returns valid formatted output."""
+    """Confirm list_collections returns valid formatted output.
+
+    Guards against: list_collections raising an error on an empty workspace or
+    returning unformatted raw JSON instead of the expected markdown structure.
+    """
     async with mcp_session() as session:
         result = await session.call_tool("list_collections")
         text = _text(result)
@@ -21,7 +32,11 @@ async def test_list_collections(mcp_session):
 
 
 async def test_list_collections_pagination(mcp_session):
-    """Verify limit/offset parameters work."""
+    """Verify that limit and offset return different pages of results.
+
+    Guards against: pagination parameters being ignored, causing both pages
+    to return identical results.
+    """
     async with mcp_session() as session:
         for name in ("E2E Page A", "E2E Page B"):
             await _create_collection(session, name)
@@ -41,7 +56,11 @@ async def test_list_collections_pagination(mcp_session):
 
 
 async def test_get_collection_structure(mcp_session):
-    """Get document hierarchy within a collection."""
+    """Fetch the document hierarchy for a collection and verify a doc appears.
+
+    Guards against: get_collection_structure returning an empty tree or
+    raising an error when a collection contains at least one document.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Structure Coll")
         await _create_document(
@@ -58,7 +77,11 @@ async def test_get_collection_structure(mcp_session):
 
 
 async def test_get_document_id_from_title(mcp_session):
-    """Look up a document ID by its title."""
+    """Look up a document's ID by its exact title, retrying while indexing.
+
+    Guards against: get_document_id_from_title failing to find a document
+    that exists, or returning a different document's ID on a title match.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Title Lookup")
         doc_id = await _create_document(
@@ -81,7 +104,11 @@ async def test_get_document_id_from_title(mcp_session):
 
 
 async def test_export_document(mcp_session):
-    """Export a document as markdown."""
+    """Export a document and verify its body content is present in the output.
+
+    Guards against: export_document returning a success message or header
+    only, without including the actual document content.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Export Doc")
         doc_id = await _create_document(
@@ -99,7 +126,13 @@ async def test_export_document(mcp_session):
 
 
 async def test_search_documents(mcp_session):
-    """Create a document and find it via search."""
+    """Create a doc with a unique token and find it via search_documents.
+
+    Uses a retry loop because Outline's full-text index is updated
+    asynchronously after document creation.
+    Guards against: search_documents returning no results immediately after
+    creation and not retrying, or returning the wrong document.
+    """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Search Collection")
 

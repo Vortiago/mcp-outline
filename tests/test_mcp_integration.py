@@ -1,8 +1,9 @@
-"""
-Integration tests for MCP server functionality.
+"""Integration tests for MCP server functionality.
 
-Tests that start the actual MCP server and verify it works through the
-MCP protocol.
+Starts the actual MCP server as a subprocess and verifies behaviour at the
+MCP protocol level — tool registration, read-only mode enforcement, and the
+initial handshake.
+
 """
 
 import os
@@ -16,14 +17,12 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 @pytest.mark.integration
 @pytest.mark.anyio
 async def test_mcp_server_integration():
-    """
-    Integration test: Start MCP server and verify basic functionality.
+    """Start the MCP server via stdio and verify the handshake and tool list.
 
-    This test validates:
-    - Server starts without errors
-    - MCP protocol handshake succeeds
-    - Stdio transport works
-    - Multiple tools are registered and discoverable
+    Validates that the server starts cleanly, completes the MCP protocol
+    handshake, and exposes multiple tools with the expected structure.
+    Guards against: startup crashes, protocol version mismatches, or the
+    server registering zero tools due to a broken registration chain.
     """
     # Set environment for stdio mode
     env = os.environ.copy()
@@ -58,11 +57,12 @@ async def test_mcp_server_integration():
 @pytest.mark.integration
 @pytest.mark.anyio
 async def test_read_only_mode_tool_list():
-    """
-    Verify that OUTLINE_READ_ONLY=true omits write tools from MCP protocol.
+    """Verify OUTLINE_READ_ONLY=true omits write tools at the MCP level.
 
-    This tests the actual MCP protocol response, not just Python-level
-    registration.
+    Tests the actual MCP list_tools response, not just Python-level
+    registration, to catch cases where tools are registered but should not be.
+    Guards against: read-only flag being ignored so write tools remain
+    accessible to clients even when the server is configured as read-only.
     """
     env = os.environ.copy()
     env["MCP_TRANSPORT"] = "stdio"

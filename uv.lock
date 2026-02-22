@@ -525,7 +525,7 @@ cli = [
 
 [[package]]
 name = "mcp-outline"
-version = "1.4.1.dev17"
+version = "1.4.1.dev20"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
