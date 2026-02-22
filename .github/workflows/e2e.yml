@@ -30,18 +30,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Prepare Outline config
-        run: |
-          cp config/outline.env.example tests/e2e/outline.env
-          SECRET1=$(openssl rand -hex 32)
-          SECRET2=$(openssl rand -hex 32)
-          sed -i "0,/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/s/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/$SECRET1/" tests/e2e/outline.env
-          sed -i "0,/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/s/REPLACE_WITH_openssl_rand_hex_32_OUTPUT/$SECRET2/" tests/e2e/outline.env
-          sed -i 's|URL=http://localhost:3030|URL=http://localhost:3031|' tests/e2e/outline.env
-          sed -i 's|OIDC_AUTH_URI=http://localhost:5556/dex/auth|OIDC_AUTH_URI=http://localhost:5557/dex/auth|' tests/e2e/outline.env
-
       - name: Start Outline stack
         run: docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d outline
+        env:
+          DEX_HOST_PORT: "5557"
+          OUTLINE_HOST_PORT: "3031"
 
       - name: Wait for Outline
         run: |

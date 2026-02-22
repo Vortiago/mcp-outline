@@ -12,7 +12,6 @@ never conflicts with a developer's running instance.
 import html
 import os
 import re
-import secrets
 import subprocess
 import time
 from contextlib import asynccontextmanager
@@ -30,7 +29,6 @@ from mcp.client.stdio import (
 from .helpers import OUTLINE_URL
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-E2E_DIR = Path(__file__).resolve().parent
 E2E_PROJECT = "mcp-outline-e2e"
 
 # Base compose command for the E2E stack
@@ -53,37 +51,6 @@ def _outline_is_ready():
         return resp.status_code < 500
     except httpx.RequestError:
         return False
-
-
-def _ensure_e2e_env_file():
-    """Generate tests/e2e/outline.env for the E2E stack."""
-    env_path = E2E_DIR / "outline.env"
-    if env_path.exists():
-        return env_path
-
-    example = PROJECT_ROOT / "config" / "outline.env.example"
-    content = example.read_text()
-
-    # Replace placeholder secrets
-    for _ in range(2):
-        content = content.replace(
-            "REPLACE_WITH_openssl_rand_hex_32_OUTPUT",
-            secrets.token_hex(32),
-            1,
-        )
-
-    # Override ports for E2E isolation
-    content = content.replace(
-        "URL=http://localhost:3030",
-        "URL=http://localhost:3031",
-    )
-    content = content.replace(
-        "OIDC_AUTH_URI=http://localhost:5556/dex/auth",
-        "OIDC_AUTH_URI=http://localhost:5557/dex/auth",
-    )
-
-    env_path.write_text(content)
-    return env_path
 
 
 def _wait_for_outline(timeout_s=300):
@@ -208,10 +175,15 @@ def outline_stack():
     managed = False
 
     if not _outline_is_ready():
-        _ensure_e2e_env_file()
+        compose_env = {
+            **os.environ,
+            "DEX_HOST_PORT": "5557",
+            "OUTLINE_HOST_PORT": "3031",
+        }
         subprocess.run(
             [*_COMPOSE_CMD, "up", "-d", "outline"],
             cwd=str(PROJECT_ROOT),
+            env=compose_env,
             check=True,
         )
         managed = True

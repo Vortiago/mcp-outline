@@ -16,7 +16,7 @@ services:
   dex:
     image: ghcr.io/dexidp/dex:v2.44.0-alpine
     ports:
-      - 5556:5556
+      - "${DEX_HOST_PORT:-5556}:5556"
     volumes:
       - ./config/dex-config.yaml:/etc/dex/config.docker.yaml:ro
     networks:
@@ -60,7 +60,7 @@ services:
     image: docker.getoutline.com/outlinewiki/outline:1.5.0
     env_file: ./config/outline.env
     ports:
-      - 3030:3030
+      - "${OUTLINE_HOST_PORT:-3030}:3030"
     volumes:
       - outline-data:/var/lib/outline/data
     depends_on:
