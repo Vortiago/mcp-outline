@@ -13,6 +13,7 @@ import html
 import os
 import re
 import subprocess
+import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -213,7 +214,7 @@ def mcp_server_params(outline_api_key):
     env["OUTLINE_API_KEY"] = outline_api_key
     env["OUTLINE_API_URL"] = f"{OUTLINE_URL}/api"
     return StdioServerParameters(
-        command="python",
+        command=sys.executable,
         args=["-m", "mcp_outline"],
         env=env,
     )

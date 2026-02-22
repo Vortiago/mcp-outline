@@ -355,14 +355,17 @@ docker compose up -d
 ```bash
 git clone https://github.com/Vortiago/mcp-outline.git
 cd mcp-outline
-uv pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
 ### Testing
 
 ```bash
-# Run tests
-uv run pytest tests/
+# Run unit tests
+uv run test-unit
+
+# Run integration tests (starts real MCP server via stdio)
+uv run test-integration
 
 # Format code
 uv run ruff format .
@@ -376,24 +379,25 @@ uv run ruff check .
 
 ### E2E Tests
 
-E2E tests run against a real Outline instance via Docker Compose:
+E2E tests run against a real Outline instance via Docker Compose. The fixtures
+manage the stack lifecycle automatically — just run:
 
 ```bash
-# Start the stack (or let the fixture handle it)
-docker compose up -d outline
-
-# Run E2E tests
-uv run pytest tests/e2e/ -v -m e2e
-
-# Tear down
-docker compose down -v
+uv run test-e2e
 ```
 
 The test fixtures automatically:
-- Create `config/outline.env` from the example if missing
-- Start Docker Compose if Outline isn't already running
+- Start the isolated Docker Compose stack (`mcp-outline-e2e` project, ports 3031/5557)
 - Authenticate via OIDC/Dex to create an API key
 - Spawn the MCP server via stdio for each test
+- Tear down the stack on exit
+
+To start the E2E stack manually (e.g. for debugging):
+```bash
+cp config/outline.env.example config/outline.env
+DEX_HOST_PORT=5557 OUTLINE_HOST_PORT=3031 \
+  docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d outline
+```
 
 See `.github/workflows/e2e.yml` for CI configuration.
 
