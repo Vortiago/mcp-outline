@@ -19,17 +19,14 @@ dependencies = [
 
 [project.scripts]
 mcp-outline = "mcp_outline.server:main"
-test-unit = "mcp_outline._scripts:test_unit"
-test-integration = "mcp_outline._scripts:test_integration"
-test-e2e = "mcp_outline._scripts:test_e2e"
-generate-test-docs = "mcp_outline._generate_docs:generate_test_docs"
 
 [project.urls]
 "Homepage" = "https://github.com/Vortiago/mcp-outline"
 "Bug Tracker" = "https://github.com/Vortiago/mcp-outline/issues"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "poethepoet>=0.32.0",
     "mcp[cli]>=1.20.0",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.2.0",
@@ -40,6 +37,12 @@ dev = [
     "trio>=0.31.0",
     "pre-commit>=4.0.0",
 ]
+
+[tool.poe.tasks]
+test-unit = "pytest tests/ -v --cov=src/mcp_outline"
+test-integration = "pytest tests/ -v -m integration"
+test-e2e = "pytest tests/e2e/ -v -m e2e"
+generate-test-docs = { script = "mcp_outline._generate_docs:generate_test_docs" }
 
 [tool.setuptools]
 package-dir = {"" = "src"}

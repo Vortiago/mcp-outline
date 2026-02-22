@@ -277,7 +277,7 @@ async def test_tool():
 Run against a real Outline instance via Docker Compose:
 
 ```bash
-uv run test-e2e
+uv run poe test-e2e
 ```
 
 - **Marker**: `@pytest.mark.e2e` — excluded from normal `pytest` runs
@@ -356,13 +356,13 @@ uv run ruff check .
 uv run pyright src/
 
 # Run tests
-uv run test-unit
+uv run poe test-unit
 
 # Run integration tests
-uv run test-integration
+uv run poe test-integration
 
 # Run E2E tests (requires Docker)
-uv run test-e2e
+uv run poe test-e2e
 ```
 
 ## Common Patterns

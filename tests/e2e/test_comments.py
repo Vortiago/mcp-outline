@@ -12,6 +12,7 @@ import anyio
 import pytest
 
 from .helpers import (
+    OUTLINE_URL,
     _create_collection,
     _create_document,
     _extract_id,
@@ -65,11 +66,9 @@ async def test_add_and_list_comments(mcp_session):
 async def test_get_document_backlinks(mcp_session):
     """Create two docs where B links to A, then verify A reports B as backlink.
 
-    Outline indexes backlinks asynchronously, so the assertion allows for
-    "No documents link" as an acceptable response if indexing hasn't caught
-    up within the sleep window.
-    Guards against: get_document_backlinks raising an error when no backlinks
-    have been indexed yet, rather than returning an empty result gracefully.
+    Uses a retry loop because Outline indexes backlinks asynchronously.
+    Guards against: get_document_backlinks never returning the backlink
+    even after the index has had time to catch up.
     """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Backlinks")
@@ -82,8 +81,10 @@ async def test_get_document_backlinks(mcp_session):
             "read_document",
             arguments={"document_id": target_id},
         )
-        url_m = re.search(r"URL:\s*(http\S+)", _text(result))
+        url_m = re.search(r"URL:\s*(\S+)", _text(result))
         doc_url = url_m.group(1) if url_m else ""
+        if doc_url and not doc_url.startswith("http"):
+            doc_url = f"{OUTLINE_URL}{doc_url}"
 
         # Create a doc that links to the target
         await _create_document(
@@ -93,12 +94,15 @@ async def test_get_document_backlinks(mcp_session):
             f"Link to [target]({doc_url})",
         )
 
-        await anyio.sleep(2)
+        for _ in range(10):
+            result = await session.call_tool(
+                "get_document_backlinks",
+                arguments={"document_id": target_id},
+            )
+            if "Backlink Source" in _text(result):
+                break
+            await anyio.sleep(1)
+        else:
+            pytest.fail("Backlink not indexed after retries")
 
-        result = await session.call_tool(
-            "get_document_backlinks",
-            arguments={"document_id": target_id},
-        )
-        text = _text(result)
-        # Backlinks may need time to index
-        assert "Backlink Source" in text or "No documents link" in text
+        assert "Backlink Source" in _text(result)

@@ -33,7 +33,7 @@ repos:
 
       - id: generate-test-docs
         name: Generate test docs
-        entry: uv run generate-test-docs
+        entry: uv run poe generate-test-docs
         language: system
         files: ^tests/.*\.(py|mmd)$
         pass_filenames: false

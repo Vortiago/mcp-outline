@@ -1,16 +1,15 @@
-# Tests for MCP Outline
 """Test suite for the MCP Outline server.
 
 Three layers of test coverage, each with a distinct scope:
 
-- **Unit tests** (``uv run test-unit``): Mock ``OutlineClient`` entirely.
+- **Unit tests** (``uv run poe test-unit``): Mock ``OutlineClient`` entirely.
   Fast, no network, no subprocess. Cover every tool function, client method,
   formatter, and error path.
-- **Integration tests** (``uv run test-integration``): Start the MCP server
+- **Integration tests** (``uv run poe test-integration``): Start the MCP server
   as a subprocess and communicate via stdio or streamable-http. Verify the
   MCP protocol handshake, tool registration, read-only mode enforcement, and
   HTTP health endpoints.
-- **E2E tests** (``uv run test-e2e``): Spin up a full Outline + Dex stack
+- **E2E tests** (``uv run poe test-e2e``): Spin up a full Outline + Dex stack
   via Docker Compose and run every MCP tool against a live API. Marked
   ``@pytest.mark.e2e`` and excluded from normal ``pytest`` runs.
 

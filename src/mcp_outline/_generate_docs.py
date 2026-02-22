@@ -168,7 +168,9 @@ def generate_test_docs() -> None:
         generated.append(out)
 
     # E2E companions (conftest, helpers) → docs/tests/e2e/<stem>.md
-    _companion_filter = lambda n: not n.name.startswith("__")  # noqa: E731
+    def _companion_filter(n: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        return not n.name.startswith("__")
+
     for src in _E2E_COMPANIONS:
         out = _DOCS_ROOT / "e2e" / f"{src.stem}.md"
         _generate_file_doc(src, out, func_filter=_companion_filter)

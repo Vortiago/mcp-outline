@@ -362,10 +362,10 @@ uv sync --extra dev
 
 ```bash
 # Run unit tests
-uv run test-unit
+uv run poe test-unit
 
 # Run integration tests (starts real MCP server via stdio)
-uv run test-integration
+uv run poe test-integration
 
 # Format code
 uv run ruff format .
@@ -383,7 +383,7 @@ E2E tests run against a real Outline instance via Docker Compose. The fixtures
 manage the stack lifecycle automatically — just run:
 
 ```bash
-uv run test-e2e
+uv run poe test-e2e
 ```
 
 The test fixtures automatically:

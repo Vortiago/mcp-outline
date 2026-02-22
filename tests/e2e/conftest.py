@@ -63,7 +63,7 @@ def _outline_is_ready():
         return False
 
 
-def _wait_for_outline(timeout_s=300):
+def _wait_for_outline(timeout_s=120):
     """Poll until Outline responds or timeout."""
     deadline = time.time() + timeout_s
     while time.time() < deadline:

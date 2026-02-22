@@ -36,8 +36,6 @@ not visible in list_document_comments or get_comment.
 
 Create two docs where B links to A, then verify A reports B as backlink.
 
-Outline indexes backlinks asynchronously, so the assertion allows for
-"No documents link" as an acceptable response if indexing hasn't caught
-up within the sleep window.
-Guards against: get_document_backlinks raising an error when no backlinks
-have been indexed yet, rather than returning an empty result gracefully.
+Uses a retry loop because Outline indexes backlinks asynchronously.
+Guards against: get_document_backlinks never returning the backlink
+even after the index has had time to catch up.

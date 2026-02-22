@@ -30,8 +30,6 @@ async def test_list_document_attachments(attachment_id, mcp_session):
     Guards against: list_document_attachments failing to parse attachment
     references embedded in document markdown content.
     """
-    att_id = attachment_id
-
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Attach List")
         # Create doc whose text references the real attachment
@@ -39,7 +37,7 @@ async def test_list_document_attachments(attachment_id, mcp_session):
             session,
             coll_id,
             "Attachment List Doc",
-            f"See [file](/api/attachments.redirect?id={att_id})",
+            f"See [file](/api/attachments.redirect?id={attachment_id})",
         )
 
         result = await session.call_tool(
@@ -47,7 +45,7 @@ async def test_list_document_attachments(attachment_id, mcp_session):
             arguments={"document_id": doc_id},
         )
         text = _text(result)
-        assert att_id in text
+        assert attachment_id in text
         assert "1." in text  # at least one attachment listed
 
 
@@ -57,12 +55,10 @@ async def test_get_attachment_url(attachment_id, mcp_session):
     Guards against: get_attachment_url returning an error string instead of
     a URL, or returning an empty response when Outline generates a redirect.
     """
-    att_id = attachment_id
-
     async with mcp_session() as session:
         result = await session.call_tool(
             "get_attachment_url",
-            arguments={"attachment_id": att_id},
+            arguments={"attachment_id": attachment_id},
         )
         text = _text(result)
         # Should return a URL, not an error
@@ -76,12 +72,10 @@ async def test_fetch_attachment(attachment_id, mcp_session):
     Guards against: fetch_attachment omitting Content-Type or Content-Base64
     headers, which would break AI image-processing workflows.
     """
-    att_id = attachment_id
-
     async with mcp_session() as session:
         result = await session.call_tool(
             "fetch_attachment",
-            arguments={"attachment_id": att_id},
+            arguments={"attachment_id": attachment_id},
         )
         text = _text(result)
         assert "Content-Type:" in text
