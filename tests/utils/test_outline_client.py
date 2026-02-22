@@ -346,6 +346,7 @@ class TestOutlineClient:
         OutlineClient._client_pool = None  # force real pool creation
         client = OutlineClient()
 
+        assert client._client_pool is not None
         timeout = client._client_pool._timeout
         assert timeout.write == 60.0
 
@@ -357,6 +358,7 @@ class TestOutlineClient:
         OutlineClient._client_pool = None  # force real pool creation
         client = OutlineClient()
 
+        assert client._client_pool is not None
         timeout = client._client_pool._timeout
         assert timeout.write == 30.0
 
@@ -513,7 +515,7 @@ class TestOutlineClient:
             "post",
             new=AsyncMock(return_value=mock_response),
         ):
-            content, content_type = await client.fetch_attachment_content(
+            _, content_type = await client.fetch_attachment_content(
                 "6fe06f93-e331-408d-b954-6bb4ed50e67d"
             )
 

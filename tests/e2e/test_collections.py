@@ -2,9 +2,28 @@
 
 import pytest
 
-from .helpers import _create_collection, _create_document, _text
+from .helpers import _create_collection, _create_document, _extract_id, _text
 
 pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
+
+
+async def test_create_collection_direct(mcp_session):
+    """Create a collection directly and verify it appears in the list."""
+    async with mcp_session() as session:
+        result = await session.call_tool(
+            "create_collection",
+            arguments={
+                "name": "E2E Direct Collection",
+                "description": "Direct.",
+            },
+        )
+        text = _text(result)
+        assert "created successfully" in text
+        coll_id = _extract_id(text)
+
+        # Verify it's visible in the list
+        result = await session.call_tool("list_collections")
+        assert coll_id in _text(result)
 
 
 async def test_update_collection(mcp_session):

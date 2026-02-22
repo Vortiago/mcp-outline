@@ -70,6 +70,60 @@ async def test_create_template_document(mcp_session):
         assert "created successfully" in _text(result)
 
 
+async def test_create_nested_document(mcp_session):
+    """Create a child document under a parent document."""
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Nesting")
+        parent_id = await _create_document(
+            session, coll_id, "Parent Doc", "Parent."
+        )
+
+        result = await session.call_tool(
+            "create_document",
+            arguments={
+                "title": "Child Doc",
+                "text": "Child content.",
+                "collection_id": coll_id,
+                "parent_document_id": parent_id,
+            },
+        )
+        assert "created successfully" in _text(result)
+
+        result = await session.call_tool(
+            "get_collection_structure",
+            arguments={"collection_id": coll_id},
+        )
+        text = _text(result)
+        assert "Parent Doc" in text
+        assert "Child Doc" in text
+
+
+async def test_create_draft_document(mcp_session):
+    """Create a draft document and verify it's readable."""
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Draft Coll")
+
+        result = await session.call_tool(
+            "create_document",
+            arguments={
+                "title": "Draft Doc",
+                "text": "Draft content.",
+                "collection_id": coll_id,
+                "publish": False,
+            },
+        )
+        text = _text(result)
+        assert "created successfully" in text
+        doc_id = _extract_id(text)
+
+        # Draft is readable by creator
+        result = await session.call_tool(
+            "read_document",
+            arguments={"document_id": doc_id},
+        )
+        assert "Draft Doc" in _text(result)
+
+
 async def test_update_document(mcp_session):
     """Update a document's title and text."""
     async with mcp_session() as session:
