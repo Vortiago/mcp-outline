@@ -1,5 +1,7 @@
+```mermaid
 flowchart LR
     U["Unit tests\nuv run poe test-unit\nmock OutlineClient"]
     I["Integration tests\nuv run poe test-integration\nsubprocess MCP server"]
     E["E2E tests\nuv run poe test-e2e\nDocker Compose stack"]
     U --> I --> E
+```

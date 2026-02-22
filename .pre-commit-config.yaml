@@ -31,13 +31,6 @@ repos:
         types: [python]
         pass_filenames: false
 
-      - id: generate-test-docs
-        name: Generate test docs
-        entry: uv run poe generate-test-docs
-        language: system
-        files: ^tests/.*\.(py|mmd)$
-        pass_filenames: false
-
   # General pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

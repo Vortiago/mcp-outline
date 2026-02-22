@@ -1,4 +1,6 @@
+```mermaid
 flowchart TD
     A["POST attachments.create\nname, contentType, size"] --> B["presigned uploadUrl\n+ form fields"]
     B --> C["POST to uploadUrl\nmultipart file upload"]
     C --> D["return attachment id"]
+```

@@ -1,6 +1,8 @@
+```mermaid
 flowchart TD
     S1[subprocess\nstdio mode] --> I1[initialize handshake]
     I1 --> LT1[list_tools\nassert read+write tools present]
 
     S2[subprocess\nOUTLINE_READ_ONLY=true] --> I2[initialize handshake]
     I2 --> LT2[list_tools\nassert write tools absent\nassert read tools present]
+```

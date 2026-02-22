@@ -42,7 +42,6 @@ dev = [
 test-unit = "pytest tests/ -v --cov=src/mcp_outline"
 test-integration = "pytest tests/ -v -m integration"
 test-e2e = "pytest tests/e2e/ -v -m e2e"
-generate-test-docs = { script = "mcp_outline._generate_docs:generate_test_docs" }
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
     CC[create_collection] --> CD[create_document]
     CD --> RD[read_document]
@@ -8,3 +9,4 @@ flowchart TD
     CC3[create_collection] --> T[create_document\ntemplate=True]
     CC4[create_collection] --> U[create_document\nupdate_document]
     U --> RU[read_document\nverify changes]
+```

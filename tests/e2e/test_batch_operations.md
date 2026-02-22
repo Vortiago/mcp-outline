@@ -1,5 +1,7 @@
+```mermaid
 flowchart LR
     BC[batch_create_documents] --> BU[batch_update_documents]
     BU --> BM[batch_move_documents]
     BM --> BA[batch_archive_documents]
     BA --> BD[batch_delete_documents]
+```
