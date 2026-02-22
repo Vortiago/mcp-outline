@@ -50,12 +50,15 @@ class TestOutlineClient:
 
     @pytest.fixture(autouse=True)
     def _cleanup_client_pool(self):
-        """Reset the shared client pool to a mock after each test.
+        """Ensure no real httpx.AsyncClient is created by default.
 
-        Avoids recreating a real httpx.AsyncClient (which loads SSL
-        context, ~0.8s) on every test. Tests that need to inspect the
-        real pool create their own and must reset it themselves.
+        Sets a MagicMock before and after each test. Avoids the ~0.8s
+        SSL context load that httpx.AsyncClient.__init__ triggers.
+        Tests that patch httpx.AsyncClient directly manage the pool
+        themselves.
         """
+        if OutlineClient._client_pool is None:
+            OutlineClient._client_pool = MagicMock()
         yield
         OutlineClient._client_pool = MagicMock()
 
@@ -327,40 +330,43 @@ class TestOutlineClient:
 
     @pytest.mark.asyncio
     async def test_session_configured_with_retry(self):
-        """Test that client pool is configured with httpx AsyncClient."""
-        OutlineClient._client_pool = None  # force real pool creation
-        client = OutlineClient()
-
-        # Verify client pool is an httpx.AsyncClient
-        assert isinstance(client._client_pool, httpx.AsyncClient)
-
-        # Verify transport exists
-        transport = client._client_pool._transport
-        assert transport is not None
+        """Test that client pool is created as httpx.AsyncClient."""
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            mock_client_cls.assert_called_once()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert "limits" in kwargs
+            assert "timeout" in kwargs
+            assert "follow_redirects" in kwargs
 
     @pytest.mark.asyncio
     async def test_write_timeout_configurable(self):
         """Test write timeout is configurable via env var."""
         os.environ["OUTLINE_WRITE_TIMEOUT"] = "60.0"
 
-        OutlineClient._client_pool = None  # force real pool creation
-        client = OutlineClient()
-
-        assert client._client_pool is not None
-        timeout = client._client_pool._timeout
-        assert timeout.write == 60.0
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["timeout"].write == 60.0
 
     @pytest.mark.asyncio
     async def test_write_timeout_default(self):
         """Test write timeout defaults to 30.0 seconds."""
         os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
 
-        OutlineClient._client_pool = None  # force real pool creation
-        client = OutlineClient()
-
-        assert client._client_pool is not None
-        timeout = client._client_pool._timeout
-        assert timeout.write == 30.0
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["timeout"].write == 30.0
 
     @pytest.mark.asyncio
     async def test_api_url_normalization(self):
