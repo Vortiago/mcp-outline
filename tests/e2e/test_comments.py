@@ -1,0 +1,108 @@
+"""E2E tests for comments and collaboration tools.
+
+Covers threaded comments (add, list, get) and document backlinks. The
+backlink test uses a brief sleep because Outline indexes links
+asynchronously after a document is created.
+
+"""
+
+import re
+
+import anyio
+import pytest
+
+from .helpers import (
+    OUTLINE_URL,
+    _create_collection,
+    _create_document,
+    _extract_id,
+    _text,
+)
+
+pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
+
+
+async def test_add_and_list_comments(mcp_session):
+    """Add a comment, list comments on the doc, then fetch the comment by ID.
+
+    Guards against: add_comment returning success while the comment is
+    not visible in list_document_comments or get_comment.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Comments")
+        doc_id = await _create_document(
+            session, coll_id, "Comment Test Doc", "For comments."
+        )
+
+        # add_comment
+        result = await session.call_tool(
+            "add_comment",
+            arguments={
+                "document_id": doc_id,
+                "text": "E2E test comment.",
+            },
+        )
+        text = _text(result)
+        assert "added successfully" in text
+        comment_id = _extract_id(text)
+
+        # list_document_comments
+        result = await session.call_tool(
+            "list_document_comments",
+            arguments={"document_id": doc_id},
+        )
+        text = _text(result)
+        assert "# Document Comments" in text
+        assert comment_id in text
+
+        # get_comment
+        result = await session.call_tool(
+            "get_comment",
+            arguments={"comment_id": comment_id},
+        )
+        assert "# Comment by" in _text(result)
+
+
+async def test_get_document_backlinks(mcp_session):
+    """Create two docs where B links to A, then verify A reports B as backlink.
+
+    Uses a retry loop because Outline indexes backlinks asynchronously.
+    Guards against: get_document_backlinks never returning the backlink
+    even after the index has had time to catch up.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Backlinks")
+        target_id = await _create_document(
+            session, coll_id, "Backlink Target", "I am target."
+        )
+
+        # Read target to get its URL for linking
+        result = await session.call_tool(
+            "read_document",
+            arguments={"document_id": target_id},
+        )
+        url_m = re.search(r"URL:\s*(\S+)", _text(result))
+        doc_url = url_m.group(1) if url_m else ""
+        if doc_url and not doc_url.startswith("http"):
+            doc_url = f"{OUTLINE_URL}{doc_url}"
+
+        # Create a doc that links to the target
+        await _create_document(
+            session,
+            coll_id,
+            "Backlink Source",
+            f"Link to [target]({doc_url})",
+        )
+
+        for _ in range(10):
+            result = await session.call_tool(
+                "get_document_backlinks",
+                arguments={"document_id": target_id},
+            )
+            if "Backlink Source" in _text(result):
+                break
+            await anyio.sleep(1)
+        else:
+            pytest.fail("Backlink not indexed after retries")
+
+        assert "Backlink Source" in _text(result)

@@ -1,0 +1,12 @@
+```mermaid
+flowchart TD
+    CC[create_collection] --> CD[create_document]
+    CD --> RD[read_document]
+    CD2[create_document\npublish=False] --> RD2[read_document\ndraft path]
+    CC2[create_collection] --> P[create_document\nparent]
+    P --> CH[create_document\nparent_document_id=P]
+    CH --> GCS[get_collection_structure]
+    CC3[create_collection] --> T[create_document\ntemplate=True]
+    CC4[create_collection] --> U[create_document\nupdate_document]
+    U --> RU[read_document\nverify changes]
+```

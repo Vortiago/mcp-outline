@@ -1,0 +1,9 @@
+```mermaid
+stateDiagram-v2
+    [*] --> Published: create_document
+    Published --> Archived: archive_document
+    Archived --> Published: unarchive_document
+    Published --> Trash: delete_document
+    Trash --> Published: restore_document
+    Published --> Moved: move_document
+```

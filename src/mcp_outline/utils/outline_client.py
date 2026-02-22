@@ -434,13 +434,16 @@ class OutlineClient:
         """
         Unarchive a document by ID.
 
+        Uses the ``documents.restore`` endpoint, which handles
+        both archived and deleted documents.
+
         Args:
             document_id: The document ID to unarchive.
 
         Returns:
             The unarchived document data.
         """
-        response = await self.post("documents.unarchive", {"id": document_id})
+        response = await self.post("documents.restore", {"id": document_id})
         return response.get("data", {})
 
     async def list_trash(self, limit: int = 25) -> List[Dict[str, Any]]:
@@ -453,9 +456,7 @@ class OutlineClient:
         Returns:
             List of documents in trash
         """
-        response = await self.post(
-            "documents.list", {"limit": limit, "deleted": True}
-        )
+        response = await self.post("documents.deleted", {"limit": limit})
         return response.get("data", [])
 
     async def restore_document(self, document_id: str) -> Dict[str, Any]:

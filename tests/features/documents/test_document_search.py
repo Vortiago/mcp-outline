@@ -254,6 +254,40 @@ class TestDocumentSearchTools:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_collections_forwards_limit_and_offset(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test limit and offset parameters are forwarded to client."""
+        mock_client = AsyncMock()
+        mock_client.list_collections.return_value = SAMPLE_COLLECTIONS
+        mock_get_client.return_value = mock_client
+
+        await register_search_tools.tools["list_collections"](
+            limit=50, offset=10
+        )
+
+        mock_client.list_collections.assert_called_once_with(
+            limit=50, offset=10
+        )
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_collections_uses_default_limit_and_offset(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test default limit=100 and offset=0 are used when not specified."""
+        mock_client = AsyncMock()
+        mock_client.list_collections.return_value = SAMPLE_COLLECTIONS
+        mock_get_client.return_value = mock_client
+
+        await register_search_tools.tools["list_collections"]()
+
+        mock_client.list_collections.assert_called_once_with(
+            limit=100, offset=0
+        )
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
     async def test_get_collection_structure_success(
         self, mock_get_client, register_search_tools
     ):

@@ -24,8 +24,9 @@ mcp-outline = "mcp_outline.server:main"
 "Homepage" = "https://github.com/Vortiago/mcp-outline"
 "Bug Tracker" = "https://github.com/Vortiago/mcp-outline/issues"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "poethepoet>=0.32.0",
     "mcp[cli]>=1.20.0",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.2.0",
@@ -37,6 +38,11 @@ dev = [
     "pre-commit>=4.0.0",
 ]
 
+[tool.poe.tasks]
+test-unit = "pytest tests/ -v --cov=src/mcp_outline"
+test-integration = "pytest tests/ -v -m integration"
+test-e2e = "pytest tests/e2e/ -v -m e2e"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
@@ -44,8 +50,10 @@ package-dir = {"" = "src"}
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
+addopts = "-m 'not e2e and not integration'"
 markers = [
     "integration: Integration tests that start the MCP server",
+    "e2e: End-to-end tests requiring docker-compose stack",
 ]
 
 [tool.ruff]

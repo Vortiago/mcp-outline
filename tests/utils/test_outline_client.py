@@ -2,7 +2,6 @@
 Tests for the Outline API client.
 """
 
-import asyncio
 import os
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -26,6 +25,7 @@ class TestOutlineClient:
         self.original_api_key = os.environ.get("OUTLINE_API_KEY")
         self.original_api_url = os.environ.get("OUTLINE_API_URL")
         self.original_write_timeout = os.environ.get("OUTLINE_WRITE_TIMEOUT")
+        self.original_verify_ssl = os.environ.get("OUTLINE_VERIFY_SSL")
 
         # Set test environment variables
         os.environ["OUTLINE_API_KEY"] = MOCK_API_KEY
@@ -49,37 +49,24 @@ class TestOutlineClient:
         else:
             os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
 
+        if self.original_verify_ssl is not None:
+            os.environ["OUTLINE_VERIFY_SSL"] = self.original_verify_ssl
+        else:
+            os.environ.pop("OUTLINE_VERIFY_SSL", None)
+
     @pytest.fixture(autouse=True)
     def _cleanup_client_pool(self):
-        """Ensure the shared httpx client pool is closed after each test.
+        """Ensure no real httpx.AsyncClient is created by default.
 
-        Uses a defensive approach: tries to run close_pool() on the current
-        event loop if possible; otherwise creates a temporary loop. This
-        avoids creating a new loop unconditionally and prevents "event loop
-        already running" errors in pytest-asyncio/anyio environments.
+        Sets a MagicMock before and after each test. Avoids the ~0.8s
+        SSL context load that httpx.AsyncClient.__init__ triggers.
+        Tests that patch httpx.AsyncClient directly manage the pool
+        themselves.
         """
+        if OutlineClient._client_pool is None:
+            OutlineClient._client_pool = MagicMock()
         yield
-        coro = OutlineClient.close_pool()
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            # No running loop in this thread; create a temporary one
-            loop = asyncio.new_event_loop()
-            try:
-                loop.run_until_complete(coro)
-            finally:
-                loop.close()
-        else:
-            # We have an event loop object
-            if loop.is_running():
-                # Can't run in the running loop; use a temporary loop
-                new_loop = asyncio.new_event_loop()
-                try:
-                    new_loop.run_until_complete(coro)
-                finally:
-                    new_loop.close()
-            else:
-                loop.run_until_complete(coro)
+        OutlineClient._client_pool = MagicMock()
 
     @pytest.mark.asyncio
     async def test_init_from_env_variables(self):
@@ -349,35 +336,97 @@ class TestOutlineClient:
 
     @pytest.mark.asyncio
     async def test_session_configured_with_retry(self):
-        """Test that client pool is configured with httpx AsyncClient."""
-        client = OutlineClient()
-
-        # Verify client pool is an httpx.AsyncClient
-        assert isinstance(client._client_pool, httpx.AsyncClient)
-
-        # Verify transport exists
-        transport = client._client_pool._transport
-        assert transport is not None
+        """Test that client pool is created as httpx.AsyncClient."""
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            mock_client_cls.assert_called_once()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert "limits" in kwargs
+            assert "timeout" in kwargs
+            assert "follow_redirects" in kwargs
 
     @pytest.mark.asyncio
     async def test_write_timeout_configurable(self):
         """Test write timeout is configurable via env var."""
         os.environ["OUTLINE_WRITE_TIMEOUT"] = "60.0"
 
-        client = OutlineClient()
-
-        timeout = client._client_pool._timeout
-        assert timeout.write == 60.0
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["timeout"].write == 60.0
 
     @pytest.mark.asyncio
     async def test_write_timeout_default(self):
         """Test write timeout defaults to 30.0 seconds."""
         os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
 
-        client = OutlineClient()
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["timeout"].write == 30.0
 
-        timeout = client._client_pool._timeout
-        assert timeout.write == 30.0
+    @pytest.mark.asyncio
+    async def test_verify_ssl_enabled_by_default(self):
+        """SSL verification is enabled when OUTLINE_VERIFY_SSL is not set."""
+        os.environ.pop("OUTLINE_VERIFY_SSL", None)
+
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["verify"] is True
+
+    @pytest.mark.asyncio
+    async def test_verify_ssl_disabled_when_false(self):
+        """SSL verification is disabled when OUTLINE_VERIFY_SSL=false."""
+        os.environ["OUTLINE_VERIFY_SSL"] = "false"
+
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["verify"] is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("false", False),
+            ("False", False),
+            ("FALSE", False),
+            ("0", False),
+            ("no", False),
+            ("No", False),
+            ("true", True),
+            ("1", True),
+            ("yes", True),
+            ("anything_else", True),
+        ],
+    )
+    async def test_verify_ssl_env_var_variants(self, value, expected):
+        """OUTLINE_VERIFY_SSL parsing: case-insensitive, safe defaults."""
+        os.environ["OUTLINE_VERIFY_SSL"] = value
+
+        OutlineClient._client_pool = None
+        with patch(
+            "mcp_outline.utils.outline_client.httpx.AsyncClient"
+        ) as mock_client_cls:
+            OutlineClient()
+            kwargs = mock_client_cls.call_args.kwargs
+            assert kwargs["verify"] is expected
 
     @pytest.mark.asyncio
     async def test_api_url_normalization(self):
@@ -532,7 +581,7 @@ class TestOutlineClient:
             "post",
             new=AsyncMock(return_value=mock_response),
         ):
-            content, content_type = await client.fetch_attachment_content(
+            _, content_type = await client.fetch_attachment_content(
                 "6fe06f93-e331-408d-b954-6bb4ed50e67d"
             )
 

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  checks: write
+
 jobs:
   test:
     name: Test Python ${{ matrix.python-version }}
@@ -30,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --extra dev
+          uv sync --group dev
 
       - name: Check formatting with ruff
         run: |
@@ -46,6 +49,13 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest tests/ -v --cov=src/mcp_outline --cov-report=term
+          uv run pytest tests/ -v -m "not e2e" --cov=src/mcp_outline --cov-report=term --junit-xml=test-results.xml
         env:
           OUTLINE_API_KEY: "dummy"
+
+      - name: Test report
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          report_paths: test-results.xml
+          check_name: Unit Tests (Python ${{ matrix.python-version }})

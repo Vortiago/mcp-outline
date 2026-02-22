@@ -30,7 +30,7 @@ def test_pydantic_validator_coerces_empty_string():
     # Test 1: Empty string should be coerced to empty dict
     params = mcp.types.CallToolRequestParams(
         name="test_tool",
-        arguments="",  # This is what Copilot CLI sends
+        arguments="",  # type: ignore[arg-type]  # intentional: testing patch
     )
     assert params.arguments == {}, (
         "Empty string should be coerced to empty dict"
@@ -54,7 +54,7 @@ def test_pydantic_validator_coerces_empty_string():
 
     # Test 5: Patch is idempotent
     patch_for_copilot_cli()  # Apply again
-    params5 = mcp.types.CallToolRequestParams(name="test_tool", arguments="")
+    params5 = mcp.types.CallToolRequestParams(name="test_tool", arguments="")  # type: ignore[arg-type]
     assert params5.arguments == {}, (
         "Patch should still work after reapplication"
     )

@@ -1,0 +1,7 @@
+```mermaid
+flowchart TD
+    API[Outline REST API\nattachments.create\nfiles.create] --> FX[attachment_id fixture]
+    FX --> LA[list_document_attachments]
+    FX --> GU[get_attachment_url]
+    FX --> FA[fetch_attachment\nbase64 response]
+```

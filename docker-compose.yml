@@ -15,9 +15,8 @@ services:
   # Required: Outline has no built-in authentication
   dex:
     image: ghcr.io/dexidp/dex:v2.44.0-alpine
-    container_name: outline-dex
     ports:
-      - 5556:5556
+      - "${DEX_HOST_PORT:-5556}:5556"
     volumes:
       - ./config/dex-config.yaml:/etc/dex/config.docker.yaml:ro
     networks:
@@ -27,7 +26,6 @@ services:
   # PostgreSQL - Database for Outline
   postgres:
     image: postgres:18-alpine
-    container_name: outline-postgres
     environment:
       POSTGRES_USER: outline
       POSTGRES_PASSWORD: outline
@@ -46,7 +44,6 @@ services:
   # Redis - Cache and session management
   redis:
     image: redis:8.2-alpine
-    container_name: outline-redis
     volumes:
       - outline-redis-data:/data
     networks:
@@ -60,11 +57,10 @@ services:
 
   # Outline - Document management platform
   outline:
-    image: docker.getoutline.com/outlinewiki/outline:1.1.0-0
-    container_name: outline
+    image: docker.getoutline.com/outlinewiki/outline:1.5.0
     env_file: ./config/outline.env
     ports:
-      - 3030:3030
+      - "${OUTLINE_HOST_PORT:-3030}:3030"
     volumes:
       - outline-data:/var/lib/outline/data
     depends_on:
@@ -85,7 +81,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: outline-mcp
     ports:
       - ${MCP_PORT:-3000}:${MCP_PORT:-3000}
     environment:

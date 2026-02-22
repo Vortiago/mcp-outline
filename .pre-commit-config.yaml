@@ -19,15 +19,14 @@ repos:
     hooks:
       - id: pyright
         name: pyright
-        entry: bash -c 'uv run pyright src/'
+        entry: uv run pyright
         language: system
         types: [python]
-        pass_filenames: false
 
-      # Run test suite (skip slow integration tests)
+      # Run test suite (addopts in pyproject.toml excludes integration+e2e)
       - id: pytest
         name: pytest (fast unit tests)
-        entry: bash -c 'uv run pytest tests/ -v -m "not integration"'
+        entry: uv run pytest tests/ -v
         language: system
         types: [python]
         pass_filenames: false
