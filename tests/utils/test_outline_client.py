@@ -2,7 +2,6 @@
 Tests for the Outline API client.
 """
 
-import asyncio
 import os
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -51,35 +50,14 @@ class TestOutlineClient:
 
     @pytest.fixture(autouse=True)
     def _cleanup_client_pool(self):
-        """Ensure the shared httpx client pool is closed after each test.
+        """Reset the shared client pool to a mock after each test.
 
-        Uses a defensive approach: tries to run close_pool() on the current
-        event loop if possible; otherwise creates a temporary loop. This
-        avoids creating a new loop unconditionally and prevents "event loop
-        already running" errors in pytest-asyncio/anyio environments.
+        Avoids recreating a real httpx.AsyncClient (which loads SSL
+        context, ~0.8s) on every test. Tests that need to inspect the
+        real pool create their own and must reset it themselves.
         """
         yield
-        coro = OutlineClient.close_pool()
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            # No running loop in this thread; create a temporary one
-            loop = asyncio.new_event_loop()
-            try:
-                loop.run_until_complete(coro)
-            finally:
-                loop.close()
-        else:
-            # We have an event loop object
-            if loop.is_running():
-                # Can't run in the running loop; use a temporary loop
-                new_loop = asyncio.new_event_loop()
-                try:
-                    new_loop.run_until_complete(coro)
-                finally:
-                    new_loop.close()
-            else:
-                loop.run_until_complete(coro)
+        OutlineClient._client_pool = MagicMock()
 
     @pytest.mark.asyncio
     async def test_init_from_env_variables(self):
@@ -350,6 +328,7 @@ class TestOutlineClient:
     @pytest.mark.asyncio
     async def test_session_configured_with_retry(self):
         """Test that client pool is configured with httpx AsyncClient."""
+        OutlineClient._client_pool = None  # force real pool creation
         client = OutlineClient()
 
         # Verify client pool is an httpx.AsyncClient
@@ -364,6 +343,7 @@ class TestOutlineClient:
         """Test write timeout is configurable via env var."""
         os.environ["OUTLINE_WRITE_TIMEOUT"] = "60.0"
 
+        OutlineClient._client_pool = None  # force real pool creation
         client = OutlineClient()
 
         timeout = client._client_pool._timeout
@@ -374,6 +354,7 @@ class TestOutlineClient:
         """Test write timeout defaults to 30.0 seconds."""
         os.environ.pop("OUTLINE_WRITE_TIMEOUT", None)
 
+        OutlineClient._client_pool = None  # force real pool creation
         client = OutlineClient()
 
         timeout = client._client_pool._timeout
