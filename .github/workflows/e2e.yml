@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
+      - name: Prepare Outline config
+        run: cp config/outline.env.example config/outline.env
+
       - name: Start Outline stack
         run: docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d outline
         env:
