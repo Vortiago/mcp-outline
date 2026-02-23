@@ -43,7 +43,7 @@ jobs:
         run: uv run pytest tests/e2e/ -v -m e2e --junit-xml=e2e-results.xml
 
       - name: Test report
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@v6
         if: always()
         with:
           report_paths: e2e-results.xml
