@@ -283,9 +283,10 @@ uv run poe test-e2e
 ```
 
 - **Marker**: `@pytest.mark.e2e` — excluded from normal `pytest` runs
-- **Fixture chain**: `outline_stack` (Docker lifecycle) → `outline_api_key`
-  (OIDC login + API key creation) → `mcp_server_params` → `mcp_session`
-  (stdio client factory)
+- **Fixture chain**: `outline_stack` (Docker lifecycle) →
+  `_outline_credentials` (OIDC login) → `outline_api_key` (API key
+  creation) / `outline_access_token` (session token) →
+  `mcp_server_params` → `mcp_session` (stdio client factory)
 - **OIDC fixture**: Uses manual cookie management (`_parse_set_cookies`) to
   prevent httpx's cookie jar from leaking Outline cookies to Dex (both run on
   localhost but on different ports)
