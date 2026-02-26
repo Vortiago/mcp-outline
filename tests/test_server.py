@@ -9,6 +9,9 @@ import pytest
 from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
+from mcp_outline.features.dynamic_tools import (
+    install_dynamic_tool_list,
+)
 
 
 @pytest.fixture
@@ -164,3 +167,51 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
         tool_names2 = [tool.name for tool in tools2]
 
         assert "ask_ai_about_documents" not in tool_names2
+
+
+@pytest.mark.anyio
+async def test_dynamic_tool_list_disabled_by_default(
+    fresh_mcp_server,
+):
+    """Dynamic tool list should not alter behaviour when unset."""
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
+        register_all(fresh_mcp_server)
+        install_dynamic_tool_list(fresh_mcp_server)
+
+        tools = await fresh_mcp_server.list_tools()
+        tool_names = [tool.name for tool in tools]
+
+        # All tools should still be present
+        assert "create_document" in tool_names
+        assert "search_documents" in tool_names
+
+
+@pytest.mark.anyio
+async def test_dynamic_tool_list_composes_with_read_only():
+    """Dynamic + read-only should compose: write tools absent."""
+    mcp = FastMCP("Test Compose")
+    with patch.dict(
+        os.environ,
+        {
+            "OUTLINE_READ_ONLY": "true",
+            "OUTLINE_DYNAMIC_TOOL_LIST": "true",
+        },
+    ):
+        register_all(mcp)
+        install_dynamic_tool_list(mcp)
+
+        # Even with admin role, read-only registration
+        # already removed write tools.
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            return_value={
+                "role": "admin",
+                "can_write": True,
+            },
+        ):
+            tools = await mcp.list_tools()
+            tool_names = [tool.name for tool in tools]
+
+            assert "create_document" not in tool_names
+            assert "search_documents" in tool_names
