@@ -86,13 +86,16 @@ _WRITE_ENDPOINT_PREFIXES = (
     "documents.update",
     "documents.move",
     "documents.archive",
-    "documents.unarchive",
     "documents.delete",
     "documents.restore",
     "collections.create",
     "collections.update",
     "collections.delete",
     "comments.create",
+    # Not yet implemented — add when tools are created:
+    # "documents.import",
+    # "comments.update",
+    # "comments.delete",
 )
 
 
