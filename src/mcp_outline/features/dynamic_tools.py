@@ -12,6 +12,22 @@ The feature is **on by default**.  Disable it by setting
 This module is intentionally fail-open: if the ``auth.info`` call
 fails for any reason the full tool list is returned.  Outline's own
 API will still enforce permissions on individual tool calls.
+
+Outline references
+------------------
+- User roles (admin / member / viewer / guest):
+  https://docs.getoutline.com/s/guide/doc/users-roles-cwCxXP8R3V
+- ``UserRole`` enum in source (``shared/types.ts``):
+  https://github.com/outline/outline/blob/main/shared/types.ts
+- API key scopes (space-separated endpoint prefixes, added in v0.82):
+  https://github.com/outline/outline/issues/8186
+  https://github.com/outline/outline/pull/8297
+- Full API endpoint list (OpenAPI spec — use to update
+  ``_WRITE_ENDPOINT_PREFIXES`` when Outline adds new write
+  endpoints):
+  https://github.com/outline/openapi/blob/main/spec3.yml
+- Interactive API reference:
+  https://www.getoutline.com/developers
 """
 
 import logging
@@ -63,6 +79,8 @@ WRITE_TOOL_NAMES: frozenset = frozenset(
 
 # Outline API endpoints that require write access.  Used to detect
 # whether an API key's scopes allow write operations.
+# To update: check the OpenAPI spec for new write endpoints:
+#   https://github.com/outline/openapi/blob/main/spec3.yml
 _WRITE_ENDPOINT_PREFIXES = (
     "documents.create",
     "documents.update",
@@ -100,6 +118,11 @@ def _has_write_scope(policies: List[Dict[str, Any]]) -> bool:
     the authenticated token can do.  We look for any document or
     collection write ability.
 
+    The ability keys checked below come from Outline's policy
+    layer.  See the ``server/policies/`` directory in the Outline
+    repo for the authoritative list of abilities per resource:
+    https://github.com/outline/outline/tree/main/server/policies
+
     Returns ``True`` when write access is detected **or** when the
     policies structure is missing / unrecognised (fail-open).
     """
@@ -132,6 +155,10 @@ def _has_write_endpoint_scope(
     Outline API-key scopes are a space-separated list of endpoint
     prefixes (e.g. ``"documents.list documents.info"``).  An empty
     or ``None`` scope means the key has full access.
+
+    Scope matching uses dot-boundary prefixes, mirroring Outline's
+    own middleware.  See the implementation PR for details:
+    https://github.com/outline/outline/pull/8297
 
     Returns ``True`` if the key can reach at least one write
     endpoint, or if scopes are absent (unscoped = full access).
@@ -166,6 +193,10 @@ async def _get_user_permissions(
 
     Calls ``auth.info`` and inspects both the user role and the
     response policies to account for API-key scopes.
+
+    Roles are defined in ``shared/types.ts`` (``UserRole`` enum):
+    https://github.com/outline/outline/blob/main/shared/types.ts
+    Currently: admin, member, viewer, guest.
 
     Returns a dict with:
     - ``role``: the Outline user role (``str`` or ``None``)
