@@ -85,21 +85,20 @@ def _stop(process: subprocess.Popen) -> None:
         process.communicate()
 
 
-def _create_viewer_api_key(admin_api_key: str) -> str:
+def _create_viewer_api_key(access_token: str) -> str:
     """Create a viewer-role API key via the Outline admin API.
 
-    Uses the admin key to:
-    1. List users and find a non-admin user, or use the admin
-       user itself after updating the role.
-    2. Create a scoped API key restricted to read-only endpoints.
+    Uses the OIDC *access_token* (session token) to call
+    ``apiKeys.create``.  This endpoint requires a session
+    token — API keys cannot create other API keys.
 
-    Falls back to creating a read-only scoped key for the admin
-    user if no second user is available.
+    Tries to create a scoped key first; falls back to an
+    unscoped key if the Outline version doesn't support scopes.
 
     Returns the API key value string.
     """
     api_url = f"{OUTLINE_URL}/api"
-    headers = {"Authorization": f"Bearer {admin_api_key}"}
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     # Create a read-only scoped API key.
     # Outline supports endpoint-based scopes.
@@ -205,7 +204,9 @@ async def test_capabilities_list_changed(outline_stack, outline_api_key):
         _stop(process)
 
 
-async def test_scoped_key_hides_write_tools(outline_stack, outline_api_key):
+async def test_scoped_key_hides_write_tools(
+    outline_stack, outline_api_key, outline_access_token
+):
     """Read-only-scoped key via header should hide write tools.
 
     Creates a scoped API key restricted to read-only endpoints
@@ -227,8 +228,9 @@ async def test_scoped_key_hides_write_tools(outline_stack, outline_api_key):
         ready = _wait_for_server(E2E_BASE, STARTUP_TIMEOUT)
         assert ready
 
-        # Create a read-only scoped key
-        viewer_key = _create_viewer_api_key(outline_api_key)
+        # Create a read-only scoped key using the session token
+        # (apiKeys.create requires a session token, not an API key)
+        viewer_key = _create_viewer_api_key(outline_access_token)
 
         http_client = httpx.AsyncClient(
             headers={"x-outline-api-key": viewer_key},
