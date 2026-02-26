@@ -120,15 +120,45 @@ When running in HTTP mode (`sse` or `streamable-http`), you can pass the Outline
 
 **Example** (with a streamable-http server on port 3000):
 
+Start the server:
+
 ```bash
-# Start server with a default key (or use as fallback)
 docker run -p 3000:3000 \
   -e OUTLINE_API_KEY=<DEFAULT_KEY> \
   -e MCP_TRANSPORT=streamable-http \
   ghcr.io/vortiago/mcp-outline:latest
+```
 
-# Connect with a per-request key (overrides the env var)
-# MCP clients can set this as a default header on their HTTP client
+Then connect from your client with a per-request key:
+
+**VS Code** (`.vscode/mcp.json`):
+```json
+{
+  "servers": {
+    "mcp-outline": {
+      "type": "http",
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "x-outline-api-key": "<YOUR_KEY>"
+      }
+    }
+  }
+}
+```
+
+**Claude Code** (`.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "mcp-outline": {
+      "type": "http",
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "x-outline-api-key": "<YOUR_KEY>"
+      }
+    }
+  }
+}
 ```
 
 > **Note:** The `x-outline-api-key` header is only available for HTTP transports. In `stdio` mode, the `OUTLINE_API_KEY` environment variable is the only option.
