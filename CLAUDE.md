@@ -298,7 +298,7 @@ uv run poe test-e2e
 
 `.env` file:
 ```bash
-# Outline API (required — or pass per-request via x-outline-api-key header)
+# Outline API (optional — if unset, every request must include x-outline-api-key header)
 OUTLINE_API_KEY=<your_key>
 
 # Outline API (optional)

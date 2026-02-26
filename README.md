@@ -57,7 +57,7 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | Yes* | - | Get from Outline web UI: Settings → API Keys → Create New ([per-request alternative](#per-request-authentication)) |
+| `OUTLINE_API_KEY` | No | - | Fallback API key. If unset, every request must provide a key via the `x-outline-api-key` header ([details](#per-request-authentication)) |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
