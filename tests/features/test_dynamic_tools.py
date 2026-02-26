@@ -34,10 +34,26 @@ def fresh_mcp_server():
 
 
 @pytest.mark.anyio
-async def test_disabled_by_default(fresh_mcp_server):
-    """Feature is off when env var is unset — list_tools unchanged."""
+async def test_enabled_by_default(fresh_mcp_server):
+    """Feature is on when env var is unset — list_tools wrapped."""
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
+        register_all(fresh_mcp_server)
+        original = fresh_mcp_server.list_tools
+
+        install_dynamic_tool_list(fresh_mcp_server)
+
+        # When enabled, list_tools is replaced
+        assert fresh_mcp_server.list_tools is not original
+
+
+@pytest.mark.anyio
+async def test_explicitly_disabled(fresh_mcp_server):
+    """Feature is off when env var is 'false' — list_tools unchanged."""
+    with patch.dict(
+        os.environ,
+        {"OUTLINE_DYNAMIC_TOOL_LIST": "false"},
+    ):
         register_all(fresh_mcp_server)
 
         install_dynamic_tool_list(fresh_mcp_server)
@@ -504,17 +520,16 @@ async def test_get_user_permissions_viewer_write_scope():
 
 
 @pytest.mark.anyio
-async def test_enabled_values(fresh_mcp_server):
-    """Feature should activate for 'true', '1', and 'yes'."""
-    for val in ("true", "True", "TRUE", "1", "yes", "Yes"):
+async def test_disabled_values(fresh_mcp_server):
+    """Feature should deactivate for 'false', '0', and 'no'."""
+    for val in ("false", "False", "FALSE", "0", "no", "No"):
         mcp = FastMCP("Test")
         with patch.dict(
             os.environ,
             {"OUTLINE_DYNAMIC_TOOL_LIST": val},
         ):
             register_all(mcp)
-            original = mcp.list_tools
             install_dynamic_tool_list(mcp)
-            assert mcp.list_tools is not original, (
-                f"Expected enabled for value '{val}'"
+            assert "list_tools" not in mcp.__dict__, (
+                f"Expected disabled for value '{val}'"
             )

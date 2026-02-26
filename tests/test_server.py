@@ -3,7 +3,7 @@ Tests for the MCP Outline server.
 """
 
 import os
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
@@ -170,21 +170,32 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
 
 
 @pytest.mark.anyio
-async def test_dynamic_tool_list_disabled_by_default(
+async def test_dynamic_tool_list_enabled_by_default(
     fresh_mcp_server,
 ):
-    """Dynamic tool list should not alter behaviour when unset."""
+    """Dynamic tool list should be active when env var is unset."""
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
         register_all(fresh_mcp_server)
         install_dynamic_tool_list(fresh_mcp_server)
 
-        tools = await fresh_mcp_server.list_tools()
-        tool_names = [tool.name for tool in tools]
+        # list_tools should be wrapped (instance override set)
+        assert "list_tools" in fresh_mcp_server.__dict__
 
-        # All tools should still be present
-        assert "create_document" in tool_names
-        assert "search_documents" in tool_names
+        # Admin still sees all tools
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            new_callable=AsyncMock,
+            return_value={
+                "role": "admin",
+                "can_write": True,
+            },
+        ):
+            tools = await fresh_mcp_server.list_tools()
+            tool_names = [tool.name for tool in tools]
+
+            assert "create_document" in tool_names
+            assert "search_documents" in tool_names
 
 
 @pytest.mark.anyio

@@ -1,14 +1,13 @@
 """Dynamic tool list filtering based on Outline user permissions.
 
-When ``OUTLINE_DYNAMIC_TOOL_LIST`` is enabled, the MCP ``tools/list``
-response is filtered per-request based on the authenticated user's
-Outline role **and** API-key scopes.  Viewer-role users (or keys
-scoped to read-only endpoints) only see read-only tools; members
-and admins see the full set.
+When enabled, the MCP ``tools/list`` response is filtered per-request
+based on the authenticated user's Outline role **and** API-key scopes.
+Viewer-role users (or keys scoped to read-only endpoints) only see
+read-only tools; members and admins see the full set.
 
-The feature is **off by default** to preserve backward compatibility.
-Enable it by setting the environment variable to ``true``, ``1``, or
-``yes`` (case-insensitive).
+The feature is **on by default**.  Disable it by setting
+``OUTLINE_DYNAMIC_TOOL_LIST`` to ``false``, ``0``, or ``no``
+(case-insensitive).
 
 This module is intentionally fail-open: if the ``auth.info`` call
 fails for any reason the full tool list is returned.  Outline's own
@@ -86,10 +85,10 @@ _WRITE_ENDPOINT_PREFIXES = (
 
 def _is_enabled() -> bool:
     """Return ``True`` when the dynamic tool list feature is on."""
-    return os.getenv("OUTLINE_DYNAMIC_TOOL_LIST", "").lower() in (
-        "true",
-        "1",
-        "yes",
+    return os.getenv("OUTLINE_DYNAMIC_TOOL_LIST", "").lower() not in (
+        "false",
+        "0",
+        "no",
     )
 
 
@@ -220,9 +219,10 @@ async def _get_user_permissions(
 def install_dynamic_tool_list(mcp) -> None:
     """Install per-request tool filtering on *mcp*.
 
-    When ``OUTLINE_DYNAMIC_TOOL_LIST`` is enabled this replaces
-    ``mcp.list_tools`` with a wrapper that filters write tools
-    for viewer-role users or read-only-scoped API keys.
+    Replaces ``mcp.list_tools`` with a wrapper that filters write
+    tools for viewer-role users or read-only-scoped API keys.
+    Enabled by default; set ``OUTLINE_DYNAMIC_TOOL_LIST=false``
+    to disable.
 
     Call this **after** ``register_all(mcp)``.
     """
