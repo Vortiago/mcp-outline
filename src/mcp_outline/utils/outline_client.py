@@ -84,7 +84,10 @@ class OutlineClient:
         # Ensure API key is provided.
         # sanitized_key will be None or empty string if invalid
         if not self.api_key:
-            raise OutlineError("Missing API key. Set OUTLINE_API_KEY env var.")
+            raise OutlineError(
+                "Missing API key. Set OUTLINE_API_KEY env var "
+                "or pass per-request via x-outline-api-key header."
+            )
 
         # Rate limit tracking
         self._rate_limit_remaining: Optional[int] = None

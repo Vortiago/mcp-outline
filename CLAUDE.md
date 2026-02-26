@@ -103,7 +103,8 @@ register_all(mcp)
 
 ### Common Utilities (`features/documents/common.py`)
 
-- `get_outline_client()` - Async function that creates an OutlineClient from env vars and verifies connectivity via `auth_info()`
+- `get_outline_client()` - Async function that creates an OutlineClient and verifies connectivity via `auth_info()`. Checks for a per-request API key from the `x-outline-api-key` HTTP header first (SSE/streamable-http), then falls back to `OUTLINE_API_KEY` env var.
+- `_get_header_api_key()` - Reads the `x-outline-api-key` header from the MCP SDK's `request_ctx` ContextVar. Returns `None` for stdio or when header is absent.
 - `OutlineClientError` - Exception class for client-related errors
 
 ### Copilot CLI Patch (`patches/copilot_cli.py`)
@@ -297,7 +298,7 @@ uv run poe test-e2e
 
 `.env` file:
 ```bash
-# Outline API (required)
+# Outline API (optional — if unset, every request must include x-outline-api-key header)
 OUTLINE_API_KEY=<your_key>
 
 # Outline API (optional)

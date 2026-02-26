@@ -82,6 +82,12 @@ def main() -> None:
             f"Starting MCP Outline server with "
             f"transport mode: {transport_mode}"
         )
+        if not os.getenv("OUTLINE_API_KEY"):
+            logging.info(
+                "No OUTLINE_API_KEY set. "
+                "Per-request authentication only "
+                "(x-outline-api-key header)."
+            )
 
     # Start the server with the specified transport
     mcp.run(transport=transport_mode)
