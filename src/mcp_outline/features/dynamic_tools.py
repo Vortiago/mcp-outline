@@ -30,16 +30,11 @@ Outline references
   https://www.getoutline.com/developers
 """
 
-from __future__ import annotations
-
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from mcp.types import Tool as MCPTool
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features.documents.common import (
     _get_header_api_key,
@@ -252,7 +247,7 @@ async def _get_user_permissions(
 # ------------------------------------------------------------------
 
 
-def install_dynamic_tool_list(mcp: FastMCP) -> None:
+def install_dynamic_tool_list(mcp) -> None:
     """Install per-request tool filtering on *mcp*.
 
     Replaces ``mcp.list_tools`` with a wrapper that filters write
