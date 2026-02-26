@@ -57,7 +57,7 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | Yes | - | Get from Outline web UI: Settings → API Keys → Create New |
+| `OUTLINE_API_KEY` | Yes* | - | Get from Outline web UI: Settings → API Keys → Create New ([per-request alternative](#per-request-authentication)) |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
@@ -106,6 +106,32 @@ Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while pre
 - `batch_delete_documents`
 
 **Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
+
+### Per-Request Authentication
+
+When running in HTTP mode (`sse` or `streamable-http`), you can pass the Outline API key per-request via the `x-outline-api-key` HTTP header instead of (or in addition to) the `OUTLINE_API_KEY` environment variable.
+
+**Priority:** Header value takes precedence over the environment variable. If the header is not present, the server falls back to the env var.
+
+**Use cases:**
+- Multi-tenant deployments where different clients use different Outline accounts
+- Centralized API key management via a reverse proxy or gateway
+- Dynamic key rotation without restarting the server
+
+**Example** (with a streamable-http server on port 3000):
+
+```bash
+# Start server with a default key (or use as fallback)
+docker run -p 3000:3000 \
+  -e OUTLINE_API_KEY=<DEFAULT_KEY> \
+  -e MCP_TRANSPORT=streamable-http \
+  ghcr.io/vortiago/mcp-outline:latest
+
+# Connect with a per-request key (overrides the env var)
+# MCP clients can set this as a default header on their HTTP client
+```
+
+> **Note:** The `x-outline-api-key` header is only available for HTTP transports. In `stdio` mode, the `OUTLINE_API_KEY` environment variable is the only option.
 
 ## Adding to Your Client
 
@@ -272,6 +298,8 @@ Then connect from client:
 ```
 
 **Note**: `OUTLINE_API_URL` should point to where your Outline instance is running, not localhost:3000.
+
+**Per-request API key**: In HTTP modes, clients can also pass the API key via the `x-outline-api-key` header instead of setting it as an env var. See [Per-Request Authentication](#per-request-authentication).
 
 </details>
 
