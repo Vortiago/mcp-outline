@@ -411,6 +411,98 @@ def test_has_write_endpoint_scope_documents_prefix():
     assert _has_write_endpoint_scope("documents") is True
 
 
+def test_has_write_endpoint_scope_partial_prefix_rejected():
+    """Short prefix that isn't a dot-boundary must NOT match."""
+    # "doc" is a prefix of "documents.create" but not at a
+    # dot boundary — it should NOT grant write access.
+    assert _has_write_endpoint_scope("doc") is False
+    assert _has_write_endpoint_scope("d") is False
+    assert _has_write_endpoint_scope("document") is False
+    assert _has_write_endpoint_scope("coll") is False
+    assert _has_write_endpoint_scope("comment") is False
+
+
+def test_has_write_endpoint_scope_exact_endpoint_match():
+    """Exact endpoint match should grant write access."""
+    assert _has_write_endpoint_scope("documents.create") is True
+    assert _has_write_endpoint_scope("collections.delete") is True
+
+
+def test_has_write_endpoint_scope_sub_endpoint():
+    """Scope more specific than a write prefix is accepted."""
+    # e.g. "documents.create.bulk" starts with "documents.create."
+    assert _has_write_endpoint_scope("documents.create.bulk") is True
+
+
+# ------------------------------------------------------------------
+# _get_user_permissions — cross-layer AND logic
+# ------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_user_permissions_admin_read_only_scope():
+    """Admin role + read-only scoped key → can_write=False.
+
+    The AND logic means the most restrictive layer wins:
+    role says yes, scope says no → no write.
+    """
+    mock_response = {
+        "data": {
+            "user": {"role": "admin"},
+            "apiKey": {"scope": "documents.list documents.info"},
+        },
+        "policies": [
+            {
+                "abilities": {
+                    "read": True,
+                    "createDocument": True,
+                    "update": True,
+                }
+            }
+        ],
+    }
+    with patch("mcp_outline.features.dynamic_tools.OutlineClient") as mock_cls:
+        instance = mock_cls.return_value
+        instance.auth_info_full = AsyncMock(return_value=mock_response)
+
+        result = await _get_user_permissions(
+            "test-key", "https://example.com/api"
+        )
+        assert result["role"] == "admin"
+        assert result["can_write"] is False
+
+
+@pytest.mark.anyio
+async def test_get_user_permissions_viewer_write_scope():
+    """Viewer role + write scoped key → can_write=False.
+
+    Role says no, scope says yes → no write.
+    """
+    mock_response = {
+        "data": {
+            "user": {"role": "viewer"},
+            "apiKey": {"scope": "documents.list documents.create"},
+        },
+        "policies": [
+            {
+                "abilities": {
+                    "read": True,
+                    "createDocument": True,
+                }
+            }
+        ],
+    }
+    with patch("mcp_outline.features.dynamic_tools.OutlineClient") as mock_cls:
+        instance = mock_cls.return_value
+        instance.auth_info_full = AsyncMock(return_value=mock_response)
+
+        result = await _get_user_permissions(
+            "test-key", "https://example.com/api"
+        )
+        assert result["role"] == "viewer"
+        assert result["can_write"] is False
+
+
 @pytest.mark.anyio
 async def test_enabled_values(fresh_mcp_server):
     """Feature should activate for 'true', '1', and 'yes'."""

@@ -146,7 +146,15 @@ def _has_write_endpoint_scope(
         if scope in ("write", "*"):
             return True
         for prefix in _WRITE_ENDPOINT_PREFIXES:
-            if prefix.startswith(scope) or scope.startswith(prefix):
+            # Exact match or dot-boundary prefix in either direction.
+            # e.g. scope "documents" matches prefix "documents.create"
+            #      scope "documents.create" matches prefix "documents.create"
+            # but  scope "doc" does NOT match "documents.create"
+            if scope == prefix:
+                return True
+            if prefix.startswith(scope + "."):
+                return True
+            if scope.startswith(prefix + "."):
                 return True
     return False
 

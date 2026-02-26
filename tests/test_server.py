@@ -215,3 +215,54 @@ async def test_dynamic_tool_list_composes_with_read_only():
 
             assert "create_document" not in tool_names
             assert "search_documents" in tool_names
+
+
+@pytest.mark.anyio
+async def test_disable_delete_composes_with_dynamic_tool_list():
+    """OUTLINE_DISABLE_DELETE + dynamic tool list should compose.
+
+    Delete tools are absent at registration.  The dynamic filter
+    should still work for remaining write tools without errors.
+    """
+    mcp = FastMCP("Test Compose Delete")
+    with patch.dict(
+        os.environ,
+        {
+            "OUTLINE_DISABLE_DELETE": "true",
+            "OUTLINE_DYNAMIC_TOOL_LIST": "true",
+        },
+    ):
+        register_all(mcp)
+        install_dynamic_tool_list(mcp)
+
+        # Admin sees everything except delete tools
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            return_value={
+                "role": "admin",
+                "can_write": True,
+            },
+        ):
+            tools = await mcp.list_tools()
+            names = [t.name for t in tools]
+
+            assert "delete_document" not in names
+            assert "delete_collection" not in names
+            # Other write tools still present for admin
+            assert "create_document" in names
+            assert "update_document" in names
+
+        # Viewer sees no write tools at all
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            return_value={
+                "role": "viewer",
+                "can_write": False,
+            },
+        ):
+            tools = await mcp.list_tools()
+            names = [t.name for t in tools]
+
+            assert "delete_document" not in names
+            assert "create_document" not in names
+            assert "search_documents" in names
