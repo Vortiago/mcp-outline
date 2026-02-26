@@ -123,7 +123,7 @@ Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to filter the tool list per-request based o
 3. If the API key has restricted scopes that exclude write endpoints, write tools are hidden
 4. If `auth.info` fails for any reason, all tools are returned (fail-open)
 
-**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations. The server advertises `listChanged: true` in its MCP capabilities when this feature is enabled.
+**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
 
 This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
 

@@ -328,7 +328,7 @@ MCP_PORT=3000                              # Server port
 **Access Control Notes**:
 - `OUTLINE_READ_ONLY`: Blocks entire write modules at registration (content, lifecycle, organization, batch_operations)
 - `OUTLINE_DISABLE_DELETE`: Conditionally registers delete tools within document_lifecycle and collection_tools
-- `OUTLINE_DYNAMIC_TOOL_LIST`: Filters tools per-request based on user role from `auth.info` and API key scopes. Fail-open: if auth check fails, all tools are shown. Advertises `listChanged: true` in MCP capabilities.
+- `OUTLINE_DYNAMIC_TOOL_LIST`: Filters tools per-request based on user role from `auth.info` and API key scopes. Fail-open: if auth check fails, all tools are shown.
 - Read-only mode takes precedence: If both are set, server operates in read-only mode
 
 ### Critical Requirements

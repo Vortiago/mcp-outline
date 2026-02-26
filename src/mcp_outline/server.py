@@ -37,27 +37,6 @@ register_all(mcp)
 # Install per-request dynamic tool filtering (off by default)
 install_dynamic_tool_list(mcp)
 
-# Advertise listChanged capability when dynamic tool list is on
-if os.getenv("OUTLINE_DYNAMIC_TOOL_LIST", "").lower() in ("true", "1", "yes"):
-    from mcp.server.lowlevel.server import (
-        NotificationOptions,
-    )
-
-    _orig_create_init = mcp._mcp_server.create_initialization_options
-
-    def _patched_create_init(
-        notification_options=None,
-        experimental_capabilities=None,
-    ):
-        return _orig_create_init(
-            notification_options=NotificationOptions(
-                tools_changed=True,
-            ),
-            experimental_capabilities=(experimental_capabilities),
-        )
-
-    mcp._mcp_server.create_initialization_options = _patched_create_init
-
 
 def main() -> None:
     # Suppress KeyboardInterrupt traceback for clean exit

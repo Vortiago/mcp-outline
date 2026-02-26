@@ -7,7 +7,7 @@ Compose.
 
 These tests start the MCP server as an HTTP subprocess (like
 ``test_api_key_header.py``) so they can verify tool-list filtering
-and the ``listChanged`` capability at the MCP protocol level.
+at the MCP protocol level.
 """
 
 import os
@@ -172,34 +172,6 @@ async def test_admin_sees_all_tools_with_dynamic_list(
                 assert "create_document" in names
                 assert "update_document" in names
                 assert "search_documents" in names
-    finally:
-        _stop(process)
-
-
-async def test_capabilities_list_changed(outline_stack, outline_api_key):
-    """Server should advertise listChanged: true for tools.
-
-    Guards against: the capability not being set when the
-    dynamic tool list feature is enabled.
-    """
-    api_url = f"{OUTLINE_URL}/api"
-    process = _start_dynamic_server(
-        api_key=outline_api_key,
-        api_url=api_url,
-    )
-    try:
-        ready = _wait_for_server(E2E_BASE, STARTUP_TIMEOUT)
-        assert ready
-
-        async with streamable_http_client(
-            url=f"{E2E_BASE}/mcp",
-        ) as (read, write, _):
-            async with ClientSession(read, write) as s:
-                result = await s.initialize()
-
-                assert result.capabilities is not None
-                assert result.capabilities.tools is not None
-                assert result.capabilities.tools.listChanged is True
     finally:
         _stop(process)
 
