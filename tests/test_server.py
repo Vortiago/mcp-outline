@@ -3,12 +3,15 @@ Tests for the MCP Outline server.
 """
 
 import os
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
+from mcp_outline.features.dynamic_tools import (
+    install_dynamic_tool_list,
+)
 
 
 @pytest.fixture
@@ -164,3 +167,113 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
         tool_names2 = [tool.name for tool in tools2]
 
         assert "ask_ai_about_documents" not in tool_names2
+
+
+@pytest.mark.anyio
+async def test_dynamic_tool_list_enabled_by_default(
+    fresh_mcp_server,
+):
+    """Dynamic tool list should be active when env var is unset."""
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
+        register_all(fresh_mcp_server)
+        install_dynamic_tool_list(fresh_mcp_server)
+
+        # list_tools should be wrapped (instance override set)
+        assert "list_tools" in fresh_mcp_server.__dict__
+
+        # Admin still sees all tools
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            new_callable=AsyncMock,
+            return_value={
+                "role": "admin",
+                "can_write": True,
+            },
+        ):
+            tools = await fresh_mcp_server.list_tools()
+            tool_names = [tool.name for tool in tools]
+
+            assert "create_document" in tool_names
+            assert "search_documents" in tool_names
+
+
+@pytest.mark.anyio
+async def test_dynamic_tool_list_composes_with_read_only():
+    """Dynamic + read-only should compose: write tools absent."""
+    mcp = FastMCP("Test Compose")
+    with patch.dict(
+        os.environ,
+        {
+            "OUTLINE_READ_ONLY": "true",
+            "OUTLINE_DYNAMIC_TOOL_LIST": "true",
+        },
+    ):
+        register_all(mcp)
+        install_dynamic_tool_list(mcp)
+
+        # Even with admin role, read-only registration
+        # already removed write tools.
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            return_value={
+                "role": "admin",
+                "can_write": True,
+            },
+        ):
+            tools = await mcp.list_tools()
+            tool_names = [tool.name for tool in tools]
+
+            assert "create_document" not in tool_names
+            assert "search_documents" in tool_names
+
+
+@pytest.mark.anyio
+async def test_disable_delete_composes_with_dynamic_tool_list():
+    """OUTLINE_DISABLE_DELETE + dynamic tool list should compose.
+
+    Delete tools are absent at registration.  The dynamic filter
+    should still work for remaining write tools without errors.
+    """
+    mcp = FastMCP("Test Compose Delete")
+    with patch.dict(
+        os.environ,
+        {
+            "OUTLINE_DISABLE_DELETE": "true",
+            "OUTLINE_DYNAMIC_TOOL_LIST": "true",
+        },
+    ):
+        register_all(mcp)
+        install_dynamic_tool_list(mcp)
+
+        # Admin sees everything except delete tools
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            return_value={
+                "role": "admin",
+                "can_write": True,
+            },
+        ):
+            tools = await mcp.list_tools()
+            names = [t.name for t in tools]
+
+            assert "delete_document" not in names
+            assert "delete_collection" not in names
+            # Other write tools still present for admin
+            assert "create_document" in names
+            assert "update_document" in names
+
+        # Viewer sees no write tools at all
+        with patch(
+            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            return_value={
+                "role": "viewer",
+                "can_write": False,
+            },
+        ):
+            tools = await mcp.list_tools()
+            names = [t.name for t in tools]
+
+            assert "delete_document" not in names
+            assert "create_document" not in names
+            assert "search_documents" in names

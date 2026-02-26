@@ -95,6 +95,11 @@ def _login_and_create_api_key():
        cookies (manual management — see module docstring).
     4. POST to ``apiKeys.create`` using the ``accessToken``
        cookie as a Bearer token and return the key value.
+
+    Returns a tuple of ``(api_key_value, access_token)`` so
+    downstream fixtures can create additional API keys using
+    the session token (``apiKeys.create`` requires a session
+    token, not an API key).
     """
     # Step 1: Start OIDC flow on Outline
     resp = httpx.get(
@@ -182,7 +187,7 @@ def _login_and_create_api_key():
         timeout=30.0,
     )
     resp.raise_for_status()
-    return resp.json()["data"]["value"]
+    return resp.json()["data"]["value"], access_token
 
 
 @pytest.fixture(scope="session")
@@ -225,7 +230,17 @@ def outline_stack():
 
 
 @pytest.fixture(scope="session")
-def outline_api_key(outline_stack):
+def _outline_credentials(outline_stack):
+    """Run the OIDC login once and return ``(api_key, access_token)``.
+
+    Private fixture consumed by ``outline_api_key`` and
+    ``outline_access_token``.
+    """
+    return _login_and_create_api_key()
+
+
+@pytest.fixture(scope="session")
+def outline_api_key(_outline_credentials):
     """Create one Outline API key for the entire test session.
 
     Session-scoped so the OIDC login flow runs exactly once regardless
@@ -234,7 +249,18 @@ def outline_api_key(outline_stack):
 
     Returns the raw API key string (``sk-...``).
     """
-    return _login_and_create_api_key()
+    return _outline_credentials[0]
+
+
+@pytest.fixture(scope="session")
+def outline_access_token(_outline_credentials):
+    """Return the OIDC session access token.
+
+    Needed by tests that must call endpoints (like
+    ``apiKeys.create``) that require a session token
+    rather than an API key.
+    """
+    return _outline_credentials[1]
 
 
 @pytest.fixture(scope="session")

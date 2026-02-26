@@ -44,6 +44,7 @@ register_all(mcp)
   |   |- document_organization.register_tools() # If not OUTLINE_READ_ONLY
   |   |- batch_operations.register_tools()     # If not OUTLINE_READ_ONLY
   |- resources.register(mcp)                   # Always
+install_dynamic_tool_list(mcp)                   # Unless OUTLINE_DYNAMIC_TOOL_LIST=false
 ```
 
 ### MCP Resources (`outline://` URI scheme)
@@ -282,9 +283,10 @@ uv run poe test-e2e
 ```
 
 - **Marker**: `@pytest.mark.e2e` — excluded from normal `pytest` runs
-- **Fixture chain**: `outline_stack` (Docker lifecycle) → `outline_api_key`
-  (OIDC login + API key creation) → `mcp_server_params` → `mcp_session`
-  (stdio client factory)
+- **Fixture chain**: `outline_stack` (Docker lifecycle) →
+  `_outline_credentials` (OIDC login) → `outline_api_key` (API key
+  creation) / `outline_access_token` (session token) →
+  `mcp_server_params` → `mcp_session` (stdio client factory)
 - **OIDC fixture**: Uses manual cookie management (`_parse_set_cookies`) to
   prevent httpx's cookie jar from leaking Outline cookies to Dex (both run on
   localhost but on different ports)
@@ -316,6 +318,7 @@ OUTLINE_WRITE_TIMEOUT=30.0                # Write timeout in seconds
 OUTLINE_DISABLE_AI_TOOLS=true              # Disable AI tools
 OUTLINE_READ_ONLY=true                     # Disable all write operations
 OUTLINE_DISABLE_DELETE=true                # Disable delete operations only
+OUTLINE_DYNAMIC_TOOL_LIST=false            # Disable per-request tool filtering (on by default)
 
 # MCP server (optional)
 MCP_TRANSPORT=stdio                        # Transport: stdio, sse, streamable-http
@@ -326,6 +329,7 @@ MCP_PORT=3000                              # Server port
 **Access Control Notes**:
 - `OUTLINE_READ_ONLY`: Blocks entire write modules at registration (content, lifecycle, organization, batch_operations)
 - `OUTLINE_DISABLE_DELETE`: Conditionally registers delete tools within document_lifecycle and collection_tools
+- `OUTLINE_DYNAMIC_TOOL_LIST`: On by default. Filters tools per-request based on user role from `auth.info` and API key scopes. Fail-open: if auth check fails, all tools are shown. Set to `false` to disable.
 - Read-only mode takes precedence: If both are set, server operates in read-only mode
 
 ### Critical Requirements

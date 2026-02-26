@@ -12,6 +12,9 @@ from typing import Literal
 from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
+from mcp_outline.features.dynamic_tools import (
+    install_dynamic_tool_list,
+)
 from mcp_outline.patches import patch_for_copilot_cli
 
 # Apply compatibility patches for MCP clients
@@ -30,6 +33,9 @@ mcp = FastMCP("Document Outline", host=host, port=port)
 
 # Register all features
 register_all(mcp)
+
+# Install per-request dynamic tool filtering (on by default)
+install_dynamic_tool_list(mcp)
 
 
 def main() -> None:

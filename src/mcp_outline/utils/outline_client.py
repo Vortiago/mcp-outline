@@ -309,6 +309,20 @@ class OutlineClient:
         response = await self.post("auth.info")
         return response.get("data", {})
 
+    async def auth_info_full(self) -> Dict[str, Any]:
+        """
+        Get the full auth.info response including policies.
+
+        Unlike :meth:`auth_info` which returns only the ``data``
+        portion, this method returns the complete response so
+        callers can inspect ``policies`` and other top-level
+        fields.
+
+        Returns:
+            Dict containing the full API response.
+        """
+        return await self.post("auth.info")
+
     async def get_document(self, document_id: str) -> Dict[str, Any]:
         """
         Get a document by ID.

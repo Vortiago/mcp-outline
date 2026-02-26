@@ -62,6 +62,7 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
+| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `true` | `false` = disable per-request tool filtering by user role/key scopes ([details](#dynamic-tool-list)) |
 | `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
 | `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
 | `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
@@ -106,6 +107,25 @@ Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while pre
 - `batch_delete_documents`
 
 **Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
+
+### Dynamic Tool List
+
+The server filters the tool list per-request based on the authenticated user's Outline role and API key scopes. On each `tools/list` request, the server calls `auth.info` and hides write tools for viewer-role users or read-only-scoped API keys. This is enabled by default; set `OUTLINE_DYNAMIC_TOOL_LIST=false` to disable.
+
+**Use cases:**
+- Multi-user HTTP deployments where different API keys have different permission levels
+- Environments where viewer-role users should not see write tools
+- API keys with restricted endpoint scopes should only show matching tools
+
+**How it works:**
+1. On each `tools/list` request, the server calls Outline's `auth.info` endpoint
+2. If the user's role is `viewer`, write tools are hidden
+3. If the API key has restricted scopes that exclude write endpoints, write tools are hidden
+4. If `auth.info` fails for any reason, all tools are returned (fail-open)
+
+**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
+
+This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
 
 ### Per-Request Authentication
 
@@ -515,6 +535,7 @@ Common issues:
 - **Read-only mode enabled?** Check if `OUTLINE_READ_ONLY=true` is disabling write tools
 - **Delete operations disabled?** Check if `OUTLINE_DISABLE_DELETE=true` is hiding delete tools
 - **AI tools missing?** Check if `OUTLINE_DISABLE_AI_TOOLS=true` is disabling AI features
+- **Dynamic filtering active?** Tools are filtered by user role/key scopes by default (set `OUTLINE_DYNAMIC_TOOL_LIST=false` to disable)
 - Restart your MCP client after changing environment variables
 
 ### API rate limiting errors?
