@@ -7,26 +7,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
-from mcp.types import ListToolsRequest
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
     WRITE_TOOL_NAMES,
     install_dynamic_tool_list,
 )
-
-
-async def _list_tools_via_handler(mcp_server):
-    """Call list_tools through the lowlevel MCP protocol handler.
-
-    This is the code path real MCP clients use (``tools/list``
-    JSON-RPC request).  The handler is registered during
-    ``FastMCP.__init__`` and may differ from the instance-level
-    ``mcp.list_tools`` attribute.
-    """
-    handler = mcp_server._mcp_server.request_handlers[ListToolsRequest]
-    server_result = await handler(ListToolsRequest())
-    return server_result.root.tools
+from tests.helpers import list_tools_via_handler
 
 
 @pytest.fixture
@@ -203,7 +190,7 @@ async def test_dynamic_tool_list_enabled_by_default(
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" in tool_names
@@ -234,7 +221,7 @@ async def test_dynamic_tool_list_composes_with_read_only():
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await _list_tools_via_handler(mcp)
+            tools = await list_tools_via_handler(mcp)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" not in tool_names
@@ -267,7 +254,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await _list_tools_via_handler(mcp)
+            tools = await list_tools_via_handler(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names
@@ -282,7 +269,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             new_callable=AsyncMock,
             return_value=WRITE_TOOL_NAMES,
         ):
-            tools = await _list_tools_via_handler(mcp)
+            tools = await list_tools_via_handler(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names

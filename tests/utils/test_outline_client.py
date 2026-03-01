@@ -629,3 +629,181 @@ class TestOutlineClient:
 
         client = OutlineClient()
         assert client.api_url == expected
+
+    # -- probe_endpoint tests ----------------------------------
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_returns_false_on_401(self):
+        """401 means the key's scope blocks access."""
+        client = OutlineClient()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 401
+        mock_resp.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_resp),
+        ):
+            result = await client.probe_endpoint("documents.info")
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_returns_true_on_403(self):
+        """403 is resource-level auth, not scope rejection."""
+        client = OutlineClient()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_resp.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_resp),
+        ):
+            result = await client.probe_endpoint("documents.info")
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_returns_true_on_200(self):
+        """200 means the endpoint is accessible."""
+        client = OutlineClient()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_resp),
+        ):
+            result = await client.probe_endpoint("documents.info")
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_fail_open_when_pool_none(
+        self,
+    ):
+        """None pool -> fail-open (return True)."""
+        client = OutlineClient()
+        OutlineClient._client_pool = None
+        result = await client.probe_endpoint("documents.info")
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_429_retry_then_success(self):
+        """429 on first attempt, success on retry."""
+        client = OutlineClient()
+
+        mock_429 = MagicMock()
+        mock_429.status_code = 429
+        mock_429.headers = {"retry-after": "0.01"}
+
+        mock_200 = MagicMock()
+        mock_200.status_code = 200
+        mock_200.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(side_effect=[mock_429, mock_200]),
+        ):
+            with patch(
+                "mcp_outline.utils.outline_client.asyncio.sleep",
+            ) as mock_sleep:
+                result = await client.probe_endpoint("documents.info")
+                assert result is True
+                mock_sleep.assert_called_once()
+                assert mock_sleep.call_args[0][0] == 0.01
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_429_retry_caps_at_2s(self):
+        """Retry-after header capped at 2.0 seconds."""
+        client = OutlineClient()
+
+        mock_429 = MagicMock()
+        mock_429.status_code = 429
+        mock_429.headers = {"retry-after": "30"}
+
+        mock_200 = MagicMock()
+        mock_200.status_code = 200
+        mock_200.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(side_effect=[mock_429, mock_200]),
+        ):
+            with patch(
+                "mcp_outline.utils.outline_client.asyncio.sleep",
+            ) as mock_sleep:
+                result = await client.probe_endpoint("documents.info")
+                assert result is True
+                assert mock_sleep.call_args[0][0] == 2.0
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_fail_open_429_exhaustion(
+        self,
+    ):
+        """Two consecutive 429s -> fail-open (True)."""
+        client = OutlineClient()
+
+        mock_429 = MagicMock()
+        mock_429.status_code = 429
+        mock_429.headers = {"retry-after": "0.01"}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_429),
+        ):
+            with patch(
+                "mcp_outline.utils.outline_client.asyncio.sleep",
+            ):
+                result = await client.probe_endpoint("documents.info")
+                assert result is True
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_fail_open_on_exception(
+        self,
+    ):
+        """Network exception -> fail-open (True)."""
+        client = OutlineClient()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(side_effect=httpx.ConnectError("refused")),
+        ):
+            result = await client.probe_endpoint("documents.info")
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_probe_endpoint_sends_correct_request(
+        self,
+    ):
+        """Verify URL, headers, body, and timeout."""
+        client = OutlineClient()
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_resp),
+        ) as mock_post:
+            await client.probe_endpoint("documents.info")
+
+            mock_post.assert_called_once()
+            _, kwargs = mock_post.call_args
+            assert kwargs["headers"]["Authorization"] == (
+                f"Bearer {MOCK_API_KEY}"
+            )
+            assert kwargs["headers"]["Content-Type"] == ("application/json")
+            assert kwargs["json"] == {
+                "id": "00000000-0000-0000-0000-000000000000"
+            }
+            assert isinstance(kwargs["timeout"], httpx.Timeout)
+            assert MOCK_API_URL in mock_post.call_args[0][0]

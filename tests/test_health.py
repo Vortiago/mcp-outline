@@ -1,8 +1,9 @@
-"""Integration tests for health check endpoints.
+"""Tests for health check endpoints.
 
-Tests the ``/health`` (liveness) and ``/ready`` (readiness) HTTP endpoints
-by starting the MCP server as a subprocess in ``streamable-http`` mode and
-polling until it binds to its port.
+Integration tests start the MCP server as a subprocess in
+``streamable-http`` mode and poll until it binds to its port.
+Unit tests call :func:`check_readiness` directly with mocked
+httpx.
 
 """
 
@@ -10,9 +11,12 @@ import os
 import subprocess
 import sys
 import time
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
+
+from mcp_outline.features.health import check_readiness
 
 HEALTH_PORT = 3997
 HEALTH_BASE = f"http://127.0.0.1:{HEALTH_PORT}"
@@ -124,29 +128,26 @@ def test_health_readiness_not_ready():
             process.communicate()
 
 
-@pytest.mark.integration
-def test_health_readiness_ready():
-    """GET /ready returns 200 when Outline is reachable.
+@pytest.mark.asyncio
+async def test_health_readiness_ready():
+    """check_readiness returns 200 when Outline is reachable."""
+    mock_client = AsyncMock()
+    mock_client.head = AsyncMock()
 
-    Uses the default URL (app.getoutline.com) which should be
-    reachable.  No API key needed — just a HEAD request.
-    """
-    process = _start_server()
-    try:
-        ready = _wait_for_server(HEALTH_BASE, STARTUP_TIMEOUT)
-        assert ready, (
-            f"Server did not bind on port {HEALTH_PORT} "
-            f"within {STARTUP_TIMEOUT}s"
+    with patch(
+        "mcp_outline.features.health.httpx.AsyncClient",
+    ) as mock_cls:
+        mock_cls.return_value.__aenter__ = AsyncMock(
+            return_value=mock_client,
+        )
+        mock_cls.return_value.__aexit__ = AsyncMock(
+            return_value=False,
         )
 
-        resp = httpx.get(f"{HEALTH_BASE}/ready", timeout=15.0)
+        resp = await check_readiness()
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "ready"
-    finally:
-        process.terminate()
-        try:
-            process.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.communicate()
+        assert (
+            resp.body == b'{"status":"ready",'
+            b'"outline":"connected",'
+            b'"api_accessible":true}'
+        )

@@ -225,8 +225,12 @@ def _start_http_server(api_key: str) -> subprocess.Popen:
 
 def _stop(process: subprocess.Popen) -> None:
     """Terminate a server subprocess."""
-    process.kill()
-    process.wait(timeout=10)
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 async def _list_tools_http(api_key: str) -> set[str]:

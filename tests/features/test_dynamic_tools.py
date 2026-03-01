@@ -25,26 +25,13 @@ from mcp_outline.features.dynamic_tools import (
     get_blocked_tools,
     install_dynamic_tool_list,
 )
+from tests.helpers import list_tools_via_handler
 
 
 @pytest.fixture
 def fresh_mcp_server():
     """Create a fresh MCP server instance for testing."""
     return FastMCP("Test Server")
-
-
-async def _list_tools_via_handler(mcp_server):
-    """Call list_tools through the lowlevel MCP protocol handler.
-
-    This is the code path real MCP clients use (``tools/list``
-    JSON-RPC request).  The handler is registered during
-    ``FastMCP.__init__`` and may differ from the instance-level
-    ``mcp.list_tools`` attribute that ``install_dynamic_tool_list``
-    patches.
-    """
-    handler = mcp_server._mcp_server.request_handlers[ListToolsRequest]
-    server_result = await handler(ListToolsRequest())
-    return server_result.root.tools
 
 
 # ------------------------------------------------------------------
@@ -110,7 +97,7 @@ async def test_viewer_sees_only_read_tools(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=WRITE_TOOL_NAMES,
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
             # Read tools present
@@ -145,7 +132,7 @@ async def test_member_sees_all_tools(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "search_documents" in names
@@ -172,7 +159,7 @@ async def test_admin_sees_all_tools(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "create_document" in names
@@ -198,7 +185,7 @@ async def test_scoped_key_without_write(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=WRITE_TOOL_NAMES,
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "search_documents" in names
@@ -230,7 +217,7 @@ async def test_graceful_degradation_auth_failure(
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
             # All tools should be returned
@@ -258,7 +245,7 @@ async def test_graceful_degradation_no_api_key(
             "mcp_outline.features.dynamic_tools.filtering._get_header_api_key",
             return_value=None,
         ):
-            tools = await _list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "create_document" in names

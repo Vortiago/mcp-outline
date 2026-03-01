@@ -47,38 +47,37 @@ def register_routes(mcp) -> None:
 
     @mcp.custom_route(path="/ready", methods=["GET"])
     async def ready_check(request: Request) -> JSONResponse:
-        """
-        Readiness check endpoint.
+        """Readiness check — delegates to :func:`check_readiness`."""
+        return await check_readiness()
 
-        Sends a HEAD request to the Outline base URL to verify
-        the instance is reachable.  No API key is required.
-        Any HTTP response means ready; only network/timeout
-        errors return 503.
 
-        Returns:
-            JSON response with status and connection info,
-            or error details if not ready
-        """
-        try:
-            base_url = _get_outline_base_url()
-            async with httpx.AsyncClient() as client:
-                await client.head(base_url, timeout=5.0)
+async def check_readiness() -> JSONResponse:
+    """Check whether the Outline instance is reachable.
 
-            return JSONResponse(
-                {
-                    "status": "ready",
-                    "outline": "connected",
-                    "api_accessible": True,
-                }
-            )
+    Sends a HEAD request to the Outline base URL.  No API key
+    is required.  Any HTTP response means ready; only
+    network/timeout errors return 503.
+    """
+    try:
+        base_url = _get_outline_base_url()
+        async with httpx.AsyncClient() as client:
+            await client.head(base_url, timeout=5.0)
 
-        except Exception as e:
-            return JSONResponse(
-                {
-                    "status": "not_ready",
-                    "outline": "disconnected",
-                    "api_accessible": False,
-                    "error": str(e),
-                },
-                status_code=503,
-            )
+        return JSONResponse(
+            {
+                "status": "ready",
+                "outline": "connected",
+                "api_accessible": True,
+            }
+        )
+
+    except Exception as e:
+        return JSONResponse(
+            {
+                "status": "not_ready",
+                "outline": "disconnected",
+                "api_accessible": False,
+                "error": str(e),
+            },
+            status_code=503,
+        )
