@@ -25,6 +25,7 @@ services:
       UTILS_SECRET: "1111111111111111111111111111111111111111111111111111111111111111"
       URL: "http://localhost:3031"
       OIDC_AUTH_URI: "http://localhost:5557/dex/auth"
+      RATE_LIMITER_ENABLED: "false"
 
   mcp-outline:
     profiles: ["disabled"]
