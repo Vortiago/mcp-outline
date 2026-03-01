@@ -40,8 +40,8 @@ def fresh_mcp_server():
 
 
 @pytest.mark.anyio
-async def test_enabled_by_default(fresh_mcp_server):
-    """Feature is on when env var is unset — handler re-registered."""
+async def test_disabled_by_default(fresh_mcp_server):
+    """Feature is off when env var is unset — handler unchanged."""
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
         register_all(fresh_mcp_server)
@@ -55,15 +55,15 @@ async def test_enabled_by_default(fresh_mcp_server):
         handler_after = fresh_mcp_server._mcp_server.request_handlers[
             ListToolsRequest
         ]
-        assert handler_after is not handler_before
+        assert handler_after is handler_before
 
 
 @pytest.mark.anyio
-async def test_explicitly_disabled(fresh_mcp_server):
-    """Feature is off when env var is 'false' — handler unchanged."""
+async def test_explicitly_enabled(fresh_mcp_server):
+    """Feature is on when env var is 'true' — handler re-registered."""
     with patch.dict(
         os.environ,
-        {"OUTLINE_DYNAMIC_TOOL_LIST": "false"},
+        {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
     ):
         register_all(fresh_mcp_server)
 
@@ -76,7 +76,7 @@ async def test_explicitly_disabled(fresh_mcp_server):
         handler_after = fresh_mcp_server._mcp_server.request_handlers[
             ListToolsRequest
         ]
-        assert handler_after is handler_before
+        assert handler_after is not handler_before
 
 
 @pytest.mark.anyio
@@ -320,7 +320,9 @@ async def test_get_blocked_tools_full_access():
         instance = mock_cls.return_value
         instance.probe_endpoint = AsyncMock(return_value=True)
 
-        result = await get_blocked_tools("test-key", "https://example.com/api")
+        result = await get_blocked_tools(
+            "key-full-access", "https://example.com/api"
+        )
         assert result == set()
 
 
@@ -339,7 +341,9 @@ async def test_get_blocked_tools_read_only_key():
         instance = mock_cls.return_value
         instance.probe_endpoint = AsyncMock(side_effect=_probe)
 
-        result = await get_blocked_tools("test-key", "https://example.com/api")
+        result = await get_blocked_tools(
+            "key-read-only", "https://example.com/api"
+        )
         # All write tools should be blocked
         assert WRITE_TOOL_NAMES <= result
 
@@ -362,7 +366,9 @@ async def test_get_blocked_tools_partial_scope():
         instance = mock_cls.return_value
         instance.probe_endpoint = AsyncMock(side_effect=_probe)
 
-        result = await get_blocked_tools("test-key", "https://example.com/api")
+        result = await get_blocked_tools(
+            "key-partial", "https://example.com/api"
+        )
         assert "create_collection" in result
         assert "update_collection" in result
         assert "delete_collection" in result
@@ -379,7 +385,9 @@ async def test_get_blocked_tools_network_error():
     ) as mock_cls:
         mock_cls.side_effect = Exception("connection refused")
 
-        result = await get_blocked_tools("test-key", "https://example.com/api")
+        result = await get_blocked_tools(
+            "key-network-error", "https://example.com/api"
+        )
         assert result == set()
 
 
@@ -391,9 +399,31 @@ async def test_get_blocked_tools_no_api_key():
 
 
 @pytest.mark.anyio
-async def test_disabled_values(fresh_mcp_server):
-    """Feature should deactivate for 'false', '0', and 'no'."""
-    for val in ("false", "False", "FALSE", "0", "no", "No"):
+async def test_get_blocked_tools_cached():
+    """Second call with same key skips probing."""
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.probe_endpoint = AsyncMock(return_value=True)
+
+        first = await get_blocked_tools(
+            "key-cached", "https://example.com/api"
+        )
+        assert first == set()
+        initial_calls = mock_cls.call_count
+
+    # Second call outside the patch — if it probes it will
+    # fail because OutlineClient is no longer mocked.
+    second = await get_blocked_tools("key-cached", "https://example.com/api")
+    assert second == set()
+    assert mock_cls.call_count == initial_calls
+
+
+@pytest.mark.anyio
+async def test_enabled_values():
+    """Feature should activate for 'true', '1', and 'yes'."""
+    for val in ("true", "True", "TRUE", "1", "yes", "Yes"):
         mcp = FastMCP("Test")
         with patch.dict(
             os.environ,
@@ -403,6 +433,6 @@ async def test_disabled_values(fresh_mcp_server):
             handler_before = mcp._mcp_server.request_handlers[ListToolsRequest]
             install_dynamic_tool_list(mcp)
             handler_after = mcp._mcp_server.request_handlers[ListToolsRequest]
-            assert handler_after is handler_before, (
-                f"Expected disabled for value '{val}'"
+            assert handler_after is not handler_before, (
+                f"Expected enabled for value '{val}'"
             )

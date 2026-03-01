@@ -172,15 +172,17 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
 
 
 @pytest.mark.anyio
-async def test_dynamic_tool_list_enabled_by_default(
+async def test_dynamic_tool_list_when_enabled(
     fresh_mcp_server,
 ):
     """Dynamic tool list should filter via the MCP protocol handler.
 
     Uses the lowlevel handler path to match real MCP clients.
     """
-    with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
+    with patch.dict(
+        os.environ,
+        {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
+    ):
         register_all(fresh_mcp_server)
         install_dynamic_tool_list(fresh_mcp_server)
 

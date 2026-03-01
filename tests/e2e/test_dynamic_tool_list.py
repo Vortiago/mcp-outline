@@ -41,7 +41,11 @@ HTTP_PORT = 3997
 HTTP_BASE = f"http://127.0.0.1:{HTTP_PORT}"
 STARTUP_TIMEOUT = 15  # seconds
 
-pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
+# Run under asyncio only — running twice (asyncio + trio) exhausts
+# Outline's per-endpoint rate limits and causes fail-open probe
+# leaks.  The tests verify Outline API behaviour, not the async
+# runtime, so a single backend is sufficient.
+pytestmark = [pytest.mark.e2e, pytest.mark.asyncio]
 
 
 # -------------------------------------------------------------------

@@ -7,8 +7,8 @@ hidden.  403 is *not* treated as blocked — Outline returns 403 for
 resource-level authorization (e.g. non-existent UUID), while scope
 restrictions produce 401.
 
-The feature is **on by default**.  Disable it by setting
-``OUTLINE_DYNAMIC_TOOL_LIST`` to ``false``, ``0``, or ``no``
+The feature is **off by default**.  Enable it by setting
+``OUTLINE_DYNAMIC_TOOL_LIST`` to ``true``, ``1``, or ``yes``
 (case-insensitive).
 
 This module is intentionally fail-open: if probing fails for any

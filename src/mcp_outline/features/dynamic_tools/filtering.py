@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Per-key cache: API key scopes are immutable (revoke + recreate
+# to change), so probe results are cached for the process lifetime.
+_blocked_cache: Dict[str, Set[str]] = {}
+
 
 # ------------------------------------------------------------------
 # Helpers
@@ -30,10 +34,10 @@ logger = logging.getLogger(__name__)
 
 def _is_enabled() -> bool:
     """Return ``True`` when the dynamic tool list feature is on."""
-    return os.getenv("OUTLINE_DYNAMIC_TOOL_LIST", "").lower() not in (
-        "false",
-        "0",
-        "no",
+    return os.getenv("OUTLINE_DYNAMIC_TOOL_LIST", "").lower() in (
+        "true",
+        "1",
+        "yes",
     )
 
 
@@ -43,6 +47,9 @@ async def get_blocked_tools(
 ) -> Set[str]:
     """Determine which tools *api_key* cannot access.
 
+    Results are cached per API key for the process lifetime
+    since Outline key scopes are immutable.
+
     Probes all unique endpoints in ``TOOL_ENDPOINT_MAP``
     concurrently. Endpoints returning 401 are mapped back
     to their tool names, which are returned as the blocked set.
@@ -51,6 +58,9 @@ async def get_blocked_tools(
     """
     if not api_key:
         return set()
+
+    if api_key in _blocked_cache:
+        return _blocked_cache[api_key]
 
     try:
         client = OutlineClient(api_key=api_key, api_url=api_url)
@@ -78,6 +88,7 @@ async def get_blocked_tools(
             if not probe_results.get(endpoint, True):
                 blocked.update(endpoint_to_tools[endpoint])
 
+        _blocked_cache[api_key] = blocked
         return blocked
 
     except Exception as exc:
@@ -99,8 +110,8 @@ def install_dynamic_tool_list(mcp: "FastMCP") -> None:
 
     Re-registers the lowlevel ``tools/list`` handler so that
     tools whose endpoints are blocked (401) are hidden.
-    Enabled by default; set ``OUTLINE_DYNAMIC_TOOL_LIST=false``
-    to disable.
+    Disabled by default; set ``OUTLINE_DYNAMIC_TOOL_LIST=true``
+    to enable.
 
     Call this **after** ``register_all(mcp)``.
     """

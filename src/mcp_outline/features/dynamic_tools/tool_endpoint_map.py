@@ -12,11 +12,11 @@
 #   ``documents.info`` instead — if the key can read documents
 #   it can access attachments.
 #
-# - ``collections.export_all`` has an aggressive rate limit
-#   (5 requests) that fires *before* auth.  Once exhausted,
-#   probes get 429 regardless of key validity.  Mapped to
-#   ``collections.list`` instead — if the key can list
-#   collections it can export them.
+# - ``collections.export`` and ``collections.export_all`` have
+#   aggressive rate limits that fire *before* auth.  Once
+#   exhausted, probes get 429 regardless of key validity.
+#   Mapped to ``collections.list`` instead — if the key can
+#   list collections it can export them.
 #
 # Limitation: a key scoped to only one of the proxy endpoints
 # (e.g. ``attachments.redirect`` but not ``documents.info``)
@@ -36,8 +36,8 @@ TOOL_ENDPOINT_MAP: dict[str, str] = {
     "get_document_id_from_title": "documents.search",
     "list_collections": "collections.list",
     "get_collection_structure": "collections.documents",
-    "export_collection": "collections.export",
-    # export_all uses collections.list as probe — see NOTE above.
+    # export endpoints use collections.list as probe — see NOTE above.
+    "export_collection": "collections.list",
     "export_all_collections": "collections.list",
     "list_document_comments": "comments.list",
     "get_comment": "comments.info",
