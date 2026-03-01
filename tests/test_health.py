@@ -33,14 +33,25 @@ def _wait_for_server(base_url: str, timeout: float) -> bool:
     return False
 
 
-def _start_server() -> subprocess.Popen:
-    """Start the MCP server in streamable-http mode."""
-    env = os.environ.copy()
+def _start_server(
+    *,
+    api_url: str = "",
+) -> subprocess.Popen:
+    """Start the MCP server in streamable-http mode.
+
+    Args:
+        api_url: Outline API URL override.  Empty uses default.
+    """
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("OUTLINE_") and not k.startswith("MCP_")
+    }
     env["MCP_TRANSPORT"] = "streamable-http"
     env["MCP_HOST"] = "127.0.0.1"
     env["MCP_PORT"] = str(HEALTH_PORT)
-    # Use a dummy key so the server starts; /ready will fail to connect
-    env["OUTLINE_API_KEY"] = "integration-test-invalid-key"
+    if api_url:
+        env["OUTLINE_API_URL"] = api_url
 
     return subprocess.Popen(
         [sys.executable, "-m", "mcp_outline"],
@@ -53,10 +64,10 @@ def _start_server() -> subprocess.Popen:
 
 @pytest.mark.integration
 def test_health_liveness():
-    """Start the server and verify GET /health returns 200 with status=healthy.
+    """GET /health returns 200 with status=healthy.
 
-    Guards against: the liveness endpoint being broken during refactors of the
-    server startup sequence, or the JSON response shape changing.
+    Guards against: the liveness endpoint being broken during
+    refactors of the server startup sequence.
     """
     process = _start_server()
     try:
@@ -81,13 +92,15 @@ def test_health_liveness():
 
 @pytest.mark.integration
 def test_health_readiness_not_ready():
-    """Verify GET /ready returns 503 when the Outline API key is invalid.
+    """GET /ready returns 503 when Outline is unreachable.
 
-    Guards against: the readiness probe returning 200 even when the server
-    cannot reach the Outline API, which would cause false-positive health
+    Points the server at a non-routable address so the HEAD
+    request times out.  Guards against: false-positive health
     checks in container orchestration.
     """
-    process = _start_server()
+    process = _start_server(
+        api_url="http://192.0.2.1:1/api",
+    )
     try:
         ready = _wait_for_server(HEALTH_BASE, STARTUP_TIMEOUT)
         assert ready, (
@@ -102,6 +115,34 @@ def test_health_readiness_not_ready():
         assert data["api_accessible"] is False
         assert "error" in data
         assert isinstance(data["error"], str)
+    finally:
+        process.terminate()
+        try:
+            process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+
+
+@pytest.mark.integration
+def test_health_readiness_ready():
+    """GET /ready returns 200 when Outline is reachable.
+
+    Uses the default URL (app.getoutline.com) which should be
+    reachable.  No API key needed — just a HEAD request.
+    """
+    process = _start_server()
+    try:
+        ready = _wait_for_server(HEALTH_BASE, STARTUP_TIMEOUT)
+        assert ready, (
+            f"Server did not bind on port {HEALTH_PORT} "
+            f"within {STARTUP_TIMEOUT}s"
+        )
+
+        resp = httpx.get(f"{HEALTH_BASE}/ready", timeout=15.0)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ready"
     finally:
         process.terminate()
         try:

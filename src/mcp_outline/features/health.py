@@ -4,8 +4,24 @@ Health check endpoints for MCP server.
 Provides liveness and readiness probes for Docker/Kubernetes deployments.
 """
 
+import os
+
+import httpx
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
+from mcp_outline.utils.outline_client import _sanitize_value
+
+
+def _get_outline_base_url() -> str:
+    """Return the Outline base URL (without ``/api`` suffix)."""
+    raw = _sanitize_value(os.getenv("OUTLINE_API_URL"))
+    if not raw:
+        return "https://app.getoutline.com"
+    url = raw.rstrip("/")
+    if url.lower().endswith("/api"):
+        return url[: -len("/api")]
+    return url
 
 
 def register_routes(mcp) -> None:
@@ -34,35 +50,20 @@ def register_routes(mcp) -> None:
         """
         Readiness check endpoint.
 
-        Verifies that:
-        1. The server is running
-        2. The Outline API key is configured
-        3. The server can connect to Outline
-        4. The API key is valid (by attempting collections.list)
-
-        Returns 200 OK with detailed status, or appropriate error if not ready.
+        Sends a HEAD request to the Outline base URL to verify
+        the instance is reachable.  No API key is required.
+        Any HTTP response means ready; only network/timeout
+        errors return 503.
 
         Returns:
-            JSON response with status and Outline connection info,
+            JSON response with status and connection info,
             or error details if not ready
         """
         try:
-            # Import here to avoid circular imports
-            from mcp_outline.features.documents.common import (
-                get_outline_client,
-            )
+            base_url = _get_outline_base_url()
+            async with httpx.AsyncClient() as client:
+                await client.head(base_url, timeout=5.0)
 
-            # Get the outline client
-            client = await get_outline_client()
-
-            # Verify API connectivity by listing collections with limit=1
-            # This verifies:
-            # - Network connectivity to Outline
-            # - API key is valid
-            # - API endpoint is accessible
-            await client.post("collections.list", {"limit": 1})
-
-            # If we got here, everything is ready
             return JSONResponse(
                 {
                     "status": "ready",
@@ -72,7 +73,6 @@ def register_routes(mcp) -> None:
             )
 
         except Exception as e:
-            # Not ready - return error with status code
             return JSONResponse(
                 {
                     "status": "not_ready",
@@ -80,5 +80,5 @@ def register_routes(mcp) -> None:
                     "api_accessible": False,
                     "error": str(e),
                 },
-                status_code=503,  # Service Unavailable
+                status_code=503,
             )

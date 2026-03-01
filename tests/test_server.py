@@ -7,11 +7,26 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ListToolsRequest
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
+    WRITE_TOOL_NAMES,
     install_dynamic_tool_list,
 )
+
+
+async def _list_tools_via_handler(mcp_server):
+    """Call list_tools through the lowlevel MCP protocol handler.
+
+    This is the code path real MCP clients use (``tools/list``
+    JSON-RPC request).  The handler is registered during
+    ``FastMCP.__init__`` and may differ from the instance-level
+    ``mcp.list_tools`` attribute.
+    """
+    handler = mcp_server._mcp_server.request_handlers[ListToolsRequest]
+    server_result = await handler(ListToolsRequest())
+    return server_result.root.tools
 
 
 @pytest.fixture
@@ -173,25 +188,22 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
 async def test_dynamic_tool_list_enabled_by_default(
     fresh_mcp_server,
 ):
-    """Dynamic tool list should be active when env var is unset."""
+    """Dynamic tool list should filter via the MCP protocol handler.
+
+    Uses the lowlevel handler path to match real MCP clients.
+    """
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
         register_all(fresh_mcp_server)
         install_dynamic_tool_list(fresh_mcp_server)
 
-        # list_tools should be wrapped (instance override set)
-        assert "list_tools" in fresh_mcp_server.__dict__
-
-        # Admin still sees all tools
+        # Admin still sees all tools via protocol handler
         with patch(
-            "mcp_outline.features.dynamic_tools._get_user_permissions",
+            "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
             new_callable=AsyncMock,
-            return_value={
-                "role": "admin",
-                "can_write": True,
-            },
+            return_value=set(),
         ):
-            tools = await fresh_mcp_server.list_tools()
+            tools = await _list_tools_via_handler(fresh_mcp_server)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" in tool_names
@@ -200,7 +212,10 @@ async def test_dynamic_tool_list_enabled_by_default(
 
 @pytest.mark.anyio
 async def test_dynamic_tool_list_composes_with_read_only():
-    """Dynamic + read-only should compose: write tools absent."""
+    """Dynamic + read-only should compose: write tools absent.
+
+    Uses the lowlevel handler path to match real MCP clients.
+    """
     mcp = FastMCP("Test Compose")
     with patch.dict(
         os.environ,
@@ -215,13 +230,11 @@ async def test_dynamic_tool_list_composes_with_read_only():
         # Even with admin role, read-only registration
         # already removed write tools.
         with patch(
-            "mcp_outline.features.dynamic_tools._get_user_permissions",
-            return_value={
-                "role": "admin",
-                "can_write": True,
-            },
+            "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
+            new_callable=AsyncMock,
+            return_value=set(),
         ):
-            tools = await mcp.list_tools()
+            tools = await _list_tools_via_handler(mcp)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" not in tool_names
@@ -234,6 +247,8 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
 
     Delete tools are absent at registration.  The dynamic filter
     should still work for remaining write tools without errors.
+
+    Uses the lowlevel handler path to match real MCP clients.
     """
     mcp = FastMCP("Test Compose Delete")
     with patch.dict(
@@ -248,13 +263,11 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
 
         # Admin sees everything except delete tools
         with patch(
-            "mcp_outline.features.dynamic_tools._get_user_permissions",
-            return_value={
-                "role": "admin",
-                "can_write": True,
-            },
+            "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
+            new_callable=AsyncMock,
+            return_value=set(),
         ):
-            tools = await mcp.list_tools()
+            tools = await _list_tools_via_handler(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names
@@ -265,13 +278,11 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
 
         # Viewer sees no write tools at all
         with patch(
-            "mcp_outline.features.dynamic_tools._get_user_permissions",
-            return_value={
-                "role": "viewer",
-                "can_write": False,
-            },
+            "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
+            new_callable=AsyncMock,
+            return_value=WRITE_TOOL_NAMES,
         ):
-            tools = await mcp.list_tools()
+            tools = await _list_tools_via_handler(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names
