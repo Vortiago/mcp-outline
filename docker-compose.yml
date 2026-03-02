@@ -84,9 +84,12 @@ services:
     ports:
       - ${MCP_PORT:-3000}:${MCP_PORT:-3000}
     environment:
-      - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
+      # OUTLINE_API_KEY is optional — set it or use per-request
+      # x-outline-api-key header instead.
+      # - OUTLINE_API_KEY=${OUTLINE_API_KEY:-}
       - OUTLINE_API_URL=http://outline:3030/api
       - OUTLINE_DISABLE_AI_TOOLS=true
+      - OUTLINE_DYNAMIC_TOOL_LIST=true
       - MCP_PORT=${MCP_PORT:-3000}
     depends_on:
       - outline

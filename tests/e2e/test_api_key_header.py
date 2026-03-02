@@ -21,6 +21,7 @@ from mcp.client.session import ClientSession
 from mcp.client.streamable_http import (
     streamable_http_client,
 )
+from mcp.types import TextContent
 
 from .helpers import OUTLINE_URL
 
@@ -125,10 +126,12 @@ async def test_header_api_key_overrides_env_var(
             async with ClientSession(read, write) as s:
                 await s.initialize()
                 result = await s.call_tool("list_collections")
-                text = result.content[0].text
-                assert "Error" not in text
+                item = result.content[0]
+                assert isinstance(item, TextContent)
+                assert "Error" not in item.text
                 assert (
-                    "# Collections" in text or "No collections found" in text
+                    "# Collections" in item.text
+                    or "No collections found" in item.text
                 )
     finally:
         _stop(process)
@@ -163,10 +166,12 @@ async def test_env_var_used_when_no_header(outline_stack, outline_api_key):
             async with ClientSession(read, write) as s:
                 await s.initialize()
                 result = await s.call_tool("list_collections")
-                text = result.content[0].text
-                assert "Error" not in text
+                item = result.content[0]
+                assert isinstance(item, TextContent)
+                assert "Error" not in item.text
                 assert (
-                    "# Collections" in text or "No collections found" in text
+                    "# Collections" in item.text
+                    or "No collections found" in item.text
                 )
     finally:
         _stop(process)

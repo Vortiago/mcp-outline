@@ -1,13 +1,27 @@
 """E2E tests for the dynamic tool list feature.
 
 Verifies that ``OUTLINE_DYNAMIC_TOOL_LIST=true`` correctly filters
-the MCP ``tools/list`` response based on the authenticated user's
-Outline role.  Tests run against a real Outline instance via Docker
-Compose.
+the MCP ``tools/list`` response based on API key scope.
 
-These tests start the MCP server as an HTTP subprocess (like
-``test_api_key_header.py``) so they can verify tool-list filtering
-at the MCP protocol level.
+Tests run against a real Outline instance via Docker Compose.
+All assertions use **exact set matching** to catch both missing
+and leaked tools.
+
+**Transports tested**:
+
+- **stdio** — each test spawns a fresh subprocess with the scoped
+  API key in ``OUTLINE_API_KEY``.  The ``stdio_client`` context
+  manager handles lifecycle; no manual subprocess management.
+- **streamable-http** — one module-scoped server verifies that
+  per-request ``x-outline-api-key`` header filtering works.
+
+Scope types tested:
+
+- **Invalid key** — all endpoints reject -> no tools
+- **Full-access key** — all endpoints accept -> all tools
+- **Route scopes** — explicit ``namespace.method`` entries
+- **Namespaced scopes** — ``namespace:level`` (read/write/create)
+- **Mixed scopes** — combination of namespace and route entries
 """
 
 import os
@@ -18,21 +32,150 @@ import time
 import httpx
 import pytest
 from mcp.client.session import ClientSession
-from mcp.client.streamable_http import (
-    streamable_http_client,
-)
+from mcp.client.stdio import StdioServerParameters, stdio_client
+from mcp.client.streamable_http import streamable_http_client
 
 from .helpers import OUTLINE_URL
 
-E2E_PORT = 3997
-E2E_BASE = f"http://127.0.0.1:{E2E_PORT}"
-STARTUP_TIMEOUT = 8  # seconds
+HTTP_PORT = 3997
+HTTP_BASE = f"http://127.0.0.1:{HTTP_PORT}"
+STARTUP_TIMEOUT = 15  # seconds
 
 pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 
 # -------------------------------------------------------------------
+# Expected tool sets
+# -------------------------------------------------------------------
+
+# All tools registered when AI tools are disabled.
+# The completeness unit test ``test_tool_endpoint_map_covers_all_tools``
+# guards against drift between this set and ``register_all()``.
+ALL_TOOLS = {
+    # Read (16 tools — AI excluded)
+    "read_document",
+    "export_document",
+    "search_documents",
+    "get_document_id_from_title",
+    "list_collections",
+    "get_collection_structure",
+    "export_collection",
+    "export_all_collections",
+    "list_document_comments",
+    "get_comment",
+    "get_document_backlinks",
+    "get_attachment_url",
+    "fetch_attachment",
+    "list_document_attachments",
+    "list_archived_documents",
+    "list_trash",
+    # Write (16 tools)
+    "create_document",
+    "update_document",
+    "add_comment",
+    "archive_document",
+    "unarchive_document",
+    "delete_document",
+    "restore_document",
+    "move_document",
+    "create_collection",
+    "update_collection",
+    "delete_collection",
+    "batch_create_documents",
+    "batch_update_documents",
+    "batch_move_documents",
+    "batch_archive_documents",
+    "batch_delete_documents",
+}
+
+
+# -------------------------------------------------------------------
 # Helpers
+# -------------------------------------------------------------------
+
+
+def _stdio_env(api_key: str) -> dict:
+    """Build a clean env dict for a stdio MCP subprocess."""
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("OUTLINE_") and not k.startswith("MCP_")
+    }
+    env["MCP_TRANSPORT"] = "stdio"
+    env["OUTLINE_API_KEY"] = api_key
+    env["OUTLINE_API_URL"] = f"{OUTLINE_URL}/api"
+    env["OUTLINE_DYNAMIC_TOOL_LIST"] = "true"
+    env["OUTLINE_DISABLE_AI_TOOLS"] = "true"
+    return env
+
+
+async def _list_tools_stdio(api_key: str) -> set[str]:
+    """List tool names via a stdio MCP session.
+
+    Spawns a fresh subprocess, initialises, calls ``list_tools``,
+    and tears down.  The ``stdio_client`` context manager handles
+    all subprocess lifecycle.
+    """
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "mcp_outline"],
+        env=_stdio_env(api_key),
+    )
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.list_tools()
+            return {t.name for t in result.tools}
+
+
+def _create_api_key_with_scope(
+    access_token: str,
+    name: str,
+    scope: list,
+) -> str:
+    """Create a scoped API key via the Outline admin API.
+
+    Uses the OIDC *access_token* (session token) to call
+    ``apiKeys.create``.  This endpoint requires a session
+    token -- API keys cannot create other API keys.
+
+    Raises ``pytest.skip`` if the Outline instance does not
+    support scoped API keys.
+
+    Returns the API key value string.
+    """
+    resp = httpx.post(
+        f"{OUTLINE_URL}/api/apiKeys.create",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json={"name": name, "scope": scope},
+        timeout=30.0,
+    )
+    if resp.status_code != 200:
+        pytest.skip(
+            "Outline does not support scoped API keys "
+            f"(apiKeys.create returned {resp.status_code})"
+        )
+
+    return resp.json()["data"]["value"]
+
+
+def _assert_tools(
+    actual: set[str],
+    expected: set[str],
+    label: str,
+) -> None:
+    """Assert exact tool set match with a clear diff message."""
+    assert actual == expected, (
+        f"Tool set mismatch for {label}.\n"
+        f"  Missing (expected but absent): "
+        f"{expected - actual or 'none'}\n"
+        f"  Extra (present but unexpected): "
+        f"{actual - expected or 'none'}"
+    )
+
+
+# -------------------------------------------------------------------
+# Streamable-HTTP helpers (one server for header tests)
 # -------------------------------------------------------------------
 
 
@@ -50,11 +193,8 @@ def _wait_for_server(base_url: str, timeout: float) -> bool:
     return False
 
 
-def _start_dynamic_server(
-    api_key: str,
-    api_url: str,
-) -> subprocess.Popen:
-    """Start the MCP server with dynamic tool list enabled."""
+def _start_http_server(api_key: str) -> subprocess.Popen:
+    """Start the MCP server in streamable-http mode."""
     env = {
         k: v
         for k, v in os.environ.items()
@@ -62,181 +202,339 @@ def _start_dynamic_server(
     }
     env["MCP_TRANSPORT"] = "streamable-http"
     env["MCP_HOST"] = "127.0.0.1"
-    env["MCP_PORT"] = str(E2E_PORT)
+    env["MCP_PORT"] = str(HTTP_PORT)
     env["OUTLINE_API_KEY"] = api_key
-    env["OUTLINE_API_URL"] = api_url
+    env["OUTLINE_API_URL"] = f"{OUTLINE_URL}/api"
     env["OUTLINE_DYNAMIC_TOOL_LIST"] = "true"
+    env["OUTLINE_DISABLE_AI_TOOLS"] = "true"
+    kwargs: dict = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "env": env,
+    }
+    # On Windows, CREATE_NEW_PROCESS_GROUP allows reliable
+    # termination without hanging on pipe reads.
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     return subprocess.Popen(
         [sys.executable, "-m", "mcp_outline"],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
+        **kwargs,
     )
 
 
 def _stop(process: subprocess.Popen) -> None:
-    """Terminate a server subprocess cleanly."""
+    """Terminate a server subprocess."""
     process.terminate()
     try:
-        process.communicate(timeout=5)
+        process.wait(timeout=5)
     except subprocess.TimeoutExpired:
         process.kill()
-        process.communicate()
+        process.wait()
 
 
-def _create_viewer_api_key(access_token: str) -> str:
-    """Create a viewer-role API key via the Outline admin API.
-
-    Uses the OIDC *access_token* (session token) to call
-    ``apiKeys.create``.  This endpoint requires a session
-    token — API keys cannot create other API keys.
-
-    Tries to create a scoped key first; falls back to an
-    unscoped key if the Outline version doesn't support scopes.
-
-    Returns the API key value string.
-    """
-    api_url = f"{OUTLINE_URL}/api"
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    # Create a read-only scoped API key.
-    # Outline supports endpoint-based scopes.
-    resp = httpx.post(
-        f"{api_url}/apiKeys.create",
-        headers=headers,
-        json={
-            "name": "e2e-viewer-scoped",
-            "scope": (
-                "auth.info "
-                "documents.list "
-                "documents.info "
-                "documents.search "
-                "collections.list "
-                "collections.info "
-                "collections.documents "
-                "comments.list "
-                "attachments.redirect"
-            ),
-        },
-        timeout=30.0,
+async def _list_tools_http(api_key: str) -> set[str]:
+    """List tool names via streamable-http with per-request key."""
+    http_client = httpx.AsyncClient(
+        headers={"x-outline-api-key": api_key},
+        timeout=httpx.Timeout(30.0, read=300.0),
     )
-    if resp.status_code == 200:
-        return resp.json()["data"]["value"]
-
-    # Fallback: create an unscoped key (tests will still
-    # validate admin flow works)
-    resp = httpx.post(
-        f"{api_url}/apiKeys.create",
-        headers=headers,
-        json={"name": "e2e-viewer-fallback"},
-        timeout=30.0,
-    )
-    resp.raise_for_status()
-    return resp.json()["data"]["value"]
+    async with streamable_http_client(
+        url=f"{HTTP_BASE}/mcp",
+        http_client=http_client,
+    ) as (read, write, _):
+        async with ClientSession(read, write) as s:
+            await s.initialize()
+            result = await s.list_tools()
+            return {t.name for t in result.tools}
 
 
 # -------------------------------------------------------------------
-# Tests
+# Fixtures
 # -------------------------------------------------------------------
 
 
-async def test_admin_sees_all_tools_with_dynamic_list(
-    outline_stack, outline_api_key
-):
-    """Admin key + dynamic list enabled still returns all tools.
+@pytest.fixture(scope="module")
+def _http_server(outline_stack):
+    """Start one streamable-http MCP server for header tests."""
+    process = _start_http_server(api_key="e2e-placeholder-key")
+    ready = _wait_for_server(HTTP_BASE, STARTUP_TIMEOUT)
+    assert ready, f"HTTP server did not start within {STARTUP_TIMEOUT}s"
+    yield
+    _stop(process)
 
-    Guards against: the dynamic filtering accidentally hiding
-    tools for admin users.
+
+# -------------------------------------------------------------------
+# Stdio tests — scope filtering via OUTLINE_API_KEY
+# -------------------------------------------------------------------
+
+
+async def test_invalid_key_returns_no_tools(outline_stack):
+    """Invalid API key -> all probes return 401 -> 0 tools.
+
+    Guards against: tools leaking through when endpoints
+    validate input before checking auth (e.g. documents.info
+    returning 400 instead of 401 for an empty body).
     """
-    api_url = f"{OUTLINE_URL}/api"
-    process = _start_dynamic_server(
-        api_key=outline_api_key,
-        api_url=api_url,
-    )
-    try:
-        ready = _wait_for_server(E2E_BASE, STARTUP_TIMEOUT)
-        assert ready, (
-            f"Server did not bind on port {E2E_PORT} within {STARTUP_TIMEOUT}s"
-        )
-
-        async with streamable_http_client(
-            url=f"{E2E_BASE}/mcp",
-        ) as (read, write, _):
-            async with ClientSession(read, write) as s:
-                await s.initialize()
-                tools_result = await s.list_tools()
-                names = {t.name for t in tools_result.tools}
-
-                # Admin should see write tools
-                assert "create_document" in names
-                assert "update_document" in names
-                assert "search_documents" in names
-    finally:
-        _stop(process)
+    names = await _list_tools_stdio("totally-invalid-key-12345")
+    _assert_tools(names, set(), "invalid key")
 
 
-async def test_scoped_key_hides_write_tools(
-    outline_stack, outline_api_key, outline_access_token
+async def test_admin_key_returns_all_tools(
+    outline_stack,
+    outline_api_key,
 ):
-    """Read-only-scoped key via header should hide write tools.
+    """Full-access admin key -> all probes pass -> all tools.
 
-    Creates a scoped API key restricted to read-only endpoints
-    and sends it via the ``x-outline-api-key`` header. The
-    dynamic tool list should detect the limited scope and
-    filter out write tools.
-
-    Guards against: scoped API key detection not working in
-    the dynamic tool list flow.
+    Uses exact set matching to detect both missing and leaked
+    tools.
     """
-    api_url = f"{OUTLINE_URL}/api"
+    names = await _list_tools_stdio(outline_api_key)
+    _assert_tools(names, ALL_TOOLS, "admin key")
 
-    # Start server with a dummy env key — real key via header
-    process = _start_dynamic_server(
-        api_key="dummy-for-scoped-test",
-        api_url=api_url,
+
+async def test_route_scoped_read_only(
+    outline_stack,
+    outline_access_token,
+):
+    """Route-scoped key with all read endpoints -> only read tools.
+
+    Scope: explicit ``namespace.method`` entries for every
+    read-only endpoint in the TOOL_ENDPOINT_MAP.
+    """
+    key = _create_api_key_with_scope(
+        outline_access_token,
+        "e2e-stdio-route-read-only",
+        [
+            "documents.info",
+            "documents.export",
+            "documents.search",
+            "documents.list",
+            "collections.list",
+            "collections.documents",
+            "collections.export",
+            "collections.export_all",
+            "comments.list",
+            "comments.info",
+            "documents.archived",
+            "documents.deleted",
+        ],
     )
-    try:
-        ready = _wait_for_server(E2E_BASE, STARTUP_TIMEOUT)
-        assert ready
 
-        # Create a read-only scoped key using the session token
-        # (apiKeys.create requires a session token, not an API key)
-        viewer_key = _create_viewer_api_key(outline_access_token)
+    expected = {
+        "read_document",
+        "export_document",
+        "search_documents",
+        "get_document_id_from_title",
+        "list_collections",
+        "get_collection_structure",
+        "export_collection",
+        "export_all_collections",
+        "list_document_comments",
+        "get_comment",
+        "get_document_backlinks",
+        "get_attachment_url",
+        "fetch_attachment",
+        "list_document_attachments",
+        "list_archived_documents",
+        "list_trash",
+    }
 
-        http_client = httpx.AsyncClient(
-            headers={"x-outline-api-key": viewer_key},
-            timeout=httpx.Timeout(30.0, read=300.0),
-        )
-        async with streamable_http_client(
-            url=f"{E2E_BASE}/mcp",
-            http_client=http_client,
-        ) as (read, write, _):
-            async with ClientSession(read, write) as s:
-                await s.initialize()
-                tools_result = await s.list_tools()
-                names = {t.name for t in tools_result.tools}
+    names = await _list_tools_stdio(key)
+    _assert_tools(names, expected, "route-scoped read-only")
 
-                # Read tools should be present
-                assert "search_documents" in names
-                assert "read_document" in names
 
-                # Whether write tools are hidden depends on
-                # the Outline version supporting scoped keys.
-                # If the scope feature is available, write
-                # tools should be absent. If not (older
-                # Outline), they may still appear because the
-                # scoped key creation fell back to unscoped.
-                # We log the result for diagnostic purposes.
-                if "create_document" in names:
-                    pytest.skip(
-                        "Outline instance does not support "
-                        "scoped API keys — cannot verify "
-                        "write-tool filtering"
-                    )
+async def test_namespace_read_scope(
+    outline_stack,
+    outline_access_token,
+):
+    """Namespaced read scopes -> only methods that map to ``read``.
 
-                assert "create_document" not in names
-                assert "update_document" not in names
-                assert "delete_document" not in names
-    finally:
-        _stop(process)
+    Scope: ``documents:read``, ``collections:read``, ``comments:read``
+
+    Outline's ``methodToScope`` mapping classifies methods as
+    ``read`` (list, info, search, export, documents, drafts,
+    viewed, config) or ``write`` (everything else).
+
+    Notably, ``documents.archived`` and ``documents.deleted``
+    default to ``write`` and are excluded by ``:read`` scopes.
+    ``export_all_collections`` probes via ``collections.list``
+    (proxy) so it follows ``:read`` access.
+    """
+    key = _create_api_key_with_scope(
+        outline_access_token,
+        "e2e-stdio-namespace-read",
+        [
+            "documents:read",
+            "collections:read",
+            "comments:read",
+        ],
+    )
+
+    expected = {
+        "read_document",  # documents.info
+        "export_document",  # documents.export
+        "search_documents",  # documents.search
+        "get_document_id_from_title",  # documents.search
+        "get_document_backlinks",  # documents.list
+        "get_attachment_url",  # documents.info (proxy)
+        "fetch_attachment",  # documents.info (proxy)
+        "list_document_attachments",  # documents.info
+        "list_collections",  # collections.list
+        "get_collection_structure",  # collections.documents
+        "export_collection",  # collections.export
+        "export_all_collections",  # collections.list (proxy)
+        "list_document_comments",  # comments.list
+        "get_comment",  # comments.info
+    }
+
+    names = await _list_tools_stdio(key)
+    _assert_tools(names, expected, "namespace read scope")
+
+
+async def test_namespace_write_documents_only(
+    outline_stack,
+    outline_access_token,
+):
+    """``documents:write`` grants ALL document methods, nothing else.
+
+    The ``write`` level matches every method regardless of
+    ``methodToScope``, granting both read and write operations
+    on documents.  Collection and comment tools stay blocked.
+    """
+    key = _create_api_key_with_scope(
+        outline_access_token,
+        "e2e-stdio-namespace-write-docs",
+        ["documents:write"],
+    )
+
+    expected = {
+        # Read document tools
+        "read_document",
+        "export_document",
+        "search_documents",
+        "get_document_id_from_title",
+        "get_document_backlinks",
+        "get_attachment_url",
+        "fetch_attachment",
+        "list_document_attachments",
+        "list_archived_documents",
+        "list_trash",
+        # Write document tools
+        "create_document",
+        "update_document",
+        "archive_document",
+        "unarchive_document",
+        "delete_document",
+        "restore_document",
+        "move_document",
+        "batch_create_documents",
+        "batch_update_documents",
+        "batch_move_documents",
+        "batch_archive_documents",
+        "batch_delete_documents",
+    }
+
+    names = await _list_tools_stdio(key)
+    _assert_tools(names, expected, "namespace write documents")
+
+
+async def test_mixed_namespace_and_route_scope(
+    outline_stack,
+    outline_access_token,
+):
+    """Mix of namespace and route scopes in one API key.
+
+    Scope: ``documents:read`` (namespace) +
+           ``collections.create`` + ``collections.list`` (route)
+
+    The namespace scope grants broad document read access.
+    The route scopes grant two specific collection operations.
+    All other collection, comment, and write tools are blocked.
+    """
+    key = _create_api_key_with_scope(
+        outline_access_token,
+        "e2e-stdio-mixed-scope",
+        [
+            "documents:read",
+            "collections.create",
+            "collections.list",
+        ],
+    )
+
+    expected = {
+        # Document read tools (from documents:read)
+        "read_document",
+        "export_document",
+        "search_documents",
+        "get_document_id_from_title",
+        "get_document_backlinks",
+        "get_attachment_url",
+        "fetch_attachment",
+        "list_document_attachments",
+        # Collection tools (from route scopes)
+        "list_collections",
+        "export_collection",  # collections.list (proxy)
+        "export_all_collections",  # collections.list (proxy)
+        "create_collection",
+    }
+
+    names = await _list_tools_stdio(key)
+    _assert_tools(names, expected, "mixed namespace + route scope")
+
+
+async def test_namespace_create_scope(
+    outline_stack,
+    outline_access_token,
+):
+    """``documents:create`` grants only ``documents.create``.
+
+    The ``create`` level is the most restrictive -- it only
+    matches methods whose ``methodToScope`` is ``create``
+    (i.e. the ``create`` method itself).
+    """
+    key = _create_api_key_with_scope(
+        outline_access_token,
+        "e2e-stdio-namespace-create-docs",
+        ["documents:create"],
+    )
+
+    expected = {
+        "create_document",
+        "batch_create_documents",
+    }
+
+    names = await _list_tools_stdio(key)
+    _assert_tools(names, expected, "namespace create scope")
+
+
+# -------------------------------------------------------------------
+# Streamable-HTTP test — per-request header filtering
+# -------------------------------------------------------------------
+
+
+async def test_http_header_filters_tools(
+    _http_server,
+    outline_api_key,
+    outline_access_token,
+):
+    """Per-request ``x-outline-api-key`` header triggers filtering.
+
+    The server runs with a placeholder env-var key.  A real
+    admin key via header should show all tools; a scoped key
+    via header should show only the permitted subset.
+    """
+    # Admin key via header -> all tools
+    admin_names = await _list_tools_http(outline_api_key)
+    _assert_tools(admin_names, ALL_TOOLS, "http header admin key")
+
+    # Scoped key via header -> subset
+    scoped_key = _create_api_key_with_scope(
+        outline_access_token,
+        "e2e-http-header-scoped",
+        ["documents:read"],
+    )
+    scoped_names = await _list_tools_http(scoped_key)
+    assert "read_document" in scoped_names
+    assert "list_collections" not in scoped_names
+    assert "create_document" not in scoped_names

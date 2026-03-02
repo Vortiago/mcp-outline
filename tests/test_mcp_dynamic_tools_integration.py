@@ -22,7 +22,7 @@ async def test_dynamic_tool_list_server_starts():
     Guards against: the dynamic tool list feature crashing the
     server at startup or breaking the MCP protocol handshake.
     """
-    env = os.environ.copy()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OUTLINE_")}
     env["MCP_TRANSPORT"] = "stdio"
     env["OUTLINE_DYNAMIC_TOOL_LIST"] = "true"
 

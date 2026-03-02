@@ -1,8 +1,9 @@
-"""Integration tests for health check endpoints.
+"""Tests for health check endpoints.
 
-Tests the ``/health`` (liveness) and ``/ready`` (readiness) HTTP endpoints
-by starting the MCP server as a subprocess in ``streamable-http`` mode and
-polling until it binds to its port.
+Integration tests start the MCP server as a subprocess in
+``streamable-http`` mode and poll until it binds to its port.
+Unit tests call :func:`check_readiness` directly with mocked
+httpx.
 
 """
 
@@ -10,9 +11,12 @@ import os
 import subprocess
 import sys
 import time
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
+
+from mcp_outline.features.health import check_readiness
 
 HEALTH_PORT = 3997
 HEALTH_BASE = f"http://127.0.0.1:{HEALTH_PORT}"
@@ -33,14 +37,25 @@ def _wait_for_server(base_url: str, timeout: float) -> bool:
     return False
 
 
-def _start_server() -> subprocess.Popen:
-    """Start the MCP server in streamable-http mode."""
-    env = os.environ.copy()
+def _start_server(
+    *,
+    api_url: str = "",
+) -> subprocess.Popen:
+    """Start the MCP server in streamable-http mode.
+
+    Args:
+        api_url: Outline API URL override.  Empty uses default.
+    """
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("OUTLINE_") and not k.startswith("MCP_")
+    }
     env["MCP_TRANSPORT"] = "streamable-http"
     env["MCP_HOST"] = "127.0.0.1"
     env["MCP_PORT"] = str(HEALTH_PORT)
-    # Use a dummy key so the server starts; /ready will fail to connect
-    env["OUTLINE_API_KEY"] = "integration-test-invalid-key"
+    if api_url:
+        env["OUTLINE_API_URL"] = api_url
 
     return subprocess.Popen(
         [sys.executable, "-m", "mcp_outline"],
@@ -53,10 +68,10 @@ def _start_server() -> subprocess.Popen:
 
 @pytest.mark.integration
 def test_health_liveness():
-    """Start the server and verify GET /health returns 200 with status=healthy.
+    """GET /health returns 200 with status=healthy.
 
-    Guards against: the liveness endpoint being broken during refactors of the
-    server startup sequence, or the JSON response shape changing.
+    Guards against: the liveness endpoint being broken during
+    refactors of the server startup sequence.
     """
     process = _start_server()
     try:
@@ -81,13 +96,15 @@ def test_health_liveness():
 
 @pytest.mark.integration
 def test_health_readiness_not_ready():
-    """Verify GET /ready returns 503 when the Outline API key is invalid.
+    """GET /ready returns 503 when Outline is unreachable.
 
-    Guards against: the readiness probe returning 200 even when the server
-    cannot reach the Outline API, which would cause false-positive health
+    Points the server at a non-routable address so the HEAD
+    request times out.  Guards against: false-positive health
     checks in container orchestration.
     """
-    process = _start_server()
+    process = _start_server(
+        api_url="http://192.0.2.1:1/api",
+    )
     try:
         ready = _wait_for_server(HEALTH_BASE, STARTUP_TIMEOUT)
         assert ready, (
@@ -109,3 +126,28 @@ def test_health_readiness_not_ready():
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate()
+
+
+@pytest.mark.asyncio
+async def test_health_readiness_ready():
+    """check_readiness returns 200 when Outline is reachable."""
+    mock_client = AsyncMock()
+    mock_client.head = AsyncMock()
+
+    with patch(
+        "mcp_outline.features.health.httpx.AsyncClient",
+    ) as mock_cls:
+        mock_cls.return_value.__aenter__ = AsyncMock(
+            return_value=mock_client,
+        )
+        mock_cls.return_value.__aexit__ = AsyncMock(
+            return_value=False,
+        )
+
+        resp = await check_readiness()
+        assert resp.status_code == 200
+        assert (
+            resp.body == b'{"status":"ready",'
+            b'"outline":"connected",'
+            b'"api_accessible":true}'
+        )

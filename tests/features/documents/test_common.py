@@ -176,15 +176,12 @@ class TestGetOutlineClient:
                 "mcp_outline.features.documents.common.OutlineClient"
             ) as mock_cls,
         ):
-            mock_client = AsyncMock()
-            mock_client.auth_info.return_value = {}
-            mock_cls.return_value = mock_client
+            mock_cls.return_value = AsyncMock()
 
-            client = await get_outline_client()
+            await get_outline_client()
             mock_cls.assert_called_once_with(
                 api_key="header-key", api_url=None
             )
-            assert client is mock_client
 
     @pytest.mark.anyio
     async def test_falls_back_to_env_var(self):
@@ -202,13 +199,10 @@ class TestGetOutlineClient:
                 "mcp_outline.features.documents.common.OutlineClient"
             ) as mock_cls,
         ):
-            mock_client = AsyncMock()
-            mock_client.auth_info.return_value = {}
-            mock_cls.return_value = mock_client
+            mock_cls.return_value = AsyncMock()
 
-            client = await get_outline_client()
+            await get_outline_client()
             mock_cls.assert_called_once_with(api_key="env-key", api_url=None)
-            assert client is mock_client
 
     @pytest.mark.anyio
     async def test_no_key_anywhere_raises(self):
@@ -223,11 +217,12 @@ class TestGetOutlineClient:
                 "mcp_outline.features.documents.common.OutlineClient"
             ) as mock_cls,
         ):
-            # Remove env var if present
             os.environ.pop("OUTLINE_API_KEY", None)
-            mock_client = AsyncMock()
-            mock_client.auth_info.side_effect = Exception("No API key")
-            mock_cls.return_value = mock_client
+            from mcp_outline.utils.outline_client import (
+                OutlineError,
+            )
+
+            mock_cls.side_effect = OutlineError("Missing API key")
 
             with pytest.raises(OutlineClientError):
                 await get_outline_client()

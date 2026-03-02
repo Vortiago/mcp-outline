@@ -34,7 +34,7 @@ mcp = FastMCP("Document Outline", host=host, port=port)
 # Register all features
 register_all(mcp)
 
-# Install per-request dynamic tool filtering (on by default)
+# Install per-request dynamic tool filtering (off by default)
 install_dynamic_tool_list(mcp)
 
 

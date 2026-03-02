@@ -69,12 +69,7 @@ async def get_outline_client() -> OutlineClient:
         api_url = os.getenv("OUTLINE_API_URL")
 
         # Create an instance of the outline client
-        client = OutlineClient(api_key=api_key, api_url=api_url)
-
-        # Test the connection by attempting to get auth info
-        _ = await client.auth_info()
-
-        return client
+        return OutlineClient(api_key=api_key, api_url=api_url)
     except OutlineError as e:
         raise OutlineClientError(f"Outline client error: {str(e)}")
     except Exception as e:
