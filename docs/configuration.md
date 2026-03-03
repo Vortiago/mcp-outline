@@ -1,6 +1,6 @@
-# Access Control
+# Configuration
 
-Configure server permissions to control what operations are allowed.
+Detailed configuration for server permissions, tool filtering, and authentication.
 
 ## Read-Only Mode
 
