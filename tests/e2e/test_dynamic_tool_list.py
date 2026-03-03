@@ -3,6 +3,10 @@
 Verifies that ``OUTLINE_DYNAMIC_TOOL_LIST=true`` correctly filters
 the MCP ``tools/list`` response based on API key scope.
 
+The feature introspects scopes via the ``apiKeys.list`` endpoint.
+Scoped API keys must include ``apiKeys.list`` in their scope array
+for introspection to work.
+
 Tests run against a real Outline instance via Docker Compose.
 All assertions use **exact set matching** to catch both missing
 and leaked tools.
@@ -17,8 +21,8 @@ and leaked tools.
 
 Scope types tested:
 
-- **Invalid key** — all endpoints reject -> no tools
-- **Full-access key** — all endpoints accept -> all tools
+- **Invalid key** — apiKeys.list returns 401 -> no tools
+- **Full-access key** — null scope -> all tools
 - **Route scopes** — explicit ``namespace.method`` entries
 - **Namespaced scopes** — ``namespace:level`` (read/write/create)
 - **Mixed scopes** — combination of namespace and route entries
@@ -270,11 +274,10 @@ def _http_server(outline_stack):
 
 
 async def test_invalid_key_returns_no_tools(outline_stack):
-    """Invalid API key -> all probes return 401 -> 0 tools.
+    """Invalid API key -> apiKeys.list returns 401 -> 0 tools.
 
-    Guards against: tools leaking through when endpoints
-    validate input before checking auth (e.g. documents.info
-    returning 400 instead of 401 for an empty body).
+    Guards against: tools leaking through when the key is
+    completely invalid.
     """
     names = await _list_tools_stdio("totally-invalid-key-12345")
     _assert_tools(names, set(), "invalid key")
@@ -284,7 +287,7 @@ async def test_admin_key_returns_all_tools(
     outline_stack,
     outline_api_key,
 ):
-    """Full-access admin key -> all probes pass -> all tools.
+    """Full-access admin key -> null scope -> all tools.
 
     Uses exact set matching to detect both missing and leaked
     tools.
@@ -306,6 +309,7 @@ async def test_route_scoped_read_only(
         outline_access_token,
         "e2e-stdio-route-read-only",
         [
+            "apiKeys.list",
             "documents.info",
             "documents.export",
             "documents.search",
@@ -350,7 +354,8 @@ async def test_namespace_read_scope(
 ):
     """Namespaced read scopes -> only methods that map to ``read``.
 
-    Scope: ``documents:read``, ``collections:read``, ``comments:read``
+    Scope: ``documents:read``, ``collections:read``,
+    ``comments:read``, ``apiKeys.list``
 
     Outline's ``methodToScope`` mapping classifies methods as
     ``read`` (list, info, search, export, documents, drafts,
@@ -358,13 +363,14 @@ async def test_namespace_read_scope(
 
     Notably, ``documents.archived`` and ``documents.deleted``
     default to ``write`` and are excluded by ``:read`` scopes.
-    ``export_all_collections`` probes via ``collections.list``
+    ``export_all_collections`` checks via ``collections.list``
     (proxy) so it follows ``:read`` access.
     """
     key = _create_api_key_with_scope(
         outline_access_token,
         "e2e-stdio-namespace-read",
         [
+            "apiKeys.list",
             "documents:read",
             "collections:read",
             "comments:read",
@@ -405,7 +411,7 @@ async def test_namespace_write_documents_only(
     key = _create_api_key_with_scope(
         outline_access_token,
         "e2e-stdio-namespace-write-docs",
-        ["documents:write"],
+        ["apiKeys.list", "documents:write"],
     )
 
     expected = {
@@ -456,6 +462,7 @@ async def test_mixed_namespace_and_route_scope(
         outline_access_token,
         "e2e-stdio-mixed-scope",
         [
+            "apiKeys.list",
             "documents:read",
             "collections.create",
             "collections.list",
@@ -496,7 +503,7 @@ async def test_namespace_create_scope(
     key = _create_api_key_with_scope(
         outline_access_token,
         "e2e-stdio-namespace-create-docs",
-        ["documents:create"],
+        ["apiKeys.list", "documents:create"],
     )
 
     expected = {
@@ -532,7 +539,7 @@ async def test_http_header_filters_tools(
     scoped_key = _create_api_key_with_scope(
         outline_access_token,
         "e2e-http-header-scoped",
-        ["documents:read"],
+        ["apiKeys.list", "documents:read"],
     )
     scoped_names = await _list_tools_http(scoped_key)
     assert "read_document" in scoped_names

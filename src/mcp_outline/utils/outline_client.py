@@ -347,6 +347,32 @@ class OutlineClient:
         except Exception:
             return True  # fail-open
 
+    async def list_api_keys(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list:
+        """List API keys for the authenticated user.
+
+        Returns metadata including ``scope``, ``last4``,
+        ``name``, and ``id`` fields.
+
+        Args:
+            limit: Maximum number of keys to return.
+            offset: Pagination offset.
+
+        Returns:
+            List of API key metadata dicts.
+
+        Raises:
+            OutlineError: If the request fails.
+        """
+        response = await self.post(
+            "apiKeys.list",
+            {"limit": limit, "offset": offset},
+        )
+        return response.get("data", [])
+
     async def get_document(self, document_id: str) -> Dict[str, Any]:
         """
         Get a document by ID.

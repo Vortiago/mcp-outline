@@ -2,7 +2,7 @@
 Tests for dynamic tool list filtering.
 
 Verifies that the ``OUTLINE_DYNAMIC_TOOL_LIST`` feature correctly
-filters tools by probing Outline API endpoints for 401.
+filters tools by introspecting API key scopes via ``apiKeys.list``.
 
 **Important**: filtering tests call ``list_tools`` through the
 lowlevel MCP handler (``_mcp_server.request_handlers``), which is
@@ -25,6 +25,10 @@ from mcp_outline.features.dynamic_tools import (
     get_blocked_tools,
     install_dynamic_tool_list,
 )
+from mcp_outline.features.dynamic_tools.filtering import (
+    _blocked_cache,
+)
+from mcp_outline.utils.outline_client import OutlineError
 from tests.helpers import list_tools_via_handler
 
 
@@ -32,6 +36,14 @@ from tests.helpers import list_tools_via_handler
 def fresh_mcp_server():
     """Create a fresh MCP server instance for testing."""
     return FastMCP("Test Server")
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    """Clear blocked tools cache between tests."""
+    _blocked_cache.clear()
+    yield
+    _blocked_cache.clear()
 
 
 # ------------------------------------------------------------------
@@ -198,7 +210,7 @@ async def test_scoped_key_without_write(fresh_mcp_server):
 async def test_graceful_degradation_auth_failure(
     fresh_mcp_server,
 ):
-    """When probing fails, return all tools (fail-open).
+    """When scope check fails, return all tools (fail-open).
 
     Uses the lowlevel handler path to match real MCP clients.
     """
@@ -307,68 +319,80 @@ async def test_tool_endpoint_map_covers_all_tools(
 
 
 # ------------------------------------------------------------------
-# _get_blocked_tools
+# get_blocked_tools — scope-based filtering
 # ------------------------------------------------------------------
+
+
+def _mock_key(api_key: str, scope=None, name: str = "test"):
+    """Build a mock API key dict matching *api_key*'s last4."""
+    return {
+        "last4": api_key[-4:],
+        "scope": scope,
+        "name": name,
+    }
 
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_full_access():
-    """All probes return non-401 → empty blocked set."""
+    """Key with null scope → full access → empty blocked set."""
+    api_key = "key-full-access"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
-        instance.probe_endpoint = AsyncMock(return_value=True)
+        instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
 
-        result = await get_blocked_tools(
-            "key-full-access", "https://example.com/api"
-        )
+        result = await get_blocked_tools(api_key, "https://example.com/api")
         assert result == set()
 
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_read_only_key():
-    """Write probes return 401 → write tool names blocked."""
-    # Build the set of write endpoints
-    write_endpoints = {TOOL_ENDPOINT_MAP[t] for t in WRITE_TOOL_NAMES}
-
-    async def _probe(endpoint):
-        return endpoint not in write_endpoints
-
+    """Read-only scoped key → write tools blocked."""
+    api_key = "key-read-only"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
-        instance.probe_endpoint = AsyncMock(side_effect=_probe)
-
-        result = await get_blocked_tools(
-            "key-read-only", "https://example.com/api"
+        instance.list_api_keys = AsyncMock(
+            return_value=[
+                _mock_key(
+                    api_key,
+                    scope=[
+                        "documents:read",
+                        "collections:read",
+                        "comments:read",
+                    ],
+                )
+            ]
         )
-        # All write tools should be blocked
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
         assert WRITE_TOOL_NAMES <= result
 
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_partial_scope():
-    """Only collection endpoints blocked → only collection tools."""
-    blocked_endpoints = {
-        "collections.create",
-        "collections.update",
-        "collections.delete",
-    }
-
-    async def _probe(endpoint):
-        return endpoint not in blocked_endpoints
-
+    """Scope missing collection write → collection write blocked."""
+    api_key = "key-partial"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
-        instance.probe_endpoint = AsyncMock(side_effect=_probe)
-
-        result = await get_blocked_tools(
-            "key-partial", "https://example.com/api"
+        instance.list_api_keys = AsyncMock(
+            return_value=[
+                _mock_key(
+                    api_key,
+                    scope=[
+                        "documents:write",
+                        "comments:write",
+                        "collections:read",
+                    ],
+                )
+            ]
         )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
         assert "create_collection" in result
         assert "update_collection" in result
         assert "delete_collection" in result
@@ -379,7 +403,7 @@ async def test_get_blocked_tools_partial_scope():
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_network_error():
-    """All probes fail (network error) → empty set (fail-open)."""
+    """OutlineClient constructor fails → empty set (fail-open)."""
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
@@ -399,25 +423,96 @@ async def test_get_blocked_tools_no_api_key():
 
 
 @pytest.mark.anyio
-async def test_get_blocked_tools_cached():
-    """Second call with same key skips probing."""
+async def test_get_blocked_tools_invalid_key_401():
+    """401 from apiKeys.list → block ALL tools."""
+    api_key = "key-invalid-401x"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
-        instance.probe_endpoint = AsyncMock(return_value=True)
-
-        first = await get_blocked_tools(
-            "key-cached", "https://example.com/api"
+        instance.list_api_keys = AsyncMock(
+            side_effect=OutlineError("HTTP 401: authentication_required")
         )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert result == set(TOOL_ENDPOINT_MAP.keys())
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_403_fail_open():
+    """403 from apiKeys.list → fail-open (empty set)."""
+    api_key = "key-missing-scope"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(
+            side_effect=OutlineError("HTTP 403: authorization_error")
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert result == set()
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_key_not_found():
+    """Key not found in apiKeys.list → fail-open."""
+    api_key = "key-not-found-xxxx"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(
+            return_value=[{"last4": "zzzz", "scope": None, "name": "other"}]
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert result == set()
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_cached():
+    """Second call with same key skips API call."""
+    api_key = "key-cached-test"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
+
+        first = await get_blocked_tools(api_key, "https://example.com/api")
         assert first == set()
         initial_calls = mock_cls.call_count
 
-    # Second call outside the patch — if it probes it will
-    # fail because OutlineClient is no longer mocked.
-    second = await get_blocked_tools("key-cached", "https://example.com/api")
+    # Second call outside the patch — if it calls the API it
+    # will fail because OutlineClient is no longer mocked.
+    second = await get_blocked_tools(api_key, "https://example.com/api")
     assert second == set()
     assert mock_cls.call_count == initial_calls
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_pagination():
+    """Key found on second page of apiKeys.list results."""
+    api_key = "key-on-page-two"
+    filler = [
+        {"last4": f"{i:04d}", "scope": None, "name": f"k{i}"}
+        for i in range(100)
+    ]
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(
+            side_effect=[
+                filler,
+                [_mock_key(api_key, scope=["documents:read"])],
+            ]
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert "create_document" in result
+        assert instance.list_api_keys.call_count == 2
 
 
 @pytest.mark.anyio

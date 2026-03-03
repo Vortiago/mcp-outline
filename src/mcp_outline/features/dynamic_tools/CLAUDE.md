@@ -1,6 +1,23 @@
 # Dynamic Tool List — Outline Scope Reference
 
-How Outline checks API key scopes against request endpoints.
+How the dynamic tool list feature determines API key permissions.
+
+## How It Works
+
+The feature calls the `apiKeys.list` endpoint once per API key to
+retrieve the key's stored scopes.  It matches the current key by
+comparing the last 4 characters against the `last4` field in the
+response.  The scope array is then evaluated locally using
+Outline's `canAccess` algorithm to determine which tools to show.
+
+**Requirement**: scoped API keys must include `apiKeys.list` in
+their scope array.  Without it, the feature degrades gracefully
+(shows all tools).
+
+**Error handling**:
+- 401 from `apiKeys.list` → key is invalid → block ALL tools
+- 403 or other errors → fail-open (show all tools)
+- Key not found in response → fail-open
 
 ## Outline Source Files
 
@@ -13,6 +30,8 @@ How Outline checks API key scopes against request endpoints.
 - **Authentication middleware** — calls `apiKey.canAccess(ctx.originalUrl)`:
   <https://github.com/outline/outline/blob/main/server/middlewares/authentication.ts>
 - **`apiKeys.create` handler** — normalises scopes on save:
+  <https://github.com/outline/outline/blob/main/server/routes/api/apiKeys/apiKeys.ts>
+- **`apiKeys.list` handler** — lists keys for authenticated user:
   <https://github.com/outline/outline/blob/main/server/routes/api/apiKeys/apiKeys.ts>
 - **API key scopes feature** (issue + PR):
   <https://github.com/outline/outline/issues/8186>
@@ -99,21 +118,9 @@ export    → "read"
 (other)   → defaults to "write"
 ```
 
-## `auth.info` and Scope Detection
+## Local Scope Matching Implementation
 
-- `auth.info` does NOT return the API key's scope in its response —
-  the `data.apiKey` field is absent.
-- To detect whether a key has write access, probe a write endpoint
-  (e.g. `documents.create`) and check for 401.
-
-## Probing: 401 vs 403
-
-- **401** (`authentication_required`): the API key's scope does not
-  include this endpoint.  The authentication middleware rejects the
-  request *before* the route handler runs.  This is what probing
-  detects.
-- **403** (`authorization_error`): the key is authenticated and
-  in-scope, but the specific resource is inaccessible (e.g. the
-  probed UUID doesn't match a real document).  Outline returns 403
-  instead of 404 for non-existent resources to avoid leaking
-  existence information.  Probing must **not** treat 403 as blocked.
+The `scope_matching.py` module implements the algorithm above in
+Python.  `is_endpoint_accessible(endpoint, scopes)` checks a
+single endpoint; `get_blocked_tools(scopes)` checks all tools
+in `TOOL_ENDPOINT_MAP` and returns blocked tool names.

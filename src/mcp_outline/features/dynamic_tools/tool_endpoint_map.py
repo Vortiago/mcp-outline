@@ -1,29 +1,23 @@
 # Mapping of MCP tool names to the Outline API endpoint used
-# for probing access.  The probe POSTs a body with a fake UUID
-# to each endpoint and checks for 401.
+# for scope-based access checks.  The scope matcher evaluates
+# each endpoint against the API key's stored scopes using
+# Outline's ``canAccess`` algorithm.
 #
-# NOTE: this is a *probing* map, not a documentation map.
-# Some endpoints cannot be reliably probed, so tools are mapped
-# to a proxy endpoint instead:
+# NOTE: some tools use a proxy endpoint rather than their
+# true endpoint to preserve consistent behavior:
 #
-# - ``attachments.redirect`` validates + looks up the resource
-#   *before* checking auth, so it never returns 401 for an
-#   invalid key.  Attachment tools are mapped to
-#   ``documents.info`` instead — if the key can read documents
-#   it can access attachments.
+# - Attachment tools are mapped to ``documents.info`` — if the
+#   key's scope grants document read access, attachment tools
+#   are shown.
 #
-# - ``collections.export`` and ``collections.export_all`` have
-#   aggressive rate limits that fire *before* auth.  Once
-#   exhausted, probes get 429 regardless of key validity.
-#   Mapped to ``collections.list`` instead — if the key can
-#   list collections it can export them.
+# - ``collections.export`` and ``collections.export_all`` are
+#   mapped to ``collections.list`` — if the key can list
+#   collections it can export them.
 #
-# Limitation: a key scoped to only one of the proxy endpoints
-# (e.g. ``attachments.redirect`` but not ``documents.info``)
-# would have its tools hidden.  Since the MCP client (an LLM)
-# can only call tools visible in the tool list, those tools
-# become inaccessible even though the key technically permits
-# them.  These are unlikely scope combinations in practice.
+# Limitation: a key scoped to only the real endpoint (e.g.
+# ``attachments:write`` but not ``documents:read``) would
+# have its attachment tools hidden.  These are unlikely scope
+# combinations in practice.
 #
 # To update: add new tools here when they are registered.
 # A cross-check unit test verifies this map stays in sync with

@@ -1,19 +1,21 @@
-"""Dynamic tool list filtering based on Outline user permissions.
+"""Dynamic tool list filtering based on Outline API key scopes.
 
 When enabled, the MCP ``tools/list`` response is filtered per-request
-by probing each Outline API endpoint with the authenticated API key.
-Endpoints returning 401 cause their associated MCP tools to be
-hidden.  403 is *not* treated as blocked — Outline returns 403 for
-resource-level authorization (e.g. non-existent UUID), while scope
-restrictions produce 401.
+by calling the Outline ``apiKeys.list`` endpoint to retrieve the
+authenticated key's scopes, then applying Outline's scope matching
+algorithm locally to determine which tools to show.
+
+The API key must include the ``apiKeys.list`` scope for
+introspection to work.  Without it the feature degrades
+gracefully (shows all tools).
 
 The feature is **off by default**.  Enable it by setting
 ``OUTLINE_DYNAMIC_TOOL_LIST`` to ``true``, ``1``, or ``yes``
 (case-insensitive).
 
-This module is intentionally fail-open: if probing fails for any
-reason the full tool list is returned.  Outline's own API will
-still enforce permissions on individual tool calls.
+This module is intentionally fail-open: if scope introspection
+fails for any reason the full tool list is returned.  Outline's
+own API will still enforce permissions on individual tool calls.
 
 Outline references
 ------------------
@@ -21,7 +23,7 @@ Outline references
   https://docs.getoutline.com/s/guide/doc/users-roles-cwCxXP8R3V
 - ``UserRole`` enum in source (``shared/types.ts``):
   https://github.com/outline/outline/blob/main/shared/types.ts
-- API key scopes (space-separated endpoint prefixes, added in v0.82):
+- API key scopes (added in v0.82):
   https://github.com/outline/outline/issues/8186
   https://github.com/outline/outline/pull/8297
 - Full API endpoint list (OpenAPI spec):

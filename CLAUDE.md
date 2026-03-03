@@ -318,7 +318,7 @@ OUTLINE_WRITE_TIMEOUT=30.0                # Write timeout in seconds
 OUTLINE_DISABLE_AI_TOOLS=true              # Disable AI tools
 OUTLINE_READ_ONLY=true                     # Disable all write operations
 OUTLINE_DISABLE_DELETE=true                # Disable delete operations only
-OUTLINE_DYNAMIC_TOOL_LIST=true             # Enable per-request tool filtering (off by default)
+OUTLINE_DYNAMIC_TOOL_LIST=true             # Enable per-request tool filtering (requires apiKeys.list scope)
 
 # MCP server (optional)
 MCP_TRANSPORT=stdio                        # Transport: stdio, sse, streamable-http
@@ -329,7 +329,7 @@ MCP_PORT=3000                              # Server port
 **Access Control Notes**:
 - `OUTLINE_READ_ONLY`: Blocks entire write modules at registration (content, lifecycle, organization, batch_operations)
 - `OUTLINE_DISABLE_DELETE`: Conditionally registers delete tools within document_lifecycle and collection_tools
-- `OUTLINE_DYNAMIC_TOOL_LIST`: Off by default. Filters tools per-request based on endpoint probing and API key scopes. Fail-open: if endpoint probe fails, all tools are shown. Set to `true` to enable.
+- `OUTLINE_DYNAMIC_TOOL_LIST`: Off by default. Uses `apiKeys.list` to introspect API key scopes and filters tools per-request based on scope matching. Scoped API keys must include `apiKeys.list` in their scope array for introspection to work. Fail-open: if scope introspection fails, all tools are shown. Set to `true` to enable.
 - Read-only mode takes precedence: If both are set, server operates in read-only mode
 
 ### Critical Requirements
