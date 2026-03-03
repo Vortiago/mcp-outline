@@ -1,5 +1,7 @@
 # MCP Outline Server
 
+<!-- mcp-name: io.github.vortiago/mcp-outline -->
+
 [![PyPI](https://img.shields.io/pypi/v/mcp-outline)](https://pypi.org/project/mcp-outline/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -232,7 +234,9 @@ Go to **Settings → MCP** and click **Add Server**:
 <details>
 <summary><b>Add to VS Code</b></summary>
 
-Create a `.vscode/mcp.json` file in your workspace with the following configuration:
+[<img alt="Install in VS Code" src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" />](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522mcp-outline%2522%252C%2522command%2522%253A%2522uvx%2522%252C%2522args%2522%253A%255B%2522mcp-outline%2522%255D%257D)
+
+Or manually create a `.vscode/mcp.json` file in your workspace with the following configuration:
 
 ```json
 {
