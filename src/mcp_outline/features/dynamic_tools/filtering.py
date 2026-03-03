@@ -43,26 +43,11 @@ async def get_blocked_tools(
     api_key: Optional[str],
     api_url: Optional[str],
 ) -> Set[str]:
-    """Determine which tools *api_key* cannot access.
+    """Return tool names *api_key* cannot access.
 
-    Calls ``apiKeys.list`` to retrieve the key's stored scopes,
-    then applies Outline's scope matching algorithm locally to
-    determine which tool endpoints are accessible.
-
-    The current key is matched by comparing its last 4 characters
-    against the ``last4`` field in the response.  If multiple keys
-    share the same ``last4`` (collision), all their scopes are
-    combined (union).  If any matching key has ``null`` scope
-    (full access), the result is full access.
-
-    Error handling:
-    - 401 from ``apiKeys.list`` → invalid key → block ALL tools.
-    - 403 or other HTTP errors → fail-open (empty blocked set).
-    - Key not found in list → fail-open.
-
-    The API key must include ``apiKeys.list`` in its scope for
-    introspection to work.  Without it the feature degrades
-    gracefully (shows all tools).
+    Calls ``apiKeys.list``, matches by ``last4``, then applies
+    scope matching locally.  Fail-open on errors (except 401
+    which blocks all tools).
     """
     if not api_key:
         return set()
