@@ -53,6 +53,12 @@ async def get_blocked_tools(
     then applies Outline's scope matching algorithm locally to
     determine which tool endpoints are accessible.
 
+    The current key is matched by comparing its last 4 characters
+    against the ``last4`` field in the response.  If multiple keys
+    share the same ``last4`` (collision), all their scopes are
+    combined (union).  If any matching key has ``null`` scope
+    (full access), the result is full access.
+
     Results are cached per API key for the process lifetime
     since Outline key scopes are immutable.
 

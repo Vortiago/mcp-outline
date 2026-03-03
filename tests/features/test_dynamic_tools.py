@@ -516,6 +516,68 @@ async def test_get_blocked_tools_pagination():
 
 
 @pytest.mark.anyio
+async def test_get_blocked_tools_last4_collision_union():
+    """Multiple keys with same last4 → scopes are combined (union)."""
+    api_key = "key-collision-test"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(
+            return_value=[
+                {
+                    "last4": api_key[-4:],
+                    "scope": ["documents:read"],
+                    "name": "key-a",
+                },
+                {
+                    "last4": api_key[-4:],
+                    "scope": ["collections:read"],
+                    "name": "key-b",
+                },
+            ]
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        # documents:read tools should NOT be blocked
+        assert "read_document" not in result
+        assert "search_documents" not in result
+        # collections:read tools should NOT be blocked
+        assert "list_collections" not in result
+        # Write tools should still be blocked
+        assert "create_document" in result
+        assert "create_collection" in result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_last4_collision_null_wins():
+    """If any colliding key has null scope, result is full access."""
+    api_key = "key-null-wins-test"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(
+            return_value=[
+                {
+                    "last4": api_key[-4:],
+                    "scope": ["documents:read"],
+                    "name": "key-scoped",
+                },
+                {
+                    "last4": api_key[-4:],
+                    "scope": None,
+                    "name": "key-admin",
+                },
+            ]
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        # null scope = full access → nothing blocked
+        assert result == set()
+
+
+@pytest.mark.anyio
 async def test_enabled_values():
     """Feature should activate for 'true', '1', and 'yes'."""
     for val in ("true", "True", "TRUE", "1", "yes", "Yes"):

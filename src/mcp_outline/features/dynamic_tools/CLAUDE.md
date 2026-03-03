@@ -14,6 +14,14 @@ Outline's `canAccess` algorithm to determine which tools to show.
 their scope array.  Without it, the feature degrades gracefully
 (shows all tools).
 
+**Key matching**: the current key is identified by comparing its
+last 4 characters against the `last4` field in the response.  If
+multiple keys share the same `last4` (collision), all their scopes
+are combined (union).  If any matching key has `null` scope (full
+access), the result is full access.  This is consistent with the
+fail-open design: the combined scopes are the most permissive
+possible, so no tools are hidden unnecessarily.
+
 **Error handling**:
 - 401 from `apiKeys.list` → key is invalid → block ALL tools
 - 403 or other errors → fail-open (show all tools)
