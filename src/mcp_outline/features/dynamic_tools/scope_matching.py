@@ -122,7 +122,7 @@ def blocked_tools_for_scopes(
         Set of blocked tool names.
         Empty set when *scopes* is ``None``.
     """
-    if scopes is None:
+    if scopes is None or len(scopes) == 0:
         return set()
 
     blocked: set[str] = set()

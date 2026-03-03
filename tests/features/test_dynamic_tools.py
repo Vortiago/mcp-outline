@@ -569,6 +569,49 @@ async def test_get_blocked_tools_last4_collision_null_wins():
 
 
 @pytest.mark.anyio
+async def test_get_blocked_tools_last4_collision_across_pages():
+    """Collision across pagination pages → scopes combined."""
+    api_key = "key-cross-page-test"
+    page1 = [
+        {
+            "last4": api_key[-4:],
+            "scope": ["documents:read"],
+            "name": "key-page1",
+        },
+        *[
+            {
+                "last4": f"{i:04d}",
+                "scope": None,
+                "name": f"filler-{i}",
+            }
+            for i in range(99)
+        ],
+    ]
+    page2 = [
+        {
+            "last4": api_key[-4:],
+            "scope": ["collections:read"],
+            "name": "key-page2",
+        },
+    ]
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.list_api_keys = AsyncMock(
+            side_effect=[page1, page2],
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        # Both pages' scopes should be combined
+        assert "read_document" not in result
+        assert "list_collections" not in result
+        # Write tools still blocked
+        assert "create_document" in result
+        assert instance.list_api_keys.call_count == 2
+
+
+@pytest.mark.anyio
 async def test_enabled_values():
     """Feature should activate for 'true', '1', and 'yes'."""
     for val in ("true", "True", "TRUE", "1", "yes", "Yes"):
