@@ -15,16 +15,16 @@ TOOL_ENDPOINT_MAP: dict[str, str] = {
     "list_collections": "collections.list",
     "get_collection_structure": "collections.documents",
     "export_collection": "collections.export",
-    "export_all_collections": "collections.export_all",
+    "export_all_collections": "collections.export_all",  # write
     "list_document_comments": "comments.list",
     "get_comment": "comments.info",
     "get_document_backlinks": "documents.list",
-    "get_attachment_url": "attachments.redirect",
-    "fetch_attachment": "attachments.redirect",
+    "get_attachment_url": "attachments.redirect",  # write
+    "fetch_attachment": "attachments.redirect",  # write
     "list_document_attachments": "documents.info",
-    "list_archived_documents": "documents.archived",
-    "list_trash": "documents.deleted",
-    "ask_ai_about_documents": "documents.answerQuestion",
+    "list_archived_documents": "documents.archived",  # write
+    "list_trash": "documents.deleted",  # write
+    "ask_ai_about_documents": "documents.answerQuestion",  # write
     # --- Write tools (16) ---
     "create_document": "documents.create",
     "update_document": "documents.update",

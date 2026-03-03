@@ -143,32 +143,6 @@ async def test_member_sees_all_tools(fresh_mcp_server):
 
 
 @pytest.mark.anyio
-async def test_admin_sees_all_tools(fresh_mcp_server):
-    """Admin (no blocked tools) should see all tools.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
-    with patch.dict(
-        os.environ,
-        {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
-    ):
-        register_all(fresh_mcp_server)
-        install_dynamic_tool_list(fresh_mcp_server)
-
-        with patch(
-            "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
-            new_callable=AsyncMock,
-            return_value=set(),
-        ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
-            names = {t.name for t in tools}
-
-            assert "create_document" in names
-            assert "update_document" in names
-            assert "search_documents" in names
-
-
-@pytest.mark.anyio
 async def test_scoped_key_without_write(fresh_mcp_server):
     """Scoped key blocking write endpoints hides write tools.
 

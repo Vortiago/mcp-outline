@@ -219,9 +219,13 @@ class TestBlockedToolsForScopes:
     def test_none_scopes_returns_empty(self):
         assert blocked_tools_for_scopes(None) == set()
 
-    def test_empty_scopes_returns_empty(self):
-        """Empty scope list → nothing blocked (fail-open)."""
-        assert blocked_tools_for_scopes([]) == set()
+    def test_empty_scopes_blocks_all(self):
+        """Empty scope list → every tool blocked."""
+        from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
+            TOOL_ENDPOINT_MAP,
+        )
+
+        assert blocked_tools_for_scopes([]) == set(TOOL_ENDPOINT_MAP.keys())
 
     def test_read_scopes_block_write_tools(self):
         scopes = [

@@ -366,7 +366,8 @@ async def test_namespace_read_scope(
     default to ``write`` and are excluded by ``:read`` scopes.
     Attachment tools (``attachments.redirect``) also default to
     ``write`` and require ``attachments:write`` or an explicit
-    route scope.
+    route scope.  ``collections.export_all`` likewise defaults
+    to ``write`` and needs ``collections:write`` or a route scope.
     """
     key = _create_api_key_with_scope(
         outline_access_token,
@@ -389,7 +390,7 @@ async def test_namespace_read_scope(
         "list_collections",  # collections.list
         "get_collection_structure",  # collections.documents
         "export_collection",  # collections.export
-        "export_all_collections",  # collections.export_all
+        # export_all_collections excluded: export_all defaults to write
         "list_document_comments",  # comments.list
         "get_comment",  # comments.info
     }

@@ -126,6 +126,12 @@ export    → "read"
 (other)   → defaults to "write"
 ```
 
+**Notable defaults**: `redirect` (used by `attachments.redirect`)
+and `export_all` (used by `collections.export_all`) are not in the
+mapping and default to `write`.  This means `attachments:read` and
+`collections:read` do **not** grant access to these endpoints — use
+`:write` or explicit route scopes instead.
+
 ## Local Scope Matching Implementation
 
 The `scope_matching.py` module implements the algorithm above in
