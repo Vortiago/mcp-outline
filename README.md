@@ -353,6 +353,35 @@ Then connect from client:
 
 </details>
 
+<details>
+<summary><b>Install as Claude Code Plugin</b></summary>
+
+Install directly as a Claude Code plugin from GitHub:
+
+```bash
+/plugin marketplace add Vortiago/mcp-outline
+/plugin install mcp-outline
+```
+
+Or test locally during development:
+
+```bash
+claude --plugin-dir ./path-to-mcp-outline
+```
+
+Set your Outline API key in your shell profile (`~/.bashrc` or `~/.zshrc`):
+
+```bash
+export OUTLINE_API_KEY="your-api-key-here"
+# For self-hosted Outline:
+export OUTLINE_API_URL="https://your-instance.example.com/api"
+```
+
+Restart Claude Code after setting environment variables. The plugin includes a
+session start hook that will remind you if `OUTLINE_API_KEY` is not configured.
+
+</details>
+
 ## Tools
 
 > **Note**: Tool availability depends on your [Access Control](#access-control) settings. Some tools are disabled in read-only mode or when delete operations are restricted.
