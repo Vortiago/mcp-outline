@@ -130,5 +130,5 @@ export    → "read"
 
 The `scope_matching.py` module implements the algorithm above in
 Python.  `is_endpoint_accessible(endpoint, scopes)` checks a
-single endpoint; `get_blocked_tools(scopes)` checks all tools
-in `TOOL_ENDPOINT_MAP` and returns blocked tool names.
+single endpoint; `blocked_tools_for_scopes(scopes)` checks all
+tools in `TOOL_ENDPOINT_MAP` and returns blocked tool names.

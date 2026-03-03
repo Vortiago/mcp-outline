@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, List, Optional, Set
 
 from mcp.types import Tool as MCPTool
 
@@ -12,7 +12,7 @@ from mcp_outline.features.documents.common import (
     _get_header_api_key,
 )
 from mcp_outline.features.dynamic_tools.scope_matching import (
-    get_blocked_tools as get_blocked_tools_from_scopes,
+    blocked_tools_for_scopes,
 )
 from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
     TOOL_ENDPOINT_MAP,
@@ -23,10 +23,6 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
-
-# Per-key cache: API key scopes are immutable (revoke + recreate
-# to change), so results are cached for the process lifetime.
-_blocked_cache: Dict[str, Set[str]] = {}
 
 
 # ------------------------------------------------------------------
@@ -59,9 +55,6 @@ async def get_blocked_tools(
     combined (union).  If any matching key has ``null`` scope
     (full access), the result is full access.
 
-    Results are cached per API key for the process lifetime
-    since Outline key scopes are immutable.
-
     Error handling:
     - 401 from ``apiKeys.list`` → invalid key → block ALL tools.
     - 403 or other HTTP errors → fail-open (empty blocked set).
@@ -73,9 +66,6 @@ async def get_blocked_tools(
     """
     if not api_key:
         return set()
-
-    if api_key in _blocked_cache:
-        return _blocked_cache[api_key]
 
     try:
         client = OutlineClient(api_key=api_key, api_url=api_url)
@@ -91,12 +81,9 @@ async def get_blocked_tools(
             try:
                 keys = await client.list_api_keys(limit=limit, offset=offset)
             except OutlineError as e:
-                err_str = str(e)
-                if err_str.startswith("HTTP 401"):
+                if e.status_code == 401:
                     # Key is completely invalid → block all.
-                    blocked = set(TOOL_ENDPOINT_MAP.keys())
-                    _blocked_cache[api_key] = blocked
-                    return blocked
+                    return set(TOOL_ENDPOINT_MAP.keys())
                 # 403 / other → fail-open.
                 logger.debug(
                     "apiKeys.list failed (%s), returning full tool list",
@@ -129,9 +116,7 @@ async def get_blocked_tools(
             )
             return set()
 
-        blocked = get_blocked_tools_from_scopes(scopes)
-        _blocked_cache[api_key] = blocked
-        return blocked
+        return blocked_tools_for_scopes(scopes)
 
     except Exception as exc:
         logger.debug(
@@ -165,13 +150,19 @@ def install_dynamic_tool_list(mcp: "FastMCP") -> None:
     async def filtered_list_tools() -> List[MCPTool]:
         tools: List[MCPTool] = await original_list_tools()
 
-        api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
-        api_url = os.getenv("OUTLINE_API_URL")
+        try:
+            api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
+            api_url = os.getenv("OUTLINE_API_URL")
 
-        blocked = await get_blocked_tools(api_key, api_url)
+            blocked = await get_blocked_tools(api_key, api_url)
 
-        if blocked:
-            return [t for t in tools if t.name not in blocked]
+            if blocked:
+                return [t for t in tools if t.name not in blocked]
+        except Exception as exc:
+            logger.debug(
+                "Dynamic tool filtering failed (%s), returning full tool list",
+                exc,
+            )
 
         return tools
 

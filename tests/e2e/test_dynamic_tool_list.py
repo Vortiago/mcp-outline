@@ -318,6 +318,7 @@ async def test_route_scoped_read_only(
             "collections.documents",
             "collections.export",
             "collections.export_all",
+            "attachments.redirect",
             "comments.list",
             "comments.info",
             "documents.archived",
@@ -363,8 +364,9 @@ async def test_namespace_read_scope(
 
     Notably, ``documents.archived`` and ``documents.deleted``
     default to ``write`` and are excluded by ``:read`` scopes.
-    ``export_all_collections`` checks via ``collections.list``
-    (proxy) so it follows ``:read`` access.
+    Attachment tools (``attachments.redirect``) also default to
+    ``write`` and require ``attachments:write`` or an explicit
+    route scope.
     """
     key = _create_api_key_with_scope(
         outline_access_token,
@@ -383,13 +385,11 @@ async def test_namespace_read_scope(
         "search_documents",  # documents.search
         "get_document_id_from_title",  # documents.search
         "get_document_backlinks",  # documents.list
-        "get_attachment_url",  # documents.info (proxy)
-        "fetch_attachment",  # documents.info (proxy)
         "list_document_attachments",  # documents.info
         "list_collections",  # collections.list
         "get_collection_structure",  # collections.documents
         "export_collection",  # collections.export
-        "export_all_collections",  # collections.list (proxy)
+        "export_all_collections",  # collections.export_all
         "list_document_comments",  # comments.list
         "get_comment",  # comments.info
     }
@@ -406,7 +406,9 @@ async def test_namespace_write_documents_only(
 
     The ``write`` level matches every method regardless of
     ``methodToScope``, granting both read and write operations
-    on documents.  Collection and comment tools stay blocked.
+    on documents.  Collection, comment, and attachment tools
+    stay blocked (attachment tools now map to the ``attachments``
+    namespace).
     """
     key = _create_api_key_with_scope(
         outline_access_token,
@@ -421,8 +423,6 @@ async def test_namespace_write_documents_only(
         "search_documents",
         "get_document_id_from_title",
         "get_document_backlinks",
-        "get_attachment_url",
-        "fetch_attachment",
         "list_document_attachments",
         "list_archived_documents",
         "list_trash",
@@ -456,7 +456,8 @@ async def test_mixed_namespace_and_route_scope(
 
     The namespace scope grants broad document read access.
     The route scopes grant two specific collection operations.
-    All other collection, comment, and write tools are blocked.
+    Attachment, export, comment, and other write tools are
+    blocked.
     """
     key = _create_api_key_with_scope(
         outline_access_token,
@@ -476,13 +477,9 @@ async def test_mixed_namespace_and_route_scope(
         "search_documents",
         "get_document_id_from_title",
         "get_document_backlinks",
-        "get_attachment_url",
-        "fetch_attachment",
         "list_document_attachments",
         # Collection tools (from route scopes)
         "list_collections",
-        "export_collection",  # collections.list (proxy)
-        "export_all_collections",  # collections.list (proxy)
         "create_collection",
     }
 

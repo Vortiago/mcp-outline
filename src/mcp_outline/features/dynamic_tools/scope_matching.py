@@ -16,7 +16,7 @@ References
 
 from __future__ import annotations
 
-from typing import List, Optional, Set
+from typing import Optional
 
 from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
     TOOL_ENDPOINT_MAP,
@@ -54,7 +54,7 @@ def _get_method_scope(method: str) -> str:
 
 def is_endpoint_accessible(
     endpoint: str,
-    scopes: List[str],
+    scopes: list[str],
 ) -> bool:
     """Check whether *scopes* grant access to *endpoint*.
 
@@ -109,9 +109,9 @@ def is_endpoint_accessible(
 # ------------------------------------------------------------------
 
 
-def get_blocked_tools(
-    scopes: Optional[List[str]],
-) -> Set[str]:
+def blocked_tools_for_scopes(
+    scopes: Optional[list[str]],
+) -> set[str]:
     """Return tool names the key *cannot* access.
 
     Args:
@@ -122,10 +122,10 @@ def get_blocked_tools(
         Set of blocked tool names.
         Empty set when *scopes* is ``None``.
     """
-    if scopes is None or len(scopes) == 0:
+    if scopes is None:
         return set()
 
-    blocked: Set[str] = set()
+    blocked: set[str] = set()
     for tool_name, endpoint in TOOL_ENDPOINT_MAP.items():
         if not is_endpoint_accessible(endpoint, scopes):
             blocked.add(tool_name)

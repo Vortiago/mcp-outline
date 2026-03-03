@@ -9,7 +9,7 @@ edge cases.
 import pytest
 
 from mcp_outline.features.dynamic_tools.scope_matching import (
-    get_blocked_tools,
+    blocked_tools_for_scopes,
     is_endpoint_accessible,
 )
 
@@ -213,14 +213,20 @@ class TestEdgeCases:
 # ------------------------------------------------------------------
 
 
-class TestGetBlockedTools:
+class TestBlockedToolsForScopes:
     """Bulk tool blocking via scope matching."""
 
     def test_none_scopes_returns_empty(self):
-        assert get_blocked_tools(None) == set()
+        assert blocked_tools_for_scopes(None) == set()
 
-    def test_empty_scopes_returns_empty(self):
-        assert get_blocked_tools([]) == set()
+    def test_empty_scopes_blocks_all(self):
+        """Empty scope list blocks all tools."""
+        from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
+            TOOL_ENDPOINT_MAP,
+        )
+
+        blocked = blocked_tools_for_scopes([])
+        assert blocked == set(TOOL_ENDPOINT_MAP.keys())
 
     def test_read_scopes_block_write_tools(self):
         scopes = [
@@ -228,7 +234,7 @@ class TestGetBlockedTools:
             "collections:read",
             "comments:read",
         ]
-        blocked = get_blocked_tools(scopes)
+        blocked = blocked_tools_for_scopes(scopes)
         assert "create_document" in blocked
         assert "update_document" in blocked
         assert "delete_document" in blocked
@@ -242,13 +248,14 @@ class TestGetBlockedTools:
             "documents:write",
             "collections:write",
             "comments:write",
+            "attachments:write",
         ]
-        blocked = get_blocked_tools(scopes)
+        blocked = blocked_tools_for_scopes(scopes)
         assert blocked == set()
 
     def test_single_namespace_blocks_others(self):
         """Only documents:read → collection + comment tools blocked."""
-        blocked = get_blocked_tools(["documents:read"])
+        blocked = blocked_tools_for_scopes(["documents:read"])
         assert "list_collections" in blocked
         assert "list_document_comments" in blocked
         assert "read_document" not in blocked
@@ -280,7 +287,7 @@ class TestGetBlockedTools:
         ],
     )
     def test_scope_tool_combinations(self, scope, tool, accessible):
-        blocked = get_blocked_tools([scope])
+        blocked = blocked_tools_for_scopes([scope])
         if accessible:
             assert tool not in blocked
         else:

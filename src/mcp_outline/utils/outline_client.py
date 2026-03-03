@@ -16,7 +16,13 @@ import httpx
 class OutlineError(Exception):
     """Exception for all Outline API errors."""
 
-    pass
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+    ):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _sanitize_value(value: Optional[str]) -> Optional[str]:
@@ -285,7 +291,10 @@ class OutlineClient:
         ):
             status = last_exception.response.status_code
             text = last_exception.response.text
-            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+            raise OutlineError(
+                f"HTTP {status}: {text}",
+                status_code=status,
+            ) from last_exception
 
         if isinstance(last_exception, httpx.TimeoutException):
             raise OutlineError(
@@ -299,59 +308,11 @@ class OutlineClient:
 
         raise OutlineError("API request failed after retries")
 
-    async def probe_endpoint(self, endpoint: str) -> bool:
-        """Check if the API key can reach *endpoint*.
-
-        POSTs a body with a fake UUID ``id`` field.  Some Outline
-        endpoints (e.g. ``documents.info``) validate input
-        *before* checking auth — an empty ``{}`` body triggers
-        a 400 validation error that masks the real auth status.
-        Sending a syntactically valid ``id`` forces the request
-        past validation so the auth middleware returns 401 when
-        the key's scope blocks access.
-
-        Only **401** is treated as blocked.  Outline returns 403
-        for resource-level authorization failures (e.g. the fake
-        UUID doesn't match any real document), which is distinct
-        from scope/auth rejection.  Scope checks happen in the
-        authentication middleware and always produce 401.
-
-        Returns ``True`` when accessible, ``False`` when blocked.
-        Fails open (returns ``True``) on network errors.
-        """
-        url = f"{self.api_url}/{endpoint.lstrip('/')}"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        # Use a fake UUID to satisfy input validation on
-        # endpoints that require an ``id`` field.  This ensures
-        # the request reaches the auth middleware.
-        body = {"id": "00000000-0000-0000-0000-000000000000"}
-        try:
-            if self._client_pool is None:
-                return True  # fail-open
-            for _ in range(2):
-                resp = await self._client_pool.post(
-                    url,
-                    headers=headers,
-                    json=body,
-                    timeout=httpx.Timeout(5.0),
-                )
-                if resp.status_code != 429:
-                    return resp.status_code != 401
-                # Rate-limited — wait and retry once.
-                retry = float(resp.headers.get("retry-after", "2"))
-                await asyncio.sleep(min(retry, 2.0))
-            return True  # still 429 after retry → fail-open
-        except Exception:
-            return True  # fail-open
-
     async def list_api_keys(
         self,
         limit: int = 100,
         offset: int = 0,
-    ) -> list:
+    ) -> List[Dict[str, Any]]:
         """List API keys for the authenticated user.
 
         Returns metadata including ``scope``, ``last4``,
@@ -775,7 +736,10 @@ class OutlineClient:
         ):
             status = last_exception.response.status_code
             text = last_exception.response.text
-            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+            raise OutlineError(
+                f"HTTP {status}: {text}",
+                status_code=status,
+            ) from last_exception
         if isinstance(last_exception, httpx.TimeoutException):
             raise OutlineError(
                 f"Request timeout: {str(last_exception)}"
@@ -864,7 +828,10 @@ class OutlineClient:
         ):
             status = last_exception.response.status_code
             text = last_exception.response.text
-            raise OutlineError(f"HTTP {status}: {text}") from last_exception
+            raise OutlineError(
+                f"HTTP {status}: {text}",
+                status_code=status,
+            ) from last_exception
         if isinstance(last_exception, httpx.TimeoutException):
             raise OutlineError(
                 f"Request timeout: {str(last_exception)}"

@@ -82,7 +82,7 @@ install_dynamic_tool_list(mcp)                   # If OUTLINE_DYNAMIC_TOOL_LIST=
 - Comments: create, list, get
 - Attachments: get_redirect_url, fetch_content
 - AI: answer questions
-- Auth: probe_endpoint (endpoint connectivity verification)
+- API Keys: list_api_keys (scope introspection for dynamic tool list)
 
 **Connection Pooling**:
 - Uses httpx with class-level connection pool
