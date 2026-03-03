@@ -1,30 +1,28 @@
-"""Filtering logic for dynamic tool list via endpoint probing."""
+"""Filtering logic for dynamic tool list via API key scopes."""
 
 from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, List, Optional, Set
 
-import anyio
 from mcp.types import Tool as MCPTool
 
 from mcp_outline.features.documents.common import (
     _get_header_api_key,
 )
+from mcp_outline.features.dynamic_tools.scope_matching import (
+    blocked_tools_for_scopes,
+)
 from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
     TOOL_ENDPOINT_MAP,
 )
-from mcp_outline.utils.outline_client import OutlineClient
+from mcp_outline.utils.outline_client import OutlineClient, OutlineError
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
-
-# Per-key cache: API key scopes are immutable (revoke + recreate
-# to change), so probe results are cached for the process lifetime.
-_blocked_cache: Dict[str, Set[str]] = {}
 
 
 # ------------------------------------------------------------------
@@ -45,55 +43,69 @@ async def get_blocked_tools(
     api_key: Optional[str],
     api_url: Optional[str],
 ) -> Set[str]:
-    """Determine which tools *api_key* cannot access.
+    """Return tool names *api_key* cannot access.
 
-    Results are cached per API key for the process lifetime
-    since Outline key scopes are immutable.
-
-    Probes all unique endpoints in ``TOOL_ENDPOINT_MAP``
-    concurrently. Endpoints returning 401 are mapped back
-    to their tool names, which are returned as the blocked set.
-
-    Fail-open: returns an empty set on any unexpected error.
+    Calls ``apiKeys.list``, matches by ``last4``, then applies
+    scope matching locally.  Fail-open on errors (except 401
+    which blocks all tools).
     """
     if not api_key:
         return set()
 
-    if api_key in _blocked_cache:
-        return _blocked_cache[api_key]
-
     try:
         client = OutlineClient(api_key=api_key, api_url=api_url)
+        last4 = api_key[-4:]
 
-        # Collect unique endpoints and their tool mappings
-        endpoint_to_tools: Dict[str, List[str]] = {}
-        for tool_name, endpoint in TOOL_ENDPOINT_MAP.items():
-            endpoint_to_tools.setdefault(endpoint, []).append(tool_name)
+        # Fetch API keys, paginating if the key isn't in
+        # the first page.
+        scopes: Optional[List[str]] = None
+        found = False
+        offset = 0
+        limit = 100
+        while True:
+            try:
+                keys = await client.list_api_keys(limit=limit, offset=offset)
+            except OutlineError as e:
+                if e.status_code == 401:
+                    # Key is completely invalid → block all.
+                    return set(TOOL_ENDPOINT_MAP.keys())
+                # 403 / other → fail-open.
+                logger.debug(
+                    "apiKeys.list failed (%s), returning full tool list",
+                    e,
+                )
+                return set()
 
-        unique_endpoints = list(endpoint_to_tools.keys())
+            for key_data in keys:
+                if key_data.get("last4") == last4:
+                    key_scope = key_data.get("scope")
+                    if not found:
+                        scopes = key_scope
+                        found = True
+                    elif key_scope is None:
+                        # Full-access key wins.
+                        scopes = None
+                    elif scopes is not None:
+                        # last4 collision → union.
+                        scopes = list(set(scopes) | set(key_scope))
 
-        # Probe all endpoints concurrently
-        probe_results: Dict[str, bool] = {}
+            if len(keys) < limit:
+                break
+            offset += limit
 
-        async def _probe_one(ep: str) -> None:
-            probe_results[ep] = await client.probe_endpoint(ep)
+        if not found:
+            logger.debug(
+                "API key last4=%s not found in "
+                "apiKeys.list, returning full tool list",
+                last4,
+            )
+            return set()
 
-        async with anyio.create_task_group() as tg:
-            for ep in unique_endpoints:
-                tg.start_soon(_probe_one, ep)
-
-        # Map blocked endpoints back to tool names
-        blocked: Set[str] = set()
-        for endpoint in unique_endpoints:
-            if not probe_results.get(endpoint, True):
-                blocked.update(endpoint_to_tools[endpoint])
-
-        _blocked_cache[api_key] = blocked
-        return blocked
+        return blocked_tools_for_scopes(scopes)
 
     except Exception as exc:
         logger.debug(
-            "Dynamic tool list: endpoint probing failed (%s),"
+            "Dynamic tool list: scope check failed (%s),"
             " returning full tool list",
             exc,
         )
@@ -109,7 +121,7 @@ def install_dynamic_tool_list(mcp: "FastMCP") -> None:
     """Install per-request tool filtering on *mcp*.
 
     Re-registers the lowlevel ``tools/list`` handler so that
-    tools whose endpoints are blocked (401) are hidden.
+    tools blocked by the API key's scopes are hidden.
     Disabled by default; set ``OUTLINE_DYNAMIC_TOOL_LIST=true``
     to enable.
 
@@ -123,13 +135,19 @@ def install_dynamic_tool_list(mcp: "FastMCP") -> None:
     async def filtered_list_tools() -> List[MCPTool]:
         tools: List[MCPTool] = await original_list_tools()
 
-        api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
-        api_url = os.getenv("OUTLINE_API_URL")
+        try:
+            api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
+            api_url = os.getenv("OUTLINE_API_URL")
 
-        blocked = await get_blocked_tools(api_key, api_url)
+            blocked = await get_blocked_tools(api_key, api_url)
 
-        if blocked:
-            return [t for t in tools if t.name not in blocked]
+            if blocked:
+                return [t for t in tools if t.name not in blocked]
+        except Exception as exc:
+            logger.debug(
+                "Dynamic tool filtering failed (%s), returning full tool list",
+                exc,
+            )
 
         return tools
 
