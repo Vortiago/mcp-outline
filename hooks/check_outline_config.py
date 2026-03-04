@@ -4,11 +4,15 @@ import os
 import sys
 from pathlib import Path
 
-CONFIG_PATH = Path.home() / ".config" / "mcp-outline" / ".env"
+CONFIG_PATH = "~/.config/mcp-outline/.env"
 
 
-def _key_in_config_file(path: Path = CONFIG_PATH) -> bool:
+def _key_in_config_file(
+    path: "Path | None" = None,
+) -> bool:
     """Check if OUTLINE_API_KEY is set in the config file."""
+    if path is None:
+        path = Path.home() / ".config" / "mcp-outline" / ".env"
     try:
         for line in path.read_text().splitlines():
             stripped = line.strip()
@@ -21,7 +25,9 @@ def _key_in_config_file(path: Path = CONFIG_PATH) -> bool:
     return False
 
 
-def _has_api_key(path: Path = CONFIG_PATH) -> bool:
+def _has_api_key(
+    path: "Path | None" = None,
+) -> bool:
     """Return True if OUTLINE_API_KEY is available from
     env vars or config file."""
     env_val = os.environ.get("OUTLINE_API_KEY")
@@ -31,16 +37,20 @@ def _has_api_key(path: Path = CONFIG_PATH) -> bool:
 
 
 def main():
-    if _has_api_key():
-        sys.exit(0)
+    try:
+        if _has_api_key():
+            sys.exit(0)
+    except Exception:
+        # If config check fails, fall through to warning
+        pass
 
-    config_str = str(CONFIG_PATH)
     print(
-        "[MCP Outline Plugin] OUTLINE_API_KEY is not set.\n"
+        "[MCP Outline Plugin] OUTLINE_API_KEY is not"
+        " set.\n"
         "\n"
-        "To configure, create " + config_str + ":\n"
+        "To configure, create " + CONFIG_PATH + ":\n"
         "   mkdir -p ~/.config/mcp-outline\n"
-        "   echo 'OUTLINE_API_KEY=your-key-here' > " + config_str + "\n"
+        "   echo 'OUTLINE_API_KEY=your-key-here' > " + CONFIG_PATH + "\n"
         "\n"
         "For self-hosted Outline, also add:\n"
         "   OUTLINE_API_URL="
