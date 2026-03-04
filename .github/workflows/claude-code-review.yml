@@ -1,14 +1,16 @@
 name: Claude Code Review
 
+# Disabled — uncomment triggers below to re-enable
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+  workflow_dispatch: {}
+  # pull_request:
+  #   types: [opened, synchronize, ready_for_review, reopened]
+  #   # Optional: Only run on specific file changes
+  #   # paths:
+  #   #   - "src/**/*.ts"
+  #   #   - "src/**/*.tsx"
+  #   #   - "src/**/*.js"
+  #   #   - "src/**/*.jsx"
 
 jobs:
   claude-review:
