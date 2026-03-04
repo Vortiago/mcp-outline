@@ -7,10 +7,10 @@ from pathlib import Path
 CONFIG_PATH = Path.home() / ".config" / "mcp-outline" / ".env"
 
 
-def _key_in_config_file() -> bool:
+def _key_in_config_file(path: Path = CONFIG_PATH) -> bool:
     """Check if OUTLINE_API_KEY is set in the config file."""
     try:
-        for line in CONFIG_PATH.read_text().splitlines():
+        for line in path.read_text().splitlines():
             stripped = line.strip()
             if stripped.startswith("OUTLINE_API_KEY="):
                 value = stripped.split("=", 1)[1].strip()
@@ -21,11 +21,17 @@ def _key_in_config_file() -> bool:
     return False
 
 
-def main():
-    if os.environ.get("OUTLINE_API_KEY"):
-        sys.exit(0)
+def _has_api_key(path: Path = CONFIG_PATH) -> bool:
+    """Return True if OUTLINE_API_KEY is available from
+    env vars or config file."""
+    env_val = os.environ.get("OUTLINE_API_KEY")
+    if env_val is not None and env_val != "":
+        return True
+    return _key_in_config_file(path)
 
-    if _key_in_config_file():
+
+def main():
+    if _has_api_key():
         sys.exit(0)
 
     config_str = str(CONFIG_PATH)
