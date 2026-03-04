@@ -1,7 +1,5 @@
 # MCP Outline Server
 
-<!-- mcp-name: io.github.vortiago/mcp-outline -->
-
 [![PyPI](https://img.shields.io/pypi/v/mcp-outline)](https://pypi.org/project/mcp-outline/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -29,170 +27,21 @@ Before using this MCP server, you need:
 
 > **Getting your API key**: Log into Outline → Click your profile → Settings → API Keys → "New API Key". Copy the generated token.
 
-## Installation
+## Quick Start
 
-### Using uv (Recommended)
+Install with uv (recommended), pip, or Docker:
 
 ```bash
-uvx mcp-outline
+uvx mcp-outline          # using uv
+pip install mcp-outline   # using pip
 ```
 
-### Using pip
-
 ```bash
-pip install mcp-outline
-```
-
-### Using Docker
-
-```bash
+# using Docker
 docker run -e OUTLINE_API_KEY=<your-key> ghcr.io/vortiago/mcp-outline:latest
 ```
 
-Or build from source:
-```bash
-docker buildx build -t mcp-outline .
-docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
-```
-
-## Configuration
-
-| Variable | Required | Default | Notes |
-|----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | No | - | Fallback API key. If unset, every request must provide a key via the `x-outline-api-key` header ([details](#per-request-authentication)) |
-| `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
-| `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
-| `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
-| `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
-| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `false` | `true` = enable per-request tool filtering by user role/key scopes ([details](#dynamic-tool-list)) |
-| `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
-| `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
-| `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
-| `OUTLINE_CONNECT_TIMEOUT` | No | `5.0` | Connection timeout in seconds |
-| `OUTLINE_WRITE_TIMEOUT` | No | `30.0` | Write timeout in seconds |
-| `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
-| `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |
-| `MCP_PORT` | No | `3000` | HTTP server port (only for `sse` and `streamable-http` modes) |
-
-## Access Control
-
-Configure server permissions to control what operations are allowed:
-
-### Read-Only Mode
-
-Set `OUTLINE_READ_ONLY=true` to enable viewer-only access. Only search, read, export, and collaboration viewing tools are available. All write operations (create, update, move, archive, delete) are disabled.
-
-**Use cases:**
-- Shared access for team members who should only view content
-- Safe integration with AI assistants that should not modify documents
-- Public or demo instances where content should be protected
-
-**Available tools:**
-- Search & Discovery: `search_documents`, `list_collections`, `get_collection_structure`, `get_document_id_from_title`
-- Document Reading: `read_document`, `export_document`
-- Comments: `list_document_comments`, `get_comment`
-- Collaboration: `get_document_backlinks`
-- Collections: `export_collection`, `export_all_collections`
-- AI: `ask_ai_about_documents` (if not disabled with `OUTLINE_DISABLE_AI_TOOLS`)
-
-### Disable Delete Operations
-
-Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while preventing accidental data loss. Only delete operations are disabled.
-
-**Use cases:**
-- Production environments where documents should not be deleted
-- Protecting against accidental deletions
-- Safe content editing workflows
-
-**Disabled tools:**
-- `delete_document`, `delete_collection`
-- `batch_delete_documents`
-
-**Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
-
-### Dynamic Tool List
-
-The server filters the tool list per-request based on the authenticated user's Outline role and API key scopes. On each `tools/list` request, the server calls `auth.info` and hides write tools for viewer-role users or read-only-scoped API keys. This is disabled by default; set `OUTLINE_DYNAMIC_TOOL_LIST=true` to enable.
-
-**Use cases:**
-- Multi-user HTTP deployments where different API keys have different permission levels
-- Environments where viewer-role users should not see write tools
-- API keys with restricted endpoint scopes should only show matching tools
-
-**How it works:**
-1. On each `tools/list` request, the server calls Outline's `auth.info` endpoint
-2. If the user's role is `viewer`, write tools are hidden
-3. If the API key has restricted scopes that exclude write endpoints, write tools are hidden
-4. If `auth.info` fails for any reason, all tools are returned (fail-open)
-
-**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
-
-This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
-
-### Per-Request Authentication
-
-When running in HTTP mode (`sse` or `streamable-http`), you can pass the Outline API key per-request via the `x-outline-api-key` HTTP header instead of (or in addition to) the `OUTLINE_API_KEY` environment variable.
-
-**Priority:** Header value takes precedence over the environment variable. If the header is not present, the server falls back to the env var.
-
-**Use cases:**
-- Multi-tenant deployments where different clients use different Outline accounts
-- Centralized API key management via a reverse proxy or gateway
-- Dynamic key rotation without restarting the server
-
-**Example** (with a streamable-http server on port 3000):
-
-Start the server:
-
-```bash
-docker run -p 3000:3000 \
-  -e OUTLINE_API_KEY=<DEFAULT_KEY> \
-  -e MCP_TRANSPORT=streamable-http \
-  ghcr.io/vortiago/mcp-outline:latest
-```
-
-Then connect from your client with a per-request key:
-
-**VS Code** (`.vscode/mcp.json`):
-```json
-{
-  "servers": {
-    "mcp-outline": {
-      "type": "http",
-      "url": "http://localhost:3000/mcp",
-      "headers": {
-        "x-outline-api-key": "<YOUR_KEY>"
-      }
-    }
-  }
-}
-```
-
-**Claude Code** (`.mcp.json`):
-```json
-{
-  "mcpServers": {
-    "mcp-outline": {
-      "type": "http",
-      "url": "http://localhost:3000/mcp",
-      "headers": {
-        "x-outline-api-key": "<YOUR_KEY>"
-      }
-    }
-  }
-}
-```
-
-> **Note:** The `x-outline-api-key` header is only available for HTTP transports. In `stdio` mode, the `OUTLINE_API_KEY` environment variable is the only option.
-
-## Adding to Your Client
-
-> **Prerequisites**: Install `uv` with `pip install uv` or from [astral.sh/uv](https://docs.astral.sh/uv/)
-
-<details>
-<summary><b>Add to Claude Desktop</b></summary>
-
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+Then add to your MCP client. Example for **Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
@@ -209,186 +58,42 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (or `%APP
 }
 ```
 
-</details>
+Setup guides for other clients: [Cursor, VS Code, Cline, Docker (HTTP), pip](docs/client-setup.md)
 
-<details>
-<summary><b>Add to Cursor</b></summary>
+## Configuration
 
-Go to **Settings → MCP** and click **Add Server**:
+| Variable | Required | Default | Notes |
+|----------|----------|---------|-------|
+| `OUTLINE_API_KEY` | Yes* | - | Required for stdio transport. For SSE/HTTP, can be provided per-user via `x-outline-api-key` header instead ([details](docs/configuration.md#per-user-outline-api-keys)) |
+| `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
+| `OUTLINE_VERIFY_SSL` | No | `true` | Set `false` for self-signed certificates |
+| `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](docs/configuration.md#read-only-mode)) |
+| `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](docs/configuration.md#disable-delete-operations)) |
+| `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
+| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `false` | `true` = enable per-user tool filtering by role/key scopes ([details](docs/configuration.md#dynamic-tool-list)) |
+| `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
+| `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
+| `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
+| `OUTLINE_CONNECT_TIMEOUT` | No | `5.0` | Connection timeout in seconds |
+| `OUTLINE_WRITE_TIMEOUT` | No | `30.0` | Write timeout in seconds |
+| `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
+| `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |
+| `MCP_PORT` | No | `3000` | HTTP server port (only for `sse` and `streamable-http` modes) |
 
-```json
-{
-  "mcp-outline": {
-    "command": "uvx",
-    "args": ["mcp-outline"],
-    "env": {
-      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
-    }
-  }
-}
-```
+## Access Control
 
-</details>
+| Feature | Env Var | Effect |
+|---------|---------|--------|
+| Read-only mode | `OUTLINE_READ_ONLY=true` | Disables all write operations — only search, read, and export tools available |
+| Disable deletes | `OUTLINE_DISABLE_DELETE=true` | Disables only delete operations, all other writes allowed |
+| Dynamic tool list | `OUTLINE_DYNAMIC_TOOL_LIST=true` | Filters tools per-user based on Outline role and API key scopes |
+| Per-user Outline API keys | `x-outline-api-key` header | Each user passes their own Outline API key in HTTP mode for multi-user setups |
 
-<details>
-<summary><b>Add to VS Code</b></summary>
-
-[<img alt="Install in VS Code" src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" />](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3Fname%3Dmcp-outline%26config%3D%257B%2522type%2522%253A%2522stdio%2522%252C%2522command%2522%253A%2522uvx%2522%252C%2522args%2522%253A%255B%2522mcp-outline%2522%255D%252C%2522env%2522%253A%257B%2522OUTLINE_API_KEY%2522%253A%2522%2524%257Binput%253Aoutline-api-key%257D%2522%252C%2522OUTLINE_API_URL%2522%253A%2522%2524%257Binput%253Aoutline-api-url%257D%2522%257D%257D)
-
-Or manually create a `.vscode/mcp.json` file in your workspace with the following configuration:
-
-```json
-{
-  "servers": {
-    "mcp-outline": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["mcp-outline"],
-      "env": {
-        "OUTLINE_API_KEY": "<YOUR_API_KEY>"
-      }
-    }
-  }
-}
-```
-
-For self-hosted Outline instances, add `OUTLINE_API_URL` to the `env` object.
-
-**Optional**: Use input variables for sensitive credentials:
-
-```json
-{
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "outline-api-key",
-      "description": "Outline API Key",
-      "password": true
-    }
-  ],
-  "servers": {
-    "mcp-outline": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["mcp-outline"],
-      "env": {
-        "OUTLINE_API_KEY": "${input:outline-api-key}"
-      }
-    }
-  }
-}
-```
-
-VS Code will automatically discover and load MCP servers from this configuration file. For more details, see the [official VS Code MCP documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
-
-</details>
-
-<details>
-<summary><b>Add to Cline (VS Code)</b></summary>
-
-In Cline extension settings, add to MCP servers:
-
-```json
-{
-  "mcp-outline": {
-    "command": "uvx",
-    "args": ["mcp-outline"],
-    "env": {
-      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Using pip instead of uvx</b></summary>
-
-If you prefer to use `pip` instead:
-
-```bash
-pip install mcp-outline
-```
-
-Then in your client config, replace `"command": "uvx"` with `"command": "mcp-outline"` and remove the `"args"` line:
-
-```json
-{
-  "mcp-outline": {
-    "command": "mcp-outline",
-    "env": {
-      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Docker Deployment (HTTP)</b></summary>
-
-For remote access or Docker containers, use HTTP transport. This runs the **MCP server** on port 3000:
-
-```bash
-docker run -p 3000:3000 \
-  -e OUTLINE_API_KEY=<YOUR_API_KEY> \
-  -e MCP_TRANSPORT=streamable-http \
-  ghcr.io/vortiago/mcp-outline:latest
-```
-
-Then connect from client:
-
-```json
-{
-  "mcp-outline": {
-    "url": "http://localhost:3000/mcp"
-  }
-}
-```
-
-**Note**: `OUTLINE_API_URL` should point to where your Outline instance is running, not localhost:3000.
-
-**Per-request API key**: In HTTP modes, clients can also pass the API key via the `x-outline-api-key` header instead of setting it as an env var. See [Per-Request Authentication](#per-request-authentication).
-
-</details>
-
-<details>
-<summary><b>Install as Claude Code Plugin</b></summary>
-
-Install directly as a Claude Code plugin from GitHub:
-
-```bash
-/plugin marketplace add Vortiago/mcp-outline
-/plugin install mcp-outline@mcp-outline
-```
-
-Or test locally during development:
-
-```bash
-claude --plugin-dir ./path-to-mcp-outline
-```
-
-Set your Outline API key in your shell profile (`~/.bashrc` or `~/.zshrc`):
-
-```bash
-export OUTLINE_API_KEY="your-api-key-here"
-# For self-hosted Outline:
-export OUTLINE_API_URL="https://your-instance.example.com/api"
-```
-
-Restart Claude Code after setting environment variables. The plugin includes a
-session start hook that will remind you if `OUTLINE_API_KEY` is not configured.
-
-</details>
+Read-only mode takes precedence over disable-delete. See [Configuration Guide](docs/configuration.md) for details.
 
 ## Tools
 
-> **Note**: Tool availability depends on your [Access Control](#access-control) settings. Some tools are disabled in read-only mode or when delete operations are restricted.
+> **Note**: Tool availability depends on your [access control](#access-control) settings.
 
 ### Search & Discovery
 - `search_documents(query, collection_id?, limit?, offset?)` - Search documents by keywords with pagination
@@ -446,153 +151,26 @@ session start hook that will remind you if `OUTLINE_API_KEY` is not configured.
 
 ## Development
 
-### Quick Start with Self-Hosted Outline
-
-```bash
-# Generate configuration
-cp config/outline.env.example config/outline.env
-openssl rand -hex 32 > /tmp/secret_key && openssl rand -hex 32 > /tmp/utils_secret
-# Update config/outline.env with generated secrets
-
-# Start all services
-docker compose up -d
-
-# Create API key: http://localhost:3030 → Settings → API Keys
-# Add to .env: OUTLINE_API_KEY=<token>
-```
-
-### Setup
-
 ```bash
 git clone https://github.com/Vortiago/mcp-outline.git
 cd mcp-outline
-uv sync --extra dev
+uv sync --group dev
+
+uv run poe test-unit          # unit tests
+uv run poe test-integration   # integration tests (starts MCP server via stdio)
+uv run poe test-e2e           # E2E tests (requires Docker)
 ```
 
-### Testing
-
-```bash
-# Run unit tests
-uv run poe test-unit
-
-# Run integration tests (starts real MCP server via stdio)
-uv run poe test-integration
-
-# Format code
-uv run ruff format .
-
-# Type check
-uv run pyright src/
-
-# Lint
-uv run ruff check .
-```
-
-### E2E Tests
-
-E2E tests run against a real Outline instance via Docker Compose. The fixtures
-manage the stack lifecycle automatically — just run:
-
-```bash
-uv run poe test-e2e
-```
-
-The test fixtures automatically:
-- Start the isolated Docker Compose stack (`mcp-outline-e2e` project, ports 3031/5557)
-- Authenticate via OIDC/Dex to create an API key
-- Spawn the MCP server via stdio for each test
-- Tear down the stack on exit
-
-To start the E2E stack manually (e.g. for debugging):
-```bash
-cp config/outline.env.example config/outline.env
-DEX_HOST_PORT=5557 OUTLINE_HOST_PORT=3031 \
-  docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d outline
-```
-
-See `.github/workflows/e2e.yml` for CI configuration.
-
-### Running Locally
-
-```bash
-uv run mcp-outline
-```
-
-### Testing with MCP Inspector
-
-Use the MCP Inspector to test the server tools visually via an interactive UI.
-
-**For local development** (with stdio):
-
-```bash
-npx @modelcontextprotocol/inspector -e OUTLINE_API_KEY=<your-key> -e OUTLINE_API_URL=<your-url> uv run python -m mcp_outline
-```
-
-**For Docker Compose** (with HTTP):
-
-```bash
-npx @modelcontextprotocol/inspector http://localhost:3000
-```
-
-![MCP Inspector](./docs/mcp_inspector_guide.png)
-
-## Architecture Notes
-
-**Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). No configuration needed.
-
-**Transport Modes**:
-- `stdio` (default): Direct process communication
-- `sse`: HTTP Server-Sent Events (use for web clients)
-- `streamable-http`: Streamable HTTP transport
-
-**Connection Pooling**: Shared httpx connection pool across instances (configurable: `OUTLINE_MAX_CONNECTIONS=100`, `OUTLINE_MAX_KEEPALIVE=20`)
+See [Development Guide](docs/development.md) for self-hosted Outline setup, MCP Inspector, and more.
 
 ## Troubleshooting
 
-### Server not connecting?
-
-**Check your API credentials:**
+**Server not connecting?** Test your API key:
 ```bash
-# Test your API key
 curl -H "Authorization: Bearer YOUR_API_KEY" YOUR_OUTLINE_URL/api/auth.info
 ```
 
-Common issues:
-- Verify `OUTLINE_API_KEY` is set correctly in your MCP client configuration
-- Check `OUTLINE_API_URL` points to your Outline instance (default: `https://app.getoutline.com/api`)
-- For self-hosted Outline, ensure the URL ends with `/api`
-- Verify your API key hasn't expired or been revoked
-
-### Tools not appearing in client?
-
-- **Read-only mode enabled?** Check if `OUTLINE_READ_ONLY=true` is disabling write tools
-- **Delete operations disabled?** Check if `OUTLINE_DISABLE_DELETE=true` is hiding delete tools
-- **AI tools missing?** Check if `OUTLINE_DISABLE_AI_TOOLS=true` is disabling AI features
-- **Dynamic filtering active?** If `OUTLINE_DYNAMIC_TOOL_LIST=true` is set, tools are filtered by user role/key scopes
-- Restart your MCP client after changing environment variables
-
-### API rate limiting errors?
-
-The server automatically handles rate limiting with retry logic. If you see persistent rate limit errors:
-- Reduce concurrent operations
-- Check if multiple clients are using the same API key
-- Contact Outline support if limits are too restrictive for your use case
-
-### Docker container issues?
-
-**Container won't start:**
-- Ensure `OUTLINE_API_KEY` is set: `docker run -e OUTLINE_API_KEY=your_key ...`
-- Check logs: `docker logs <container-id>`
-
-**Can't connect from client:**
-- Use `0.0.0.0` for MCP_HOST: `-e MCP_HOST=0.0.0.0`
-- Verify port mapping: `-p 3000:3000`
-- Check transport mode: `-e MCP_TRANSPORT=streamable-http`
-
-### Need more help?
-
-- 📖 [MCP Documentation](https://modelcontextprotocol.io/)
-- 🐛 [Report an issue](https://github.com/Vortiago/mcp-outline/issues)
+See [Troubleshooting Guide](docs/troubleshooting.md) for common issues with tools, rate limiting, and Docker.
 
 ## Contributing
 
