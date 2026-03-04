@@ -14,7 +14,7 @@ Where mcp-outline is listed and which files control each listing.
 
 - **`server.json`** — MCP Registry server manifest. Schema: `2025-12-11`. Versions updated by CI at publish time.
 - **`glama.json`** — Glama ownership claim. Minimal: just `$schema` + `maintainers`.
-- **`.claude-plugin/plugin.json`** — Claude Code plugin metadata (name, description, MCP server and hook paths).
+- **`.claude-plugin/plugin.json`** — Claude Code plugin metadata (name, description, keywords).
 - **`.claude-plugin/marketplace.json`** — Claude Code marketplace entry. Lists plugins available from this repo.
 - **`.mcp.json`** — MCP server config used by the Claude Code plugin. Defines how to run the server with env vars.
 - **`hooks/hooks.json`** — Claude Code session hooks. Runs `check_outline_config.py` on startup.
