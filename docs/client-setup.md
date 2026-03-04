@@ -25,7 +25,9 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (or `%APP
 
 ## Cursor
 
-Go to **Settings → MCP** and click **Add Server**:
+**One-click install**: [![Install in Cursor](https://img.shields.io/badge/Install_in-Cursor-000000?style=flat-square&logoColor=white)](https://cursor.com/en/install-mcp?name=mcp-outline&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJtY3Atb3V0bGluZSJdLCJlbnYiOnsiT1VUTElORV9BUElfS0VZIjoiJHtpbnB1dDpvdXRsaW5lX2FwaV9rZXl9IiwiT1VUTElORV9BUElfVVJMIjoiJHtpbnB1dDpvdXRsaW5lX2FwaV91cmx9In0sImlucHV0cyI6W3siaWQiOiJvdXRsaW5lX2FwaV9rZXkiLCJ0eXBlIjoicHJvbXB0U3RyaW5nIiwiZGVzY3JpcHRpb24iOiJFbnRlciBPVVRMSU5FX0FQSV9LRVkiLCJwYXNzd29yZCI6dHJ1ZX0seyJpZCI6Im91dGxpbmVfYXBpX3VybCIsInR5cGUiOiJwcm9tcHRTdHJpbmciLCJkZXNjcmlwdGlvbiI6Ik91dGxpbmUgQVBJIFVSTCAob3B0aW9uYWwsIGZvciBzZWxmLWhvc3RlZCkiLCJwYXNzd29yZCI6ZmFsc2V9XX0=)
+
+Or go to **Settings → MCP** and click **Add Server**:
 
 ```json
 {
@@ -33,43 +35,47 @@ Go to **Settings → MCP** and click **Add Server**:
     "command": "uvx",
     "args": ["mcp-outline"],
     "env": {
-      "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-      "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
-    }
+      "OUTLINE_API_KEY": "${input:outline_api_key}",
+      "OUTLINE_API_URL": "${input:outline_api_url}"
+    },
+    "inputs": [
+      {
+        "id": "outline_api_key",
+        "type": "promptString",
+        "description": "Enter OUTLINE_API_KEY",
+        "password": true
+      },
+      {
+        "id": "outline_api_url",
+        "type": "promptString",
+        "description": "Outline API URL (optional, for self-hosted)",
+        "password": false
+      }
+    ]
   }
 }
 ```
 
 ## VS Code
 
-Create a `.vscode/mcp.json` file in your workspace:
+**One-click install**: [![Install in VS Code](https://img.shields.io/badge/Install_in-VS_Code-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=mcp-outline&inputs=%5B%7B%22id%22%3A%22outline_api_key%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20OUTLINE_API_KEY%22%2C%22password%22%3Atrue%7D%2C%7B%22id%22%3A%22outline_api_url%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Outline%20API%20URL%20(optional%2C%20for%20self-hosted)%22%2C%22password%22%3Afalse%7D%5D&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22mcp-outline%22%5D%2C%22env%22%3A%7B%22OUTLINE_API_KEY%22%3A%22%24%7Binput%3Aoutline_api_key%7D%22%2C%22OUTLINE_API_URL%22%3A%22%24%7Binput%3Aoutline_api_url%7D%22%7D%7D)
 
-```json
-{
-  "servers": {
-    "mcp-outline": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["mcp-outline"],
-      "env": {
-        "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
-      }
-    }
-  }
-}
-```
-
-**Optional**: Use input variables for sensitive credentials:
+Or create a `.vscode/mcp.json` file in your workspace (recommended — uses secure password prompts):
 
 ```json
 {
   "inputs": [
     {
       "type": "promptString",
-      "id": "outline-api-key",
-      "description": "Outline API Key",
+      "id": "outline_api_key",
+      "description": "Enter OUTLINE_API_KEY",
       "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "outline_api_url",
+      "description": "Outline API URL (optional, for self-hosted)",
+      "password": false
     }
   ],
   "servers": {
@@ -78,11 +84,18 @@ Create a `.vscode/mcp.json` file in your workspace:
       "command": "uvx",
       "args": ["mcp-outline"],
       "env": {
-        "OUTLINE_API_KEY": "${input:outline-api-key}"
+        "OUTLINE_API_KEY": "${input:outline_api_key}",
+        "OUTLINE_API_URL": "${input:outline_api_url}"
       }
     }
   }
 }
+```
+
+You can also install via the CLI:
+
+```bash
+code --add-mcp '{"name":"mcp-outline","command":"uvx","args":["mcp-outline"],"env":{"OUTLINE_API_KEY":"${input:outline_api_key}","OUTLINE_API_URL":"${input:outline_api_url}"},"inputs":[{"id":"outline_api_key","type":"promptString","description":"Enter OUTLINE_API_KEY","password":true},{"id":"outline_api_url","type":"promptString","description":"Outline API URL (optional, for self-hosted)","password":false}]}'
 ```
 
 See the [official VS Code MCP documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for more details.
