@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/Vortiago/mcp-outline/pkgs/container/mcp-outline)
-[<img alt="Install in VS Code" src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" />](https://vscode.dev/redirect/mcp/install?name=mcp-outline&config=%7B%22type%22%3A%20%22stdio%22%2C%20%22command%22%3A%20%22uvx%22%2C%20%22args%22%3A%20%5B%22mcp-outline%22%5D%2C%20%22env%22%3A%20%7B%22OUTLINE_API_KEY%22%3A%20%22%24%7Binput%3Aoutline-api-key%7D%22%2C%20%22OUTLINE_API_URL%22%3A%20%22%24%7Binput%3Aoutline-api-url%7D%22%7D%7D)
+[<img alt="Install in VS Code" src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" />](https://vscode.dev/redirect/mcp/install?name=mcp-outline&config=%7B%22type%22%3A%20%22stdio%22%2C%20%22command%22%3A%20%22uvx%22%2C%20%22args%22%3A%20%5B%22mcp-outline%22%5D%2C%20%22env%22%3A%20%7B%22OUTLINE_API_KEY%22%3A%20%22YOUR_API_KEY%22%7D%7D)
 
 A Model Context Protocol server for interacting with Outline document management.
 
