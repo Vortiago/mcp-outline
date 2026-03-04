@@ -52,14 +52,13 @@ Create a `.vscode/mcp.json` file in your workspace:
       "command": "uvx",
       "args": ["mcp-outline"],
       "env": {
-        "OUTLINE_API_KEY": "<YOUR_API_KEY>"
+        "OUTLINE_API_KEY": "<YOUR_API_KEY>",
+        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
       }
     }
   }
 }
 ```
-
-For self-hosted Outline instances, add `OUTLINE_API_URL` to the `env` object.
 
 **Optional**: Use input variables for sensitive credentials:
 
