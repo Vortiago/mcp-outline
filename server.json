@@ -22,8 +22,8 @@
       "environmentVariables": [
         {
           "name": "OUTLINE_API_KEY",
-          "description": "Outline API key (Settings > API)",
-          "isRequired": true,
+          "description": "Outline API key (Settings > API). Can also be set in ~/.config/mcp-outline/.env",
+          "isRequired": false,
           "isSecret": true
         },
         {
