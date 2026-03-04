@@ -1,8 +1,10 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.vortiago/mcp-outline",
+  "title": "Outline MCP Server",
   "description": "Connect AI assistants to Outline for document search, reading, and management",
   "version": "1.6.0",
+  "websiteUrl": "https://github.com/Vortiago/mcp-outline",
   "repository": {
     "url": "https://github.com/Vortiago/mcp-outline",
     "source": "github",
@@ -10,23 +12,24 @@
   },
   "packages": [
     {
-      "registry_type": "pypi",
+      "registryType": "pypi",
       "identifier": "mcp-outline",
       "version": "1.6.0",
       "transport": {
         "type": "stdio"
       },
-      "runtime_hint": "uvx",
-      "environment_variables": [
+      "runtimeHint": "uvx",
+      "environmentVariables": [
         {
           "name": "OUTLINE_API_KEY",
           "description": "Outline API key (Settings > API)",
-          "required": true
+          "isRequired": true,
+          "isSecret": true
         },
         {
           "name": "OUTLINE_API_URL",
           "description": "Outline API URL for self-hosted instances",
-          "required": false
+          "isRequired": false
         }
       ]
     }

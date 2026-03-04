@@ -64,7 +64,7 @@ docker run -e OUTLINE_API_KEY=<your-key> mcp-outline
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
-| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `true` | `false` = disable per-request tool filtering by user role/key scopes ([details](#dynamic-tool-list)) |
+| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `false` | `true` = enable per-request tool filtering by user role/key scopes ([details](#dynamic-tool-list)) |
 | `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
 | `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
 | `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
@@ -112,7 +112,7 @@ Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while pre
 
 ### Dynamic Tool List
 
-The server filters the tool list per-request based on the authenticated user's Outline role and API key scopes. On each `tools/list` request, the server calls `auth.info` and hides write tools for viewer-role users or read-only-scoped API keys. This is enabled by default; set `OUTLINE_DYNAMIC_TOOL_LIST=false` to disable.
+The server filters the tool list per-request based on the authenticated user's Outline role and API key scopes. On each `tools/list` request, the server calls `auth.info` and hides write tools for viewer-role users or read-only-scoped API keys. This is disabled by default; set `OUTLINE_DYNAMIC_TOOL_LIST=true` to enable.
 
 **Use cases:**
 - Multi-user HTTP deployments where different API keys have different permission levels
@@ -364,7 +364,7 @@ Install directly as a Claude Code plugin from GitHub:
 
 ```bash
 /plugin marketplace add Vortiago/mcp-outline
-/plugin install mcp-outline
+/plugin install mcp-outline@mcp-outline
 ```
 
 Or test locally during development:
@@ -568,7 +568,7 @@ Common issues:
 - **Read-only mode enabled?** Check if `OUTLINE_READ_ONLY=true` is disabling write tools
 - **Delete operations disabled?** Check if `OUTLINE_DISABLE_DELETE=true` is hiding delete tools
 - **AI tools missing?** Check if `OUTLINE_DISABLE_AI_TOOLS=true` is disabling AI features
-- **Dynamic filtering active?** Tools are filtered by user role/key scopes by default (set `OUTLINE_DYNAMIC_TOOL_LIST=false` to disable)
+- **Dynamic filtering active?** If `OUTLINE_DYNAMIC_TOOL_LIST=true` is set, tools are filtered by user role/key scopes
 - Restart your MCP client after changing environment variables
 
 ### API rate limiting errors?

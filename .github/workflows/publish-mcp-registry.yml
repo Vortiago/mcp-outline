@@ -9,9 +9,6 @@ jobs:
   publish:
     name: Publish to MCP Registry
     runs-on: ubuntu-latest
-    # Run after PyPI publish completes so the package is available
-    needs: []
-
     permissions:
       id-token: write   # Required for GitHub OIDC authentication
       contents: read

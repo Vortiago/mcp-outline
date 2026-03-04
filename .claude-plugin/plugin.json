@@ -14,5 +14,7 @@
     "wiki",
     "knowledge-base",
     "mcp"
-  ]
+  ],
+  "mcpServers": "../.mcp.json",
+  "hooks": "../hooks/hooks.json"
 }
