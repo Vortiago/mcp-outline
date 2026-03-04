@@ -10,7 +10,7 @@ git clone https://github.com/YOUR_USERNAME/mcp-outline.git
 cd mcp-outline
 
 # 2. Install dependencies
-uv sync --extra dev
+uv sync --group dev
 
 # 3. Install pre-commit hooks (important!)
 uv run pre-commit install
@@ -35,7 +35,7 @@ If you want to run checks before committing:
 uv run ruff format .      # Format code
 uv run ruff check .       # Lint code
 uv run pyright src/       # Type check
-uv run pytest tests/ -v   # Run tests
+uv run poe test-unit      # Run tests
 ```
 
 ## Questions?
