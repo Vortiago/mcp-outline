@@ -35,7 +35,7 @@ If you want to run checks before committing:
 uv run ruff format .      # Format code
 uv run ruff check .       # Lint code
 uv run pyright src/       # Type check
-uv run pytest tests/ -v   # Run tests
+uv run poe test-unit      # Run tests
 ```
 
 ## Questions?
