@@ -92,7 +92,7 @@ npx @modelcontextprotocol/inspector http://localhost:3000
 
 ## Architecture Notes
 
-**Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). No configuration needed.
+**Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). Returns an error to the user after exhausting retries. No configuration needed.
 
 **Transport Modes**:
 - `stdio` (default): Direct process communication
