@@ -65,6 +65,30 @@ def test_env_var_loaded_from_file(tmp_path):
         assert os.environ["OUTLINE_API_KEY"] == "from-file"
 
 
+def test_empty_env_vars_stripped_before_dotenv(tmp_path):
+    """Empty OUTLINE_* env vars (from MCP client env blocks)
+    should be stripped so dotenv can fill them from file."""
+    config_dir = tmp_path / ".config" / "mcp-outline"
+    config_dir.mkdir(parents=True)
+    (config_dir / ".env").write_text(
+        "OUTLINE_API_KEY=from-file\nOUTLINE_API_URL=http://localhost:3030\n"
+    )
+
+    env = os.environ.copy()
+    env.pop("OUTLINE_API_KEY", None)
+    env.pop("OUTLINE_API_URL", None)
+    # Simulate MCP client passing empty strings
+    env["OUTLINE_API_KEY"] = ""
+    env["OUTLINE_API_URL"] = ""
+
+    with patch.dict(os.environ, env, clear=True):
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            import mcp_outline.server  # noqa: F401
+
+        assert os.environ["OUTLINE_API_KEY"] == "from-file"
+        assert os.environ["OUTLINE_API_URL"] == "http://localhost:3030"
+
+
 def test_missing_config_file_no_error():
     """Server imports without error when the config file does
     not exist."""

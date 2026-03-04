@@ -23,6 +23,13 @@ from mcp_outline.patches import patch_for_copilot_cli
 # This must happen before creating the FastMCP instance
 patch_for_copilot_cli()
 
+# Strip empty env vars so that dotenv can fill them from the
+# config file.  MCP clients (e.g. Claude Code) may pass
+# empty strings for unset variables via their env block.
+for _key in list(os.environ):
+    if _key.startswith("OUTLINE_") and os.environ[_key] == "":
+        del os.environ[_key]
+
 # Load configuration from ~/.config/mcp-outline/.env if it exists.
 # Existing environment variables take priority (override=False).
 _config_path = Path.home() / ".config" / "mcp-outline" / ".env"
