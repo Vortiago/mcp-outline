@@ -96,7 +96,7 @@ npx @modelcontextprotocol/inspector http://localhost:3000
 
 **Transport Modes**:
 - `stdio` (default): Direct process communication
-- `sse`: HTTP Server-Sent Events (use for web clients)
+- `sse`: HTTP Server-Sent Events
 - `streamable-http`: Streamable HTTP transport
 
 **Connection Pooling**: Shared httpx connection pool across instances (configurable: `OUTLINE_MAX_CONNECTIONS=100`, `OUTLINE_MAX_KEEPALIVE=20`)
