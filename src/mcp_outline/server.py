@@ -7,8 +7,10 @@ A simple MCP server that provides document outline capabilities.
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import Literal
 
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
@@ -21,11 +23,16 @@ from mcp_outline.patches import patch_for_copilot_cli
 # This must happen before creating the FastMCP instance
 patch_for_copilot_cli()
 
+# Load configuration from ~/.config/mcp-outline/.env if it exists.
+# Existing environment variables take priority (override=False).
+_config_path = Path.home() / ".config" / "mcp-outline" / ".env"
+load_dotenv(_config_path)
+
 # Get host from environment variable, default to 127.0.0.1
 # Use 0.0.0.0 for Docker containers to allow external connections
 host = os.getenv("MCP_HOST", "127.0.0.1")
 
-# Get port from environment variable, default to 3000 (standard MCP HTTP port)
+# Get port from environment variable, default to 3000
 port = int(os.getenv("MCP_PORT", "3000"))
 
 # Create a FastMCP server instance with a name and port configuration
