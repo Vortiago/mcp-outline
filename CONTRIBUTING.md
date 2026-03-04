@@ -10,7 +10,7 @@ git clone https://github.com/YOUR_USERNAME/mcp-outline.git
 cd mcp-outline
 
 # 2. Install dependencies
-uv sync --extra dev
+uv sync --group dev
 
 # 3. Install pre-commit hooks (important!)
 uv run pre-commit install

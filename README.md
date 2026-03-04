@@ -66,6 +66,7 @@ Setup guides for other clients: [Cursor, VS Code, Cline, Docker (HTTP), pip](doc
 |----------|----------|---------|-------|
 | `OUTLINE_API_KEY` | No | - | Fallback API key. If unset, every request must provide a key via the `x-outline-api-key` header ([details](docs/configuration.md#per-user-outline-api-keys)) |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
+| `OUTLINE_VERIFY_SSL` | No | `true` | Set `false` for self-signed certificates |
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](docs/configuration.md#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](docs/configuration.md#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
@@ -153,7 +154,7 @@ Read-only mode takes precedence over disable-delete. See [Configuration Guide](d
 ```bash
 git clone https://github.com/Vortiago/mcp-outline.git
 cd mcp-outline
-uv sync --extra dev
+uv sync --group dev
 
 uv run poe test-unit          # unit tests
 uv run poe test-integration   # integration tests (starts MCP server via stdio)

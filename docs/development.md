@@ -20,7 +20,7 @@ docker compose up -d
 ```bash
 git clone https://github.com/Vortiago/mcp-outline.git
 cd mcp-outline
-uv sync --extra dev
+uv sync --group dev
 ```
 
 ## Testing
