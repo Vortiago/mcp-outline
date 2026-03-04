@@ -44,11 +44,6 @@ Pass the Outline API key per-request via the `x-outline-api-key` HTTP header ins
 
 **Priority:** Header value takes precedence over the environment variable. If the header is not present, the server falls back to the env var.
 
-**Use cases:**
-- Multi-tenant deployments where different clients use different Outline accounts
-- Centralized API key management via a reverse proxy or gateway
-- Dynamic key rotation without restarting the server
-
 **Example** (with a streamable-http server on port 3000):
 
 Start the server:
