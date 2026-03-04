@@ -34,28 +34,13 @@ Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while pre
 
 **Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
 
-## Dynamic Tool List
+## Multi-User Setup (HTTP)
 
-Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to filter the tool list per-request based on the authenticated user's Outline role and API key scopes. On each `tools/list` request, the server calls `auth.info` and hides write tools for viewer-role users or read-only-scoped API keys. This is disabled by default.
+When running in HTTP mode (`sse` or `streamable-http`), multiple users can share a single MCP server, each authenticating with their own Outline API key.
 
-**Use cases:**
-- Multi-user HTTP deployments where different API keys have different permission levels
-- Environments where viewer-role users should not see write tools
-- API keys with restricted endpoint scopes should only show matching tools
+### Per-Request Authentication
 
-**How it works:**
-1. On each `tools/list` request, the server calls Outline's `auth.info` endpoint
-2. If the user's role is `viewer`, write tools are hidden
-3. If the API key has restricted scopes that exclude write endpoints, write tools are hidden
-4. If `auth.info` fails for any reason, all tools are returned (fail-open)
-
-**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
-
-This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
-
-## Per-Request Authentication
-
-When running in HTTP mode (`sse` or `streamable-http`), you can pass the Outline API key per-request via the `x-outline-api-key` HTTP header instead of (or in addition to) the `OUTLINE_API_KEY` environment variable.
+Pass the Outline API key per-request via the `x-outline-api-key` HTTP header instead of (or in addition to) the `OUTLINE_API_KEY` environment variable.
 
 **Priority:** Header value takes precedence over the environment variable. If the header is not present, the server falls back to the env var.
 
@@ -108,3 +93,17 @@ Then connect from your client with a per-request key:
 ```
 
 > **Note:** The `x-outline-api-key` header is only available for HTTP transports. In `stdio` mode, the `OUTLINE_API_KEY` environment variable is the only option.
+
+### Dynamic Tool List
+
+Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to automatically filter the tool list based on each user's Outline role and API key scopes. This pairs well with per-request authentication — each user sees only the tools their key allows.
+
+**How it works:**
+1. On each `tools/list` request, the server calls Outline's `auth.info` endpoint
+2. If the user's role is `viewer`, write tools are hidden
+3. If the API key has restricted scopes that exclude write endpoints, write tools are hidden
+4. If `auth.info` fails for any reason, all tools are returned (fail-open)
+
+**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
+
+This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
