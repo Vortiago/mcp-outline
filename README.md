@@ -58,7 +58,7 @@ Then add to your MCP client. Example for **Claude Desktop** (`~/Library/Applicat
 }
 ```
 
-Setup guides for other clients: [Cursor, VS Code, Cline, Docker (HTTP), pip](docs/client-setup.md)
+Setup guides for other clients: [Claude Code, Cursor, VS Code, Cline, Docker (HTTP), pip](docs/client-setup.md)
 
 ## Configuration
 
