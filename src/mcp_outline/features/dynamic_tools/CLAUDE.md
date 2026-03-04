@@ -1,6 +1,6 @@
 # Dynamic Tool List
 
-Filters the MCP `tools/list` response per-request based on the API
+Filters the MCP `tools/list` response per-user based on the API
 key's scopes.  Calls `apiKeys.list` once, matches the key by `last4`,
 then applies Outline's scope matching algorithm locally.
 

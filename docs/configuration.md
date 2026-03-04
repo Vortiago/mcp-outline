@@ -38,9 +38,9 @@ Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while pre
 
 When running in HTTP mode (`sse` or `streamable-http`), multiple users can share a single MCP server, each authenticating with their own Outline API key.
 
-### Per-Request Authentication
+### Per-User Outline API Keys
 
-Pass the Outline API key per-request via the `x-outline-api-key` HTTP header instead of (or in addition to) the `OUTLINE_API_KEY` environment variable.
+Each user passes their own Outline API key via the `x-outline-api-key` HTTP header instead of (or in addition to) the `OUTLINE_API_KEY` environment variable.
 
 **Priority:** Header value takes precedence over the environment variable. If the header is not present, the server falls back to the env var.
 
@@ -55,7 +55,7 @@ docker run -p 3000:3000 \
   ghcr.io/vortiago/mcp-outline:latest
 ```
 
-Then connect from your client with a per-request key:
+Then connect from your client with a user-specific key:
 
 **VS Code** (`.vscode/mcp.json`):
 ```json
@@ -91,7 +91,7 @@ Then connect from your client with a per-request key:
 
 ### Dynamic Tool List
 
-Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to automatically filter the tool list based on each user's Outline role and API key scopes. This pairs well with per-request authentication — each user sees only the tools their key allows.
+Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to automatically filter the tool list based on each user's Outline role and API key scopes. This pairs well with per-user Outline API keys — each user sees only the tools their key allows.
 
 **How it works:**
 1. On each `tools/list` request, the server calls Outline's `auth.info` endpoint

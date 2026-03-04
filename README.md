@@ -64,12 +64,12 @@ Setup guides for other clients: [Cursor, VS Code, Cline, Docker (HTTP), pip](doc
 
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | No | - | Fallback API key. If unset, every request must provide a key via the `x-outline-api-key` header ([details](docs/configuration.md#per-request-authentication)) |
+| `OUTLINE_API_KEY` | No | - | Fallback API key. If unset, every request must provide a key via the `x-outline-api-key` header ([details](docs/configuration.md#per-user-outline-api-keys)) |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](docs/configuration.md#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](docs/configuration.md#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
-| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `false` | `true` = enable per-request tool filtering by user role/key scopes ([details](docs/configuration.md#dynamic-tool-list)) |
+| `OUTLINE_DYNAMIC_TOOL_LIST` | No | `false` | `true` = enable per-user tool filtering by role/key scopes ([details](docs/configuration.md#dynamic-tool-list)) |
 | `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
 | `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
 | `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
@@ -85,8 +85,8 @@ Setup guides for other clients: [Cursor, VS Code, Cline, Docker (HTTP), pip](doc
 |---------|---------|--------|
 | Read-only mode | `OUTLINE_READ_ONLY=true` | Disables all write operations — only search, read, and export tools available |
 | Disable deletes | `OUTLINE_DISABLE_DELETE=true` | Disables only delete operations, all other writes allowed |
-| Dynamic tool list | `OUTLINE_DYNAMIC_TOOL_LIST=true` | Filters tools per-request based on user role and API key scopes |
-| Per-request auth | `x-outline-api-key` header | Pass API key per-request in HTTP mode for multi-tenant setups |
+| Dynamic tool list | `OUTLINE_DYNAMIC_TOOL_LIST=true` | Filters tools per-user based on Outline role and API key scopes |
+| Per-user Outline API keys | `x-outline-api-key` header | Each user passes their own Outline API key in HTTP mode for multi-user setups |
 
 Read-only mode takes precedence over disable-delete. See [Configuration Guide](docs/configuration.md) for details.
 
