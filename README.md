@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/mcp-outline/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/Vortiago/mcp-outline/pkgs/container/mcp-outline)
+[<img alt="Install in VS Code" src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white" />](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3Fname%3Dmcp-outline%26config%3D%257B%2522type%2522%253A%2522stdio%2522%252C%2522command%2522%253A%2522uvx%2522%252C%2522args%2522%253A%255B%2522mcp-outline%2522%255D%252C%2522env%2522%253A%257B%2522OUTLINE_API_KEY%2522%253A%2522%2524%257Binput%253Aoutline-api-key%257D%2522%252C%2522OUTLINE_API_URL%2522%253A%2522%2524%257Binput%253Aoutline-api-url%257D%2522%257D%257D)
 
 A Model Context Protocol server for interacting with Outline document management.
 
