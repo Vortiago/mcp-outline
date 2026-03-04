@@ -149,4 +149,18 @@ Then connect from your client:
 
 **Note**: `OUTLINE_API_URL` should point to where your Outline instance is running, not localhost:3000.
 
-**Per-request API key**: In HTTP modes, clients can also pass the API key via the `x-outline-api-key` header instead of setting it as an env var. See [Configuration](configuration.md#per-request-authentication).
+**Per-request API key**: In HTTP modes, clients can pass the API key via the `x-outline-api-key` header instead of setting it as an env var:
+
+```json
+{
+  "mcp-outline": {
+    "type": "http",
+    "url": "http://localhost:3000/mcp",
+    "headers": {
+      "x-outline-api-key": "<YOUR_API_KEY>"
+    }
+  }
+}
+```
+
+See [Configuration](configuration.md#per-request-authentication) for more details.
