@@ -2,7 +2,7 @@
 
 Instructions for connecting mcp-outline to your MCP client.
 
-> **Prerequisites**: Install `uv` with `pip install uv` or from [astral.sh/uv](https://docs.astral.sh/uv/)
+The examples below use [`uvx`](https://docs.astral.sh/uv/) to run mcp-outline without installing it globally. If you prefer `pip`, see [Using pip instead of uvx](#using-pip-instead-of-uvx).
 
 ## Claude Desktop
 
