@@ -92,8 +92,9 @@ class OutlineClient:
         if not self.api_key:
             raise OutlineError(
                 "Missing API key. Set OUTLINE_API_KEY in "
-                "~/.config/mcp-outline/.env or as an env "
-                "var. Get your key from Outline "
+                ".mcp-outline.env (project) or "
+                "~/.config/mcp-outline/.env (user). "
+                "Get your key from Outline "
                 "(Settings > API)."
             )
 

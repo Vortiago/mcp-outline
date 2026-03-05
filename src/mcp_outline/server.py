@@ -30,8 +30,11 @@ for _key in list(os.environ):
     if _key.startswith("OUTLINE_") and os.environ[_key] == "":
         del os.environ[_key]
 
-# Load configuration from ~/.config/mcp-outline/.env if it exists.
-# Existing environment variables take priority (override=False).
+# Load configuration from dotenv files.
+# Existing environment variables always take priority (override=False).
+# Project-level file is loaded first so it wins over user-level.
+_project_env = Path.cwd() / ".mcp-outline.env"
+load_dotenv(_project_env)
 _config_path = Path.home() / ".config" / "mcp-outline" / ".env"
 load_dotenv(_config_path)
 

@@ -1,12 +1,12 @@
 """
 Tests for dotenv configuration loading from
-~/.config/mcp-outline/.env.
+.mcp-outline.env (project) and ~/.config/mcp-outline/.env (user).
 """
 
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 
@@ -24,14 +24,17 @@ def _clean_server_module():
         del sys.modules[m]
 
 
-def test_load_dotenv_called_with_config_path():
-    """load_dotenv is called with ~/.config/mcp-outline/.env."""
-    expected = Path.home() / ".config" / "mcp-outline" / ".env"
+def test_load_dotenv_called_project_then_user():
+    """load_dotenv is called for project env first,
+    then user config."""
+    project = Path.cwd() / ".mcp-outline.env"
+    user = Path.home() / ".config" / "mcp-outline" / ".env"
 
     with patch("dotenv.load_dotenv") as mock_load:
         import mcp_outline.server  # noqa: F401
 
-        mock_load.assert_called_once_with(expected)
+        assert mock_load.call_count == 2
+        mock_load.assert_has_calls([call(project), call(user)])
 
 
 def test_env_var_not_overridden(tmp_path):
@@ -48,9 +51,9 @@ def test_env_var_not_overridden(tmp_path):
         assert os.environ["OUTLINE_API_KEY"] == "from-env"
 
 
-def test_env_var_loaded_from_file(tmp_path):
+def test_env_var_loaded_from_user_file(tmp_path):
     """When OUTLINE_API_KEY is not set, the module-level
-    load_dotenv populates it from the config file."""
+    load_dotenv populates it from the user config file."""
     config_dir = tmp_path / ".config" / "mcp-outline"
     config_dir.mkdir(parents=True)
     (config_dir / ".env").write_text("OUTLINE_API_KEY=from-file\n")
@@ -63,6 +66,40 @@ def test_env_var_loaded_from_file(tmp_path):
             import mcp_outline.server  # noqa: F401
 
         assert os.environ["OUTLINE_API_KEY"] == "from-file"
+
+
+def test_project_env_takes_priority(tmp_path):
+    """Project-level .mcp-outline.env wins over user-level
+    config when both exist."""
+    # User config
+    user_dir = tmp_path / ".config" / "mcp-outline"
+    user_dir.mkdir(parents=True)
+    (user_dir / ".env").write_text(
+        "OUTLINE_API_KEY=from-user\nOUTLINE_API_URL=http://user-instance/api\n"
+    )
+
+    # Project config
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / ".mcp-outline.env").write_text(
+        "OUTLINE_API_KEY=from-project\n"
+        "OUTLINE_API_URL=http://project-instance/api\n"
+    )
+
+    env = os.environ.copy()
+    env.pop("OUTLINE_API_KEY", None)
+    env.pop("OUTLINE_API_URL", None)
+
+    with patch.dict(os.environ, env, clear=True):
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            with patch(
+                "pathlib.Path.cwd",
+                return_value=project_dir,
+            ):
+                import mcp_outline.server  # noqa: F401
+
+        assert os.environ["OUTLINE_API_KEY"] == "from-project"
+        assert os.environ["OUTLINE_API_URL"] == "http://project-instance/api"
 
 
 def test_empty_env_vars_stripped_before_dotenv(tmp_path):
@@ -90,10 +127,10 @@ def test_empty_env_vars_stripped_before_dotenv(tmp_path):
 
 
 def test_missing_config_file_no_error():
-    """Server imports without error when the config file does
-    not exist."""
+    """Server imports without error when config files
+    do not exist."""
     with patch("dotenv.load_dotenv") as mock_load:
         mock_load.return_value = False
         import mcp_outline.server  # noqa: F401
 
-        mock_load.assert_called_once()
+        assert mock_load.call_count == 2
