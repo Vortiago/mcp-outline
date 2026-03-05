@@ -29,6 +29,16 @@ Before using this MCP server, you need:
 
 ## Quick Start
 
+### One-Click Install
+
+Click a button to install with interactive API key prompt:
+
+[![Install in VS Code](https://img.shields.io/badge/Install_in-VS_Code-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=mcp-outline&inputs=%5B%7B%22id%22%3A%22outline_api_key%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20OUTLINE_API_KEY%22%2C%22password%22%3Atrue%7D%2C%7B%22id%22%3A%22outline_api_url%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Outline%20API%20URL%20(optional%2C%20for%20self-hosted)%22%2C%22password%22%3Afalse%7D%5D&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22mcp-outline%22%5D%2C%22env%22%3A%7B%22OUTLINE_API_KEY%22%3A%22%24%7Binput%3Aoutline_api_key%7D%22%2C%22OUTLINE_API_URL%22%3A%22%24%7Binput%3Aoutline_api_url%7D%22%7D%7D)
+[![Install in VS Code Insiders](https://img.shields.io/badge/Install_in-VS_Code_Insiders-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=mcp-outline&inputs=%5B%7B%22id%22%3A%22outline_api_key%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20OUTLINE_API_KEY%22%2C%22password%22%3Atrue%7D%2C%7B%22id%22%3A%22outline_api_url%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Outline%20API%20URL%20(optional%2C%20for%20self-hosted)%22%2C%22password%22%3Afalse%7D%5D&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22mcp-outline%22%5D%2C%22env%22%3A%7B%22OUTLINE_API_KEY%22%3A%22%24%7Binput%3Aoutline_api_key%7D%22%2C%22OUTLINE_API_URL%22%3A%22%24%7Binput%3Aoutline_api_url%7D%22%7D%7D&quality=insiders)
+[![Install in Cursor](https://img.shields.io/badge/Install_in-Cursor-000000?style=flat-square&logoColor=white)](https://cursor.com/en/install-mcp?name=mcp-outline&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJtY3Atb3V0bGluZSJdLCJlbnYiOnsiT1VUTElORV9BUElfS0VZIjoiJHtpbnB1dDpvdXRsaW5lX2FwaV9rZXl9IiwiT1VUTElORV9BUElfVVJMIjoiJHtpbnB1dDpvdXRsaW5lX2FwaV91cmx9In0sImlucHV0cyI6W3siaWQiOiJvdXRsaW5lX2FwaV9rZXkiLCJ0eXBlIjoicHJvbXB0U3RyaW5nIiwiZGVzY3JpcHRpb24iOiJFbnRlciBPVVRMSU5FX0FQSV9LRVkiLCJwYXNzd29yZCI6dHJ1ZX0seyJpZCI6Im91dGxpbmVfYXBpX3VybCIsInR5cGUiOiJwcm9tcHRTdHJpbmciLCJkZXNjcmlwdGlvbiI6Ik91dGxpbmUgQVBJIFVSTCAob3B0aW9uYWwsIGZvciBzZWxmLWhvc3RlZCkiLCJwYXNzd29yZCI6ZmFsc2V9XX0=)
+
+### Manual Install
+
 Install with uv (recommended), pip, or Docker:
 
 ```bash
@@ -41,7 +51,49 @@ pip install mcp-outline   # using pip
 docker run -e OUTLINE_API_KEY=<your-key> ghcr.io/vortiago/mcp-outline:latest
 ```
 
-Then add to your MCP client. Example for **Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Then add to your MCP client config (works with VS Code, Claude Desktop, Cursor, and others):
+
+```json
+{
+  "inputs": [
+    {
+      "id": "outline_api_key",
+      "type": "promptString",
+      "description": "Enter OUTLINE_API_KEY",
+      "password": true
+    },
+    {
+      "id": "outline_api_url",
+      "type": "promptString",
+      "description": "Outline API URL (optional, for self-hosted)",
+      "password": false
+    }
+  ],
+  "servers": {
+    "mcp-outline": {
+      "command": "uvx",
+      "args": ["mcp-outline"],
+      "env": {
+        "OUTLINE_API_KEY": "${input:outline_api_key}",
+        "OUTLINE_API_URL": "${input:outline_api_url}"
+      }
+    }
+  }
+}
+```
+
+<details>
+<summary>Claude Code</summary>
+
+```bash
+claude mcp add mcp-outline uvx mcp-outline
+```
+</details>
+
+<details>
+<summary>Claude Desktop</summary>
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -51,20 +103,21 @@ Then add to your MCP client. Example for **Claude Desktop** (`~/Library/Applicat
       "args": ["mcp-outline"],
       "env": {
         "OUTLINE_API_KEY": "<YOUR_API_KEY>",
-        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>" // Optional
+        "OUTLINE_API_URL": "<YOUR_OUTLINE_URL>"
       }
     }
   }
 }
 ```
+</details>
 
-Setup guides for other clients: [Cursor, VS Code, Cline, Docker (HTTP), pip](docs/client-setup.md)
+Setup guides for more clients: [Docker (HTTP), Cline, Codex, Windsurf, and others](docs/client-setup.md)
 
 ## Configuration
 
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | Yes* | - | Required for stdio transport. For SSE/HTTP, can be provided per-user via `x-outline-api-key` header instead ([details](docs/configuration.md#per-user-outline-api-keys)) |
+| `OUTLINE_API_KEY` | Yes* | - | Required for tool calls to succeed. For SSE/HTTP, can alternatively be provided per-request via `x-outline-api-key` header ([details](docs/configuration.md#per-user-outline-api-keys)) |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
 | `OUTLINE_VERIFY_SSL` | No | `true` | Set `false` for self-signed certificates |
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](docs/configuration.md#read-only-mode)) |

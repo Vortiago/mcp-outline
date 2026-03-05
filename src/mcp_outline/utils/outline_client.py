@@ -91,8 +91,13 @@ class OutlineClient:
         # sanitized_key will be None or empty string if invalid
         if not self.api_key:
             raise OutlineError(
-                "Missing API key. Set OUTLINE_API_KEY env var "
-                "or pass per-request via x-outline-api-key header."
+                "Missing API key. Set OUTLINE_API_KEY in "
+                ".mcp-outline.env (project) or "
+                "~/.config/mcp-outline/.env (user), "
+                "or pass per-request via "
+                "x-outline-api-key header. "
+                "Get your key from Outline "
+                "(Settings > API)."
             )
 
         # Rate limit tracking

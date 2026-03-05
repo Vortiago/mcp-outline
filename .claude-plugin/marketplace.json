@@ -1,0 +1,22 @@
+{
+  "name": "mcp-outline",
+  "owner": {
+    "name": "Vortiago",
+    "url": "https://github.com/Vortiago"
+  },
+  "metadata": {
+    "description": "Outline knowledge base integration for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "mcp-outline",
+      "source": "./",
+      "description": "Connect Claude Code to Outline for document search, reading, creation, and management",
+      "version": "1.6.0",
+      "author": {
+        "name": "Vortiago"
+      },
+      "license": "MIT"
+    }
+  ]
+}
