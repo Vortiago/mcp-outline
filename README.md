@@ -117,7 +117,7 @@ Setup guides for more clients: [Docker (HTTP), Cline, Codex, Windsurf, and other
 
 | Variable | Required | Default | Notes |
 |----------|----------|---------|-------|
-| `OUTLINE_API_KEY` | Yes* | - | Required for stdio transport. For SSE/HTTP, can be provided per-user via `x-outline-api-key` header instead ([details](docs/configuration.md#per-user-outline-api-keys)) |
+| `OUTLINE_API_KEY` | Yes* | - | Required for tool calls to succeed. For SSE/HTTP, can alternatively be provided per-request via `x-outline-api-key` header ([details](docs/configuration.md#per-user-outline-api-keys)) |
 | `OUTLINE_API_URL` | No | `https://app.getoutline.com/api` | For self-hosted: `https://your-domain/api` |
 | `OUTLINE_VERIFY_SSL` | No | `true` | Set `false` for self-signed certificates |
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](docs/configuration.md#read-only-mode)) |

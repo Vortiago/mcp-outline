@@ -87,7 +87,7 @@ Then connect from your client with a user-specific key:
 }
 ```
 
-> **Note:** The `x-outline-api-key` header is only available for HTTP transports. In `stdio` mode, the `OUTLINE_API_KEY` environment variable is the only option.
+> **Note:** The `x-outline-api-key` header is only available for HTTP transports (SSE, streamable-http). In `stdio` mode, you must set `OUTLINE_API_KEY` via environment variable or a [dotenv config file](client-setup.md#claude-code-plugin). If it is missing, the server still starts but every tool call will return an error with setup instructions.
 
 ### Dynamic Tool List
 

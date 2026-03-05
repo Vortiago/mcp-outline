@@ -140,7 +140,7 @@ export OUTLINE_API_KEY="your-api-key-here"
 export OUTLINE_API_URL="https://your-instance.example.com/api"
 ```
 
-Restart Claude Code after setting environment variables. The plugin includes a session start hook that will remind you if `OUTLINE_API_KEY` is not configured.
+Restart Claude Code after setting environment variables. If `OUTLINE_API_KEY` is not configured, each tool call will return an error with setup instructions.
 
 ## Using pip Instead of uvx
 
