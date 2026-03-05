@@ -3,7 +3,7 @@
   "name": "io.github.vortiago/mcp-outline",
   "title": "Outline MCP Server",
   "description": "Connect AI assistants to Outline for document search, reading, and management",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "websiteUrl": "https://github.com/Vortiago/mcp-outline",
   "repository": {
     "url": "https://github.com/Vortiago/mcp-outline",
@@ -14,7 +14,7 @@
     {
       "registryType": "pypi",
       "identifier": "mcp-outline",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "transport": {
         "type": "stdio"
       },
