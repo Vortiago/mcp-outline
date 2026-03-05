@@ -138,8 +138,10 @@ def test_missing_config_file_no_error():
 
 def test_stdio_starts_without_api_key():
     """In stdio mode, main() starts normally even without
-    an API key.  Tools will return a config error when
-    called."""
+    an API key.  Unlike SSE/HTTP where per-request auth
+    via x-outline-api-key header is available, stdio has
+    no header fallback — so every tool call will return
+    an OutlineClientError with config instructions."""
     env = os.environ.copy()
     env.pop("OUTLINE_API_KEY", None)
     env["MCP_TRANSPORT"] = "stdio"
@@ -169,8 +171,10 @@ def test_stdio_starts_with_api_key():
 
 
 def test_sse_skips_api_key_check():
-    """In SSE mode, main() starts without API key
-    (keys come per-request via headers)."""
+    """In SSE mode, main() starts without a global API key.
+    Unlike stdio, SSE/HTTP modes support per-request auth
+    via the x-outline-api-key header, so a global key is
+    not required."""
     env = os.environ.copy()
     env.pop("OUTLINE_API_KEY", None)
     env["MCP_TRANSPORT"] = "sse"
