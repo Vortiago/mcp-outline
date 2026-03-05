@@ -134,3 +134,53 @@ def test_missing_config_file_no_error():
         import mcp_outline.server  # noqa: F401
 
         assert mock_load.call_count == 2
+
+
+def test_stdio_exits_without_api_key(capsys):
+    """In stdio mode, main() exits with error when no
+    API key is configured."""
+    env = os.environ.copy()
+    env.pop("OUTLINE_API_KEY", None)
+    env["MCP_TRANSPORT"] = "stdio"
+
+    with patch.dict(os.environ, env, clear=True):
+        import mcp_outline.server
+
+        with pytest.raises(SystemExit) as exc_info:
+            mcp_outline.server.main()
+
+        assert exc_info.value.code == 1
+        err = capsys.readouterr().err
+        assert "OUTLINE_API_KEY is not set" in err
+        assert ".mcp-outline.env" in err
+
+
+def test_stdio_starts_with_api_key():
+    """In stdio mode, main() proceeds when API key is set."""
+    with patch.dict(
+        os.environ,
+        {
+            "OUTLINE_API_KEY": "ol_api_test",
+            "MCP_TRANSPORT": "stdio",
+        },
+    ):
+        import mcp_outline.server
+
+        with patch.object(mcp_outline.server.mcp, "run") as mock_run:
+            mcp_outline.server.main()
+            mock_run.assert_called_once_with(transport="stdio")
+
+
+def test_sse_skips_api_key_check():
+    """In SSE mode, main() starts without API key
+    (keys come per-request via headers)."""
+    env = os.environ.copy()
+    env.pop("OUTLINE_API_KEY", None)
+    env["MCP_TRANSPORT"] = "sse"
+
+    with patch.dict(os.environ, env, clear=True):
+        import mcp_outline.server
+
+        with patch.object(mcp_outline.server.mcp, "run") as mock_run:
+            mcp_outline.server.main()
+            mock_run.assert_called_once_with(transport="sse")
