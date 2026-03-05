@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.vortiago/mcp-outline",
+  "name": "io.github.Vortiago/mcp-outline",
   "title": "Outline MCP Server",
   "description": "Connect AI assistants to Outline for document search, reading, and management",
   "version": "1.7.0",
