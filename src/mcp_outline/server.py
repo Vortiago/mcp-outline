@@ -112,22 +112,6 @@ def main() -> None:
                 "(x-outline-api-key header)."
             )
 
-    # In stdio mode, fail fast if no API key is available.
-    # SSE/HTTP modes can get the key per-request via headers.
-    if transport_mode == "stdio" and not os.getenv("OUTLINE_API_KEY"):
-        print(
-            "[MCP Outline] OUTLINE_API_KEY is not set.\n"
-            "\n"
-            "Configure in one of:\n"
-            "  .mcp-outline.env  (project, in working dir)\n"
-            "  ~/.config/mcp-outline/.env  (user)\n"
-            "  Environment variable\n"
-            "\n"
-            "Get your key from Outline (Settings > API).",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
     # Start the server with the specified transport
     mcp.run(transport=transport_mode)
 

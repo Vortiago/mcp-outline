@@ -136,9 +136,10 @@ def test_missing_config_file_no_error():
         assert mock_load.call_count == 2
 
 
-def test_stdio_exits_without_api_key(capsys):
-    """In stdio mode, main() exits with error when no
-    API key is configured."""
+def test_stdio_starts_without_api_key():
+    """In stdio mode, main() starts normally even without
+    an API key.  Tools will return a config error when
+    called."""
     env = os.environ.copy()
     env.pop("OUTLINE_API_KEY", None)
     env["MCP_TRANSPORT"] = "stdio"
@@ -146,13 +147,9 @@ def test_stdio_exits_without_api_key(capsys):
     with patch.dict(os.environ, env, clear=True):
         import mcp_outline.server
 
-        with pytest.raises(SystemExit) as exc_info:
+        with patch.object(mcp_outline.server.mcp, "run") as mock_run:
             mcp_outline.server.main()
-
-        assert exc_info.value.code == 1
-        err = capsys.readouterr().err
-        assert "OUTLINE_API_KEY is not set" in err
-        assert ".mcp-outline.env" in err
+            mock_run.assert_called_once_with(transport="stdio")
 
 
 def test_stdio_starts_with_api_key():
