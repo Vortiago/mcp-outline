@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Full history needed for setuptools-scm to calculate version
-          fetch-tags: true  # Explicit tag fetching (redundant with fetch-depth: 0 but explicit)
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -81,3 +81,31 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+
+  publish-to-mcp-registry:
+    name: Publish to MCP Registry
+    needs: [publish-to-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # Required for GitHub OIDC authentication
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update server.json version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.json.tmp
+          mv server.json.tmp server.json
+          cat server.json
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate with MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
