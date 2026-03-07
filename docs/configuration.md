@@ -105,3 +105,5 @@ Both results are combined. Each check fails open independently — if either cal
 > **Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
 
 This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
+
+For architecture details and diagrams, see [Dynamic Tool List Architecture](dynamic-tool-list.md).

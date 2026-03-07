@@ -47,6 +47,9 @@ register_all(mcp)
 install_dynamic_tool_list(mcp)                   # If OUTLINE_DYNAMIC_TOOL_LIST=true
 ```
 
+For dynamic tool list architecture and scope matching details, see
+[docs/dynamic-tool-list.md](docs/dynamic-tool-list.md).
+
 ### MCP Resources (`outline://` URI scheme)
 
 - `outline://document/{document_id}` - Full markdown content
