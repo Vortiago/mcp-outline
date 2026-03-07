@@ -190,7 +190,8 @@ async def new_operation(self, param: str) -> dict:
     annotations=ToolAnnotations(
         readOnlyHint=False,
         destructiveHint=False,
-    )
+    ),
+    meta={"endpoint": "namespace.method"},
 )
 async def new_tool_name(param: str) -> str:
     """Clear description."""
@@ -203,6 +204,11 @@ async def new_tool_name(param: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 ```
+
+The `meta={"endpoint": "..."}` value must match the Outline API endpoint
+the tool calls (e.g. `documents.create`, `collections.list`). The endpoint
+map and write-tool set are derived automatically from tool metadata by
+`introspect.py` — no separate map files need updating.
 
 **Testing**: Mock OutlineClient, test success and error cases
 

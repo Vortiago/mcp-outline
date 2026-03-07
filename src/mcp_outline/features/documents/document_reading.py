@@ -35,7 +35,8 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={"endpoint": "documents.info"},
     )
     async def read_document(document_id: str) -> str:
         """
@@ -63,7 +64,8 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={"endpoint": "documents.export"},
     )
     async def export_document(document_id: str) -> str:
         """

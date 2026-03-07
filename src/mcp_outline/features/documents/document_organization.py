@@ -27,7 +27,8 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=False,
-        )
+        ),
+        meta={"endpoint": "documents.move"},
     )
     async def move_document(
         document_id: str,

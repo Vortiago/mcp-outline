@@ -36,7 +36,8 @@ grant access to `attachments.redirect` or `collections.export_all`.
 
 In addition to scope matching, `get_blocked_tools` calls `auth.info`
 to check the user's Outline role.  If the role is `"viewer"`, all
-write tools (from `WRITE_TOOL_NAMES`) are blocked.  This check is
+write tools (derived from `readOnlyHint=False` annotations) are
+blocked.  This check is
 independent of scope matching — both results are combined (union).
 Fails open: if `auth.info` returns an error, only scope matching
 is applied.

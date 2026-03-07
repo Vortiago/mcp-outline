@@ -31,7 +31,8 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=False, destructiveHint=True, idempotentHint=True
-        )
+        ),
+        meta={"endpoint": "documents.archive"},
     )
     async def archive_document(document_id: str) -> str:
         """
@@ -71,7 +72,8 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=False, destructiveHint=False, idempotentHint=True
-        )
+        ),
+        meta={"endpoint": "documents.restore"},
     )
     async def unarchive_document(document_id: str) -> str:
         """
@@ -109,7 +111,8 @@ def register_tools(mcp) -> None:
         @mcp.tool(
             annotations=ToolAnnotations(
                 readOnlyHint=False, destructiveHint=True, idempotentHint=True
-            )
+            ),
+            meta={"endpoint": "documents.delete"},
         )
         async def delete_document(
             document_id: str, permanent: bool = False
@@ -173,7 +176,8 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=False, destructiveHint=False, idempotentHint=True
-        )
+        ),
+        meta={"endpoint": "documents.restore"},
     )
     async def restore_document(document_id: str) -> str:
         """
@@ -209,7 +213,8 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=True, destructiveHint=False, idempotentHint=True
-        )
+        ),
+        meta={"endpoint": "documents.archived"},
     )
     async def list_archived_documents() -> str:
         """
@@ -241,7 +246,8 @@ def register_tools(mcp) -> None:
     @mcp.tool(
         annotations=ToolAnnotations(
             readOnlyHint=True, destructiveHint=False, idempotentHint=True
-        )
+        ),
+        meta={"endpoint": "documents.deleted"},
     )
     async def list_trash() -> str:
         """

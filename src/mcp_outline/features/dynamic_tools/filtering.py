@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING, FrozenSet, List, Optional, Set
 
 from mcp.types import Tool as MCPTool
 
@@ -13,12 +13,6 @@ from mcp_outline.features.documents.common import (
 )
 from mcp_outline.features.dynamic_tools.scope_matching import (
     blocked_tools_for_scopes,
-)
-from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
-    TOOL_ENDPOINT_MAP,
-)
-from mcp_outline.features.dynamic_tools.write_tool_names import (
-    WRITE_TOOL_NAMES,
 )
 from mcp_outline.utils.outline_client import OutlineClient, OutlineError
 
@@ -44,13 +38,14 @@ def _is_enabled() -> bool:
 
 async def _get_role_blocked_tools(
     client: OutlineClient,
+    write_tool_names: FrozenSet[str],
 ) -> Set[str]:
     """Block write tools when the user's role is ``viewer``."""
     try:
         data = await client.get_auth_info()
         role = data.get("user", {}).get("role")
         if role == "viewer":
-            return set(WRITE_TOOL_NAMES)
+            return set(write_tool_names)
     except OutlineError as exc:
         if exc.status_code == 403:
             logger.warning(
@@ -79,6 +74,8 @@ async def _get_role_blocked_tools(
 async def get_blocked_tools(
     api_key: Optional[str],
     api_url: Optional[str],
+    tool_endpoint_map: dict[str, str],
+    write_tool_names: FrozenSet[str],
 ) -> Set[str]:
     """Return tool names *api_key* cannot access.
 
@@ -104,7 +101,7 @@ async def get_blocked_tools(
         return set()
 
     # Check 1: role-based blocking (auth.info)
-    blocked = await _get_role_blocked_tools(client)
+    blocked = await _get_role_blocked_tools(client, write_tool_names)
 
     # Check 2: scope-based blocking (apiKeys.list)
     try:
@@ -128,7 +125,7 @@ async def get_blocked_tools(
                         "Settings → API Keys.",
                         api_key[-4:],
                     )
-                    return set(TOOL_ENDPOINT_MAP.keys())
+                    return set(tool_endpoint_map.keys())
                 if e.status_code == 403:
                     logger.warning(
                         "Dynamic tool list: API key ending "
@@ -173,7 +170,7 @@ async def get_blocked_tools(
             )
             return blocked
 
-        blocked |= blocked_tools_for_scopes(scopes)
+        blocked |= blocked_tools_for_scopes(scopes, tool_endpoint_map)
 
     except Exception as exc:
         logger.debug(
@@ -189,7 +186,11 @@ async def get_blocked_tools(
 # ------------------------------------------------------------------
 
 
-def install_dynamic_tool_list(mcp: "FastMCP") -> None:
+def install_dynamic_tool_list(
+    mcp: "FastMCP",
+    tool_endpoint_map: dict[str, str],
+    write_tool_names: FrozenSet[str],
+) -> None:
     """Install per-request tool filtering on *mcp*.
 
     Re-registers the lowlevel ``tools/list`` handler so that
@@ -211,7 +212,12 @@ def install_dynamic_tool_list(mcp: "FastMCP") -> None:
             api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
             api_url = os.getenv("OUTLINE_API_URL")
 
-            blocked = await get_blocked_tools(api_key, api_url)
+            blocked = await get_blocked_tools(
+                api_key,
+                api_url,
+                tool_endpoint_map,
+                write_tool_names,
+            )
 
             if blocked:
                 return [t for t in tools if t.name not in blocked]

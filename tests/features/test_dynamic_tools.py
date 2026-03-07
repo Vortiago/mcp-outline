@@ -21,13 +21,23 @@ from mcp.types import ListToolsRequest
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
-    TOOL_ENDPOINT_MAP,
-    WRITE_TOOL_NAMES,
+    build_tool_endpoint_map,
+    build_write_tool_names,
     get_blocked_tools,
     install_dynamic_tool_list,
 )
 from mcp_outline.utils.outline_client import OutlineError
 from tests.helpers import list_tools_via_handler
+
+
+def _build_maps():
+    """Build tool maps from a temporary server for test assertions."""
+    _mcp = FastMCP("map-builder")
+    register_all(_mcp)
+    return build_tool_endpoint_map(_mcp), build_write_tool_names(_mcp)
+
+
+_ENDPOINT_MAP, _WRITE_NAMES = _build_maps()
 
 
 @pytest.fixture
@@ -52,7 +62,11 @@ async def test_disabled_by_default(fresh_mcp_server):
             ListToolsRequest
         ]
 
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         handler_after = fresh_mcp_server._mcp_server.request_handlers[
             ListToolsRequest
@@ -73,7 +87,11 @@ async def test_explicitly_enabled(fresh_mcp_server):
             ListToolsRequest
         ]
 
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         handler_after = fresh_mcp_server._mcp_server.request_handlers[
             ListToolsRequest
@@ -92,12 +110,16 @@ async def test_viewer_sees_only_read_tools(fresh_mcp_server):
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
     ):
         register_all(fresh_mcp_server)
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
             new_callable=AsyncMock,
-            return_value=WRITE_TOOL_NAMES,
+            return_value=_WRITE_NAMES,
         ):
             tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
@@ -127,7 +149,11 @@ async def test_member_sees_all_tools(fresh_mcp_server):
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
     ):
         register_all(fresh_mcp_server)
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
@@ -154,12 +180,16 @@ async def test_scoped_key_without_write(fresh_mcp_server):
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
     ):
         register_all(fresh_mcp_server)
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
             new_callable=AsyncMock,
-            return_value=WRITE_TOOL_NAMES,
+            return_value=_WRITE_NAMES,
         ):
             tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
@@ -186,7 +216,11 @@ async def test_graceful_degradation_scope_check_error(
         },
     ):
         register_all(fresh_mcp_server)
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
@@ -215,7 +249,11 @@ async def test_graceful_degradation_no_api_key(
     ):
         os.environ.pop("OUTLINE_API_KEY", None)
         register_all(fresh_mcp_server)
-        install_dynamic_tool_list(fresh_mcp_server)
+        install_dynamic_tool_list(
+            fresh_mcp_server,
+            build_tool_endpoint_map(fresh_mcp_server),
+            build_write_tool_names(fresh_mcp_server),
+        )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering._get_header_api_key",
@@ -229,57 +267,22 @@ async def test_graceful_degradation_no_api_key(
 
 
 # ------------------------------------------------------------------
-# WRITE_TOOL_NAMES completeness
+# Tool metadata completeness
 # ------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_write_tool_names_matches_annotations(
+async def test_all_tools_have_endpoint_meta(
     fresh_mcp_server,
 ):
-    """WRITE_TOOL_NAMES must match tools with readOnlyHint=False."""
+    """Every registered tool must have meta["endpoint"]."""
     register_all(fresh_mcp_server)
-    tools = await fresh_mcp_server.list_tools()
-
-    write_tools_from_annotations = set()
-    for tool in tools:
-        if (
-            tool.annotations is not None
-            and tool.annotations.readOnlyHint is False
-        ):
-            write_tools_from_annotations.add(tool.name)
-
-    assert WRITE_TOOL_NAMES == write_tools_from_annotations, (
-        f"WRITE_TOOL_NAMES mismatch.\n"
-        f"  In WRITE_TOOL_NAMES but not annotated: "
-        f"{WRITE_TOOL_NAMES - write_tools_from_annotations}\n"
-        f"  Annotated but not in WRITE_TOOL_NAMES: "
-        f"{write_tools_from_annotations - WRITE_TOOL_NAMES}"
-    )
-
-
-# ------------------------------------------------------------------
-# TOOL_ENDPOINT_MAP completeness
-# ------------------------------------------------------------------
-
-
-@pytest.mark.anyio
-async def test_tool_endpoint_map_covers_all_tools(
-    fresh_mcp_server,
-):
-    """Every registered tool must have a TOOL_ENDPOINT_MAP entry."""
-    register_all(fresh_mcp_server)
+    endpoint_map = build_tool_endpoint_map(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
     registered = {t.name for t in tools}
 
-    mapped = set(TOOL_ENDPOINT_MAP.keys())
-    missing = registered - mapped
-    extra = mapped - registered
-
-    assert not missing, (
-        f"Tools registered but missing from TOOL_ENDPOINT_MAP: {missing}"
-    )
-    assert not extra, f"Tools in TOOL_ENDPOINT_MAP but not registered: {extra}"
+    missing = registered - set(endpoint_map.keys())
+    assert not missing, f"Tools without meta['endpoint']: {missing}"
 
 
 @pytest.mark.anyio
@@ -289,8 +292,7 @@ async def test_all_tools_have_read_only_hint(
     """Every registered tool must set readOnlyHint explicitly.
 
     A tool without annotations (or with ``readOnlyHint=None``)
-    would slip through both the WRITE_TOOL_NAMES cross-check
-    and the TOOL_ENDPOINT_MAP completeness check.  This test
+    would slip through the write-tool derivation.  This test
     ensures the read/write classification is exhaustive so
     that derived sets (``ALL_TOOLS``, ``READ_TOOLS``) in E2E
     tests stay correct.
@@ -329,7 +331,12 @@ async def test_get_blocked_tools_full_access():
         instance = mock_cls.return_value
         instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         assert result == set()
 
 
@@ -354,8 +361,13 @@ async def test_get_blocked_tools_read_only_key():
             ]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
-        assert WRITE_TOOL_NAMES <= result
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
+        assert _WRITE_NAMES <= result
 
 
 @pytest.mark.anyio
@@ -379,7 +391,12 @@ async def test_get_blocked_tools_partial_scope():
             ]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         assert "create_collection" in result
         assert "update_collection" in result
         assert "delete_collection" in result
@@ -397,7 +414,10 @@ async def test_get_blocked_tools_network_error():
         mock_cls.side_effect = Exception("connection refused")
 
         result = await get_blocked_tools(
-            "key-network-error", "https://example.com/api"
+            "key-network-error",
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
         )
         assert result == set()
 
@@ -405,14 +425,14 @@ async def test_get_blocked_tools_network_error():
 @pytest.mark.anyio
 async def test_get_blocked_tools_no_api_key():
     """No API key → empty set."""
-    result = await get_blocked_tools(None, None)
+    result = await get_blocked_tools(None, None, _ENDPOINT_MAP, _WRITE_NAMES)
     assert result == set()
 
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_empty_string_api_key():
     """Empty string API key → empty set (no API call)."""
-    result = await get_blocked_tools("", None)
+    result = await get_blocked_tools("", None, _ENDPOINT_MAP, _WRITE_NAMES)
     assert result == set()
 
 
@@ -431,8 +451,13 @@ async def test_get_blocked_tools_invalid_key_401():
             )
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
-        assert result == set(TOOL_ENDPOINT_MAP.keys())
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
+        assert result == set(_ENDPOINT_MAP.keys())
 
 
 @pytest.mark.anyio
@@ -455,7 +480,10 @@ async def test_get_blocked_tools_403_fail_open(caplog):
             logger="mcp_outline.features.dynamic_tools.filtering",
         ):
             result = await get_blocked_tools(
-                api_key, "https://example.com/api"
+                api_key,
+                "https://example.com/api",
+                _ENDPOINT_MAP,
+                _WRITE_NAMES,
             )
         assert result == set()
         assert any(
@@ -481,7 +509,12 @@ async def test_get_blocked_tools_key_not_found():
             ]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         assert result == set()
 
 
@@ -508,7 +541,12 @@ async def test_get_blocked_tools_pagination():
             ]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         assert "create_document" in result
         assert instance.list_api_keys.call_count == 2
 
@@ -536,7 +574,12 @@ async def test_get_blocked_tools_last4_collision_union():
             ]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         # documents:read tools should NOT be blocked
         assert "read_document" not in result
         assert "search_documents" not in result
@@ -570,7 +613,12 @@ async def test_get_blocked_tools_last4_collision_null_wins():
             ]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         # null scope = full access → nothing blocked
         assert result == set()
 
@@ -609,7 +657,12 @@ async def test_get_blocked_tools_last4_collision_across_pages():
             side_effect=[page1, page2],
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         # Both pages' scopes should be combined
         assert "read_document" not in result
         assert "list_collections" not in result
@@ -629,7 +682,11 @@ async def test_enabled_values():
         ):
             register_all(mcp)
             handler_before = mcp._mcp_server.request_handlers[ListToolsRequest]
-            install_dynamic_tool_list(mcp)
+            install_dynamic_tool_list(
+                mcp,
+                build_tool_endpoint_map(mcp),
+                build_write_tool_names(mcp),
+            )
             handler_after = mcp._mcp_server.request_handlers[ListToolsRequest]
             assert handler_after is not handler_before, (
                 f"Expected enabled for value '{val}'"
@@ -657,8 +714,13 @@ async def test_get_blocked_tools_viewer_role():
         instance.get_auth_info = _mock_auth_info("viewer")
         instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
-        assert WRITE_TOOL_NAMES <= result
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
+        assert _WRITE_NAMES <= result
 
 
 @pytest.mark.anyio
@@ -672,7 +734,12 @@ async def test_get_blocked_tools_member_role():
         instance.get_auth_info = _mock_auth_info("member")
         instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         assert result == set()
 
 
@@ -691,7 +758,12 @@ async def test_get_blocked_tools_auth_info_fails_scope_works():
             return_value=[_mock_key(api_key, scope=["documents:read"])]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         assert "create_document" in result
 
 
@@ -716,7 +788,10 @@ async def test_get_blocked_tools_auth_info_403_warning(caplog):
             logger="mcp_outline.features.dynamic_tools.filtering",
         ):
             result = await get_blocked_tools(
-                api_key, "https://example.com/api"
+                api_key,
+                "https://example.com/api",
+                _ENDPOINT_MAP,
+                _WRITE_NAMES,
             )
         # Fail-open: no write tools blocked from role check
         # Full-access key: no scope blocking either
@@ -739,8 +814,13 @@ async def test_get_blocked_tools_scope_fails_role_works():
             side_effect=Exception("network error")
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
-        assert WRITE_TOOL_NAMES <= result
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
+        assert _WRITE_NAMES <= result
 
 
 @pytest.mark.anyio
@@ -756,8 +836,13 @@ async def test_get_blocked_tools_viewer_plus_scope_union():
             return_value=[_mock_key(api_key, scope=["documents:read"])]
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _WRITE_NAMES,
+        )
         # Write tools from role check
-        assert WRITE_TOOL_NAMES <= result
+        assert _WRITE_NAMES <= result
         # Scope-blocked read tools too
         assert "export_all_collections" in result

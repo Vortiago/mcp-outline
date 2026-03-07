@@ -18,10 +18,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
-    TOOL_ENDPOINT_MAP,
-)
-
 # ------------------------------------------------------------------
 # Outline method-to-scope mapping
 # ------------------------------------------------------------------
@@ -111,12 +107,15 @@ def is_endpoint_accessible(
 
 def blocked_tools_for_scopes(
     scopes: Optional[list[str]],
+    tool_endpoint_map: dict[str, str],
 ) -> set[str]:
     """Return tool names the key *cannot* access.
 
     Args:
         scopes: The API key's scope array, or ``None``
             for full access (no restrictions).
+        tool_endpoint_map: Mapping of tool names to
+            Outline API endpoints.
 
     Returns:
         Set of blocked tool names.
@@ -126,7 +125,7 @@ def blocked_tools_for_scopes(
         return set()
 
     blocked: set[str] = set()
-    for tool_name, endpoint in TOOL_ENDPOINT_MAP.items():
+    for tool_name, endpoint in tool_endpoint_map.items():
         if not is_endpoint_accessible(endpoint, scopes):
             blocked.add(tool_name)
     return blocked

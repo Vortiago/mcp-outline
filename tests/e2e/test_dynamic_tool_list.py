@@ -38,12 +38,12 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.server.fastmcp import FastMCP
 
-from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
-    TOOL_ENDPOINT_MAP,
-)
-from mcp_outline.features.dynamic_tools.write_tool_names import (
-    WRITE_TOOL_NAMES,
+from mcp_outline.features import register_all
+from mcp_outline.features.dynamic_tools.introspect import (
+    build_tool_endpoint_map,
+    build_write_tool_names,
 )
 
 from .helpers import OUTLINE_URL
@@ -59,10 +59,20 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 # Expected tool sets — derived from source-of-truth maps
 # -------------------------------------------------------------------
 
+
+def _build_expected_tools():
+    """Build expected tool sets by introspecting registered tools."""
+    _mcp = FastMCP("tool-set-builder")
+    register_all(_mcp)
+    endpoint_map = build_tool_endpoint_map(_mcp)
+    write_names = build_write_tool_names(_mcp)
+    all_tools = set(endpoint_map) - {"ask_ai_about_documents"}
+    read_tools = all_tools - write_names
+    return all_tools, read_tools, write_names
+
+
 # All tools registered when AI tools are disabled.
-# Derived from TOOL_ENDPOINT_MAP (validated by
-# ``test_tool_endpoint_map_covers_all_tools``).
-ALL_TOOLS = set(TOOL_ENDPOINT_MAP) - {"ask_ai_about_documents"}
+ALL_TOOLS, READ_TOOLS, _WRITE_NAMES = _build_expected_tools()
 
 
 # -------------------------------------------------------------------
@@ -521,7 +531,7 @@ async def test_http_header_filters_tools(
 # Viewer role tests — auth.info role-based filtering
 # -------------------------------------------------------------------
 
-READ_TOOLS = ALL_TOOLS - WRITE_TOOL_NAMES
+# READ_TOOLS already computed by _build_expected_tools()
 
 
 async def test_viewer_full_access_key_blocks_writes(

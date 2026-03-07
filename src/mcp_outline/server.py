@@ -15,6 +15,8 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
+    build_tool_endpoint_map,
+    build_write_tool_names,
     install_dynamic_tool_list,
 )
 from mcp_outline.patches import patch_for_copilot_cli
@@ -51,8 +53,12 @@ mcp = FastMCP("Document Outline", host=host, port=port)
 # Register all features
 register_all(mcp)
 
+# Build tool metadata maps by introspecting registered tools
+tool_endpoint_map = build_tool_endpoint_map(mcp)
+write_tool_names = build_write_tool_names(mcp)
+
 # Install per-request dynamic tool filtering (off by default)
-install_dynamic_tool_list(mcp)
+install_dynamic_tool_list(mcp, tool_endpoint_map, write_tool_names)
 
 
 def main() -> None:

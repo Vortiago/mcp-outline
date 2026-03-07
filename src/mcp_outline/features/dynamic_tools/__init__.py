@@ -10,16 +10,14 @@ from mcp_outline.features.dynamic_tools.filtering import (
     get_blocked_tools,
     install_dynamic_tool_list,
 )
-from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
-    TOOL_ENDPOINT_MAP,
-)
-from mcp_outline.features.dynamic_tools.write_tool_names import (
-    WRITE_TOOL_NAMES,
+from mcp_outline.features.dynamic_tools.introspect import (
+    build_tool_endpoint_map,
+    build_write_tool_names,
 )
 
 __all__ = [
-    "TOOL_ENDPOINT_MAP",
-    "WRITE_TOOL_NAMES",
+    "build_tool_endpoint_map",
+    "build_write_tool_names",
     "get_blocked_tools",
     "install_dynamic_tool_list",
 ]

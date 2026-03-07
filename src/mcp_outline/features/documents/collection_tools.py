@@ -74,7 +74,8 @@ def register_tools(mcp) -> None:
             readOnlyHint=True,
             destructiveHint=False,
             idempotentHint=True,
-        )
+        ),
+        meta={"endpoint": "collections.export"},
     )
     async def export_collection(
         collection_id: str, format: str = "outline-markdown"
@@ -123,7 +124,8 @@ def register_tools(mcp) -> None:
             readOnlyHint=True,
             destructiveHint=False,
             idempotentHint=True,
-        )
+        ),
+        meta={"endpoint": "collections.export_all"},
     )
     async def export_all_collections(format: str = "outline-markdown") -> str:
         """
@@ -170,7 +172,8 @@ def register_tools(mcp) -> None:
                 readOnlyHint=False,
                 destructiveHint=False,
                 idempotentHint=False,
-            )
+            ),
+            meta={"endpoint": "collections.create"},
         )
         async def create_collection(
             name: str, description: str = "", color: Optional[str] = None
@@ -220,7 +223,8 @@ def register_tools(mcp) -> None:
                 readOnlyHint=False,
                 destructiveHint=True,
                 idempotentHint=False,
-            )
+            ),
+            meta={"endpoint": "collections.update"},
         )
         async def update_collection(
             collection_id: str,
@@ -278,7 +282,8 @@ def register_tools(mcp) -> None:
                 readOnlyHint=False,
                 destructiveHint=True,
                 idempotentHint=True,
-            )
+            ),
+            meta={"endpoint": "collections.delete"},
         )
         async def delete_collection(collection_id: str) -> str:
             """
