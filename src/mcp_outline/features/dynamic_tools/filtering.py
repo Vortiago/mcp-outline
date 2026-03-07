@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, FrozenSet, List, Optional, Set
+from typing import TYPE_CHECKING, Dict, FrozenSet, List, Optional, Set
 
 from mcp.types import Tool as MCPTool
 
@@ -38,14 +38,18 @@ def _is_enabled() -> bool:
 
 async def _get_role_blocked_tools(
     client: OutlineClient,
-    write_tool_names: FrozenSet[str],
+    role_blocked_map: Dict[str, FrozenSet[str]],
 ) -> Set[str]:
-    """Block write tools when the user's role is ``viewer``."""
+    """Block tools the user's Outline role cannot access.
+
+    Calls ``auth.info`` and looks up the role in
+    *role_blocked_map* (built from ``min_role`` metadata).
+    """
     try:
         data = await client.get_auth_info()
         role = data.get("user", {}).get("role")
-        if role == "viewer":
-            return set(write_tool_names)
+        if role in role_blocked_map:
+            return set(role_blocked_map[role])
     except OutlineError as exc:
         if exc.status_code == 403:
             logger.warning(
@@ -75,13 +79,13 @@ async def get_blocked_tools(
     api_key: Optional[str],
     api_url: Optional[str],
     tool_endpoint_map: dict[str, str],
-    write_tool_names: FrozenSet[str],
+    role_blocked_map: Dict[str, FrozenSet[str]],
 ) -> Set[str]:
     """Return tool names *api_key* cannot access.
 
     Performs two independent checks (results unioned):
 
-    1. ``auth.info`` — blocks write tools for viewer role
+    1. ``auth.info`` — blocks tools by user role via ``min_role``
     2. ``apiKeys.list`` — blocks tools excluded by key scopes
 
     Each check fails open independently (except 401 on
@@ -101,7 +105,7 @@ async def get_blocked_tools(
         return set()
 
     # Check 1: role-based blocking (auth.info)
-    blocked = await _get_role_blocked_tools(client, write_tool_names)
+    blocked = await _get_role_blocked_tools(client, role_blocked_map)
 
     # Check 2: scope-based blocking (apiKeys.list)
     try:
@@ -189,14 +193,14 @@ async def get_blocked_tools(
 def install_dynamic_tool_list(
     mcp: "FastMCP",
     tool_endpoint_map: dict[str, str],
-    write_tool_names: FrozenSet[str],
+    role_blocked_map: Dict[str, FrozenSet[str]],
 ) -> None:
     """Install per-request tool filtering on *mcp*.
 
     Re-registers the lowlevel ``tools/list`` handler so that
-    tools blocked by the API key's scopes are hidden.
-    Disabled by default; set ``OUTLINE_DYNAMIC_TOOL_LIST=true``
-    to enable.
+    tools blocked by the API key's scopes or user role are
+    hidden.  Disabled by default; set
+    ``OUTLINE_DYNAMIC_TOOL_LIST=true`` to enable.
 
     Call this **after** ``register_all(mcp)``.
     """
@@ -216,7 +220,7 @@ def install_dynamic_tool_list(
                 api_key,
                 api_url,
                 tool_endpoint_map,
-                write_tool_names,
+                role_blocked_map,
             )
 
             if blocked:

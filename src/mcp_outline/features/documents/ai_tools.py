@@ -57,7 +57,10 @@ def register_tools(mcp) -> None:
         annotations=ToolAnnotations(
             readOnlyHint=True, openWorldHint=True, idempotentHint=False
         ),
-        meta={"endpoint": "documents.answerQuestion"},
+        meta={
+            "endpoint": "documents.answerQuestion",
+            "min_role": "viewer",
+        },
     )
     async def ask_ai_about_documents(
         question: str,

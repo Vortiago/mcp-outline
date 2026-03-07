@@ -12,7 +12,7 @@ The system has two phases: **startup** (build metadata maps from tool decorators
 flowchart TB
     subgraph Startup
         A["register_all(mcp)"] --> B["build_tool_endpoint_map()"]
-        A --> C["build_write_tool_names()"]
+        A --> C["build_role_blocked_map()"]
         B --> D["install_dynamic_tool_list(mcp, maps)"]
         C --> D
         D --> E["Wrap tools/list handler"]
@@ -33,12 +33,12 @@ flowchart TB
 
 ## Startup: Metadata Introspection
 
-Every `@mcp.tool()` decorator carries two pieces of metadata that drive filtering:
+Every `@mcp.tool()` decorator carries metadata that drives filtering:
 
 ```python
 @mcp.tool(
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True),
-    meta={"endpoint": "documents.delete"},
+    meta={"endpoint": "documents.delete", "min_role": "member"},
 )
 async def delete_document(...) -> str:
 ```
@@ -48,7 +48,9 @@ After `register_all(mcp)`, `introspect.py` scans all registered tools via `mcp._
 | Map | Source | Purpose |
 |-----|--------|---------|
 | `tool_endpoint_map` | `meta["endpoint"]` | `{tool_name: "namespace.method"}` — used for scope matching |
-| `write_tool_names` | `readOnlyHint=False` | `frozenset[str]` — used for viewer role blocking |
+| `role_blocked_map` | `meta["min_role"]` | `{role: frozenset(blocked_names)}` — used for role-based blocking |
+
+`min_role` declares the minimum Outline role required (`"viewer"`, `"member"`, or `"admin"`). This is independent of `readOnlyHint`, which controls `OUTLINE_READ_ONLY` module registration.
 
 These maps are passed to `install_dynamic_tool_list()`, which wraps the `tools/list` protocol handler with a filtering function.
 
@@ -63,16 +65,17 @@ On each `tools/list` call, the wrapped handler:
 
 ### Check 1 — Role-Based Filtering
 
-Calls `auth.info` to get the user's Outline role. If `viewer`, all write tools are blocked.
+Calls `auth.info` to get the user's Outline role, then looks up blocked tools from `role_blocked_map` (built from `min_role` metadata at startup).
 
 ```mermaid
 flowchart TD
     A["Call auth.info"] --> B{Response?}
-    B -->|200| C{role == viewer?}
-    C -->|Yes| D["Block all write tools"]
-    C -->|No| E["Block nothing"]
-    B -->|"403 (missing scope)"| F["Log WARNING\nBlock nothing"]
-    B -->|Other error| E
+    B -->|200| C["Look up role in\nrole_blocked_map"]
+    C --> D{role in map?}
+    D -->|Yes| E["Block tools above\nuser's role level"]
+    D -->|No| F["Block nothing"]
+    B -->|"403 (missing scope)"| G["Log WARNING\nBlock nothing"]
+    B -->|Other error| F
 ```
 
 **Fail-open**: if `auth.info` errors, no tools are blocked by this check. A 403 specifically logs a warning suggesting the operator add `auth.info` to the key's scope array.
@@ -140,6 +143,7 @@ Level matching:
 
 - `attachments:read` does **not** grant `attachments.redirect` — `redirect` defaults to `write`
 - `collections:read` does **not** grant `collections.export_all` — `export_all` defaults to `write`
+- Methods that default to `write` scope (not in `methodToScope`): `update`, `delete`, `archive`, `restore`, `move`, `redirect`, `export_all`, `answerQuestion`, `archived`, `deleted`
 - Global scopes like `"read"` are broken in Outline v1.5.0 (storage normalisation prepends `/api/`). Use namespaced scopes (`documents:read`) instead
 
 ## Error Handling
@@ -175,6 +179,6 @@ src/mcp_outline/features/dynamic_tools/
 No changes needed in the dynamic tools module. Just ensure the `@mcp.tool()` decorator has:
 
 1. **`meta={"endpoint": "namespace.method"}`** — the Outline API endpoint for scope matching
-2. **`annotations=ToolAnnotations(readOnlyHint=True/False)`** — `False` for write tools (role filtering)
+2. **`meta={"min_role": "viewer"|"member"|"admin"}`** — the minimum Outline role required
 
-The maps are built automatically at startup. Integration tests (`test_all_tools_have_endpoint_meta`, `test_all_tools_have_read_only_hint`) verify every registered tool has both.
+The maps are built automatically at startup. Integration tests (`test_all_tools_have_endpoint_meta`, `test_all_tools_have_min_role_meta`) verify every registered tool has both.

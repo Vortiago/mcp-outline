@@ -10,8 +10,8 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
+    build_role_blocked_map,
     build_tool_endpoint_map,
-    build_write_tool_names,
     install_dynamic_tool_list,
 )
 from tests.helpers import list_tools_via_handler
@@ -188,7 +188,7 @@ async def test_dynamic_tool_list_when_enabled(
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         # Admin still sees all tools via protocol handler
@@ -222,7 +222,7 @@ async def test_dynamic_tool_list_composes_with_read_only():
         install_dynamic_tool_list(
             mcp,
             build_tool_endpoint_map(mcp),
-            build_write_tool_names(mcp),
+            build_role_blocked_map(mcp),
         )
 
         # Even with admin role, read-only registration
@@ -260,7 +260,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
         install_dynamic_tool_list(
             mcp,
             build_tool_endpoint_map(mcp),
-            build_write_tool_names(mcp),
+            build_role_blocked_map(mcp),
         )
 
         # Admin sees everything except delete tools
@@ -278,11 +278,12 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             assert "create_document" in names
             assert "update_document" in names
 
-        # Viewer sees no write tools at all
+        # Viewer sees no member/admin tools at all
+        role_map = build_role_blocked_map(mcp)
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
             new_callable=AsyncMock,
-            return_value=build_write_tool_names(mcp),
+            return_value=set(role_map["viewer"]),
         ):
             tools = await list_tools_via_handler(mcp)
             names = [t.name for t in tools]

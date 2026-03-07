@@ -42,8 +42,8 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools.introspect import (
+    build_role_blocked_map,
     build_tool_endpoint_map,
-    build_write_tool_names,
 )
 
 from .helpers import OUTLINE_URL
@@ -65,14 +65,14 @@ def _build_expected_tools():
     _mcp = FastMCP("tool-set-builder")
     register_all(_mcp)
     endpoint_map = build_tool_endpoint_map(_mcp)
-    write_names = build_write_tool_names(_mcp)
+    role_map = build_role_blocked_map(_mcp)
     all_tools = set(endpoint_map) - {"ask_ai_about_documents"}
-    read_tools = all_tools - write_names
-    return all_tools, read_tools, write_names
+    viewer_tools = all_tools - set(role_map["viewer"])
+    return all_tools, viewer_tools
 
 
 # All tools registered when AI tools are disabled.
-ALL_TOOLS, READ_TOOLS, _WRITE_NAMES = _build_expected_tools()
+ALL_TOOLS, READ_TOOLS = _build_expected_tools()
 
 
 # -------------------------------------------------------------------
@@ -531,7 +531,7 @@ async def test_http_header_filters_tools(
 # Viewer role tests — auth.info role-based filtering
 # -------------------------------------------------------------------
 
-# READ_TOOLS already computed by _build_expected_tools()
+# READ_TOOLS (viewer tools) already computed by _build_expected_tools()
 
 
 async def test_viewer_full_access_key_blocks_writes(

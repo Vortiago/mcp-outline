@@ -2,7 +2,8 @@
 Tests for dynamic tool list filtering.
 
 Verifies that the ``OUTLINE_DYNAMIC_TOOL_LIST`` feature correctly
-filters tools by introspecting API key scopes via ``apiKeys.list``.
+filters tools by introspecting API key scopes via ``apiKeys.list``
+and user role via ``auth.info``.
 
 **Important**: filtering tests call ``list_tools`` through the
 lowlevel MCP handler (``_mcp_server.request_handlers``), which is
@@ -21,8 +22,8 @@ from mcp.types import ListToolsRequest
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
+    build_role_blocked_map,
     build_tool_endpoint_map,
-    build_write_tool_names,
     get_blocked_tools,
     install_dynamic_tool_list,
 )
@@ -34,10 +35,13 @@ def _build_maps():
     """Build tool maps from a temporary server for test assertions."""
     _mcp = FastMCP("map-builder")
     register_all(_mcp)
-    return build_tool_endpoint_map(_mcp), build_write_tool_names(_mcp)
+    return (
+        build_tool_endpoint_map(_mcp),
+        build_role_blocked_map(_mcp),
+    )
 
 
-_ENDPOINT_MAP, _WRITE_NAMES = _build_maps()
+_ENDPOINT_MAP, _ROLE_MAP = _build_maps()
 
 
 @pytest.fixture
@@ -65,7 +69,7 @@ async def test_disabled_by_default(fresh_mcp_server):
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         handler_after = fresh_mcp_server._mcp_server.request_handlers[
@@ -90,7 +94,7 @@ async def test_explicitly_enabled(fresh_mcp_server):
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         handler_after = fresh_mcp_server._mcp_server.request_handlers[
@@ -100,8 +104,8 @@ async def test_explicitly_enabled(fresh_mcp_server):
 
 
 @pytest.mark.anyio
-async def test_viewer_sees_only_read_tools(fresh_mcp_server):
-    """Blocked write tools should not appear in tool list.
+async def test_viewer_sees_only_viewer_tools(fresh_mcp_server):
+    """Blocked tools for viewer role should not appear in tool list.
 
     Uses the lowlevel handler path to match real MCP clients.
     """
@@ -113,29 +117,33 @@ async def test_viewer_sees_only_read_tools(fresh_mcp_server):
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
             new_callable=AsyncMock,
-            return_value=_WRITE_NAMES,
+            return_value=_ROLE_MAP["viewer"],
         ):
             tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
 
-            # Read tools present
+            # Viewer-accessible tools present
             assert "search_documents" in names
             assert "read_document" in names
             assert "list_collections" in names
-            assert "export_collection" in names
+            assert "add_comment" in names
 
-            # Write tools absent
+            # Member/admin tools absent
             assert "create_document" not in names
             assert "update_document" not in names
             assert "delete_document" not in names
             assert "move_document" not in names
             assert "batch_archive_documents" not in names
+            assert "list_archived_documents" not in names
+            assert "list_trash" not in names
+            assert "export_collection" not in names
+            assert "export_all_collections" not in names
 
 
 @pytest.mark.anyio
@@ -152,7 +160,7 @@ async def test_member_sees_all_tools(fresh_mcp_server):
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         with patch(
@@ -183,13 +191,13 @@ async def test_scoped_key_without_write(fresh_mcp_server):
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         with patch(
             "mcp_outline.features.dynamic_tools.filtering.get_blocked_tools",
             new_callable=AsyncMock,
-            return_value=_WRITE_NAMES,
+            return_value=_ROLE_MAP["viewer"],
         ):
             tools = await list_tools_via_handler(fresh_mcp_server)
             names = {t.name for t in tools}
@@ -219,7 +227,7 @@ async def test_graceful_degradation_scope_check_error(
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         with patch(
@@ -252,7 +260,7 @@ async def test_graceful_degradation_no_api_key(
         install_dynamic_tool_list(
             fresh_mcp_server,
             build_tool_endpoint_map(fresh_mcp_server),
-            build_write_tool_names(fresh_mcp_server),
+            build_role_blocked_map(fresh_mcp_server),
         )
 
         with patch(
@@ -307,6 +315,79 @@ async def test_all_tools_have_read_only_hint(
     assert not missing, f"Tools without explicit readOnlyHint: {missing}"
 
 
+@pytest.mark.anyio
+async def test_all_tools_have_min_role_meta(
+    fresh_mcp_server,
+):
+    """Every registered tool must have meta["min_role"].
+
+    The ``min_role`` field declares the minimum Outline role
+    (viewer/member/admin) required to use the tool.  Missing
+    it would cause the tool to be accessible to all roles.
+    """
+    register_all(fresh_mcp_server)
+    tools = await fresh_mcp_server.list_tools()
+    registered = {t.name for t in tools}
+
+    all_tools = fresh_mcp_server._tool_manager._tools
+    missing = [
+        name
+        for name in registered
+        if not (all_tools[name].meta or {}).get("min_role")
+    ]
+    assert not missing, f"Tools without meta['min_role']: {missing}"
+
+
+# ------------------------------------------------------------------
+# Role-blocked map correctness
+# ------------------------------------------------------------------
+
+
+class TestRoleBlockedMap:
+    """Verify min_role assignments match Outline permissions."""
+
+    def test_viewer_cannot_create_documents(self):
+        assert "create_document" in _ROLE_MAP["viewer"]
+
+    def test_viewer_cannot_list_archived(self):
+        assert "list_archived_documents" in _ROLE_MAP["viewer"]
+
+    def test_viewer_cannot_list_trash(self):
+        assert "list_trash" in _ROLE_MAP["viewer"]
+
+    def test_viewer_cannot_export_collection(self):
+        assert "export_collection" in _ROLE_MAP["viewer"]
+
+    def test_viewer_cannot_export_all(self):
+        assert "export_all_collections" in _ROLE_MAP["viewer"]
+
+    def test_viewer_can_comment(self):
+        assert "add_comment" not in _ROLE_MAP["viewer"]
+
+    def test_viewer_can_search(self):
+        assert "search_documents" not in _ROLE_MAP["viewer"]
+
+    def test_viewer_can_read(self):
+        assert "read_document" not in _ROLE_MAP["viewer"]
+
+    def test_viewer_can_get_attachments(self):
+        assert "get_attachment_url" not in _ROLE_MAP["viewer"]
+        assert "fetch_attachment" not in _ROLE_MAP["viewer"]
+
+    def test_member_cannot_export_all(self):
+        """export_all_collections requires admin."""
+        assert "export_all_collections" in _ROLE_MAP["member"]
+
+    def test_member_can_create_documents(self):
+        assert "create_document" not in _ROLE_MAP["member"]
+
+    def test_member_can_list_archived(self):
+        assert "list_archived_documents" not in _ROLE_MAP["member"]
+
+    def test_admin_has_no_blocks(self):
+        assert len(_ROLE_MAP["admin"]) == 0
+
+
 # ------------------------------------------------------------------
 # get_blocked_tools — scope-based filtering
 # ------------------------------------------------------------------
@@ -335,7 +416,7 @@ async def test_get_blocked_tools_full_access():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert result == set()
 
@@ -365,9 +446,9 @@ async def test_get_blocked_tools_read_only_key():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
-        assert _WRITE_NAMES <= result
+        assert "create_document" in result
 
 
 @pytest.mark.anyio
@@ -395,7 +476,7 @@ async def test_get_blocked_tools_partial_scope():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert "create_collection" in result
         assert "update_collection" in result
@@ -417,7 +498,7 @@ async def test_get_blocked_tools_network_error():
             "key-network-error",
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert result == set()
 
@@ -425,14 +506,14 @@ async def test_get_blocked_tools_network_error():
 @pytest.mark.anyio
 async def test_get_blocked_tools_no_api_key():
     """No API key → empty set."""
-    result = await get_blocked_tools(None, None, _ENDPOINT_MAP, _WRITE_NAMES)
+    result = await get_blocked_tools(None, None, _ENDPOINT_MAP, _ROLE_MAP)
     assert result == set()
 
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_empty_string_api_key():
     """Empty string API key → empty set (no API call)."""
-    result = await get_blocked_tools("", None, _ENDPOINT_MAP, _WRITE_NAMES)
+    result = await get_blocked_tools("", None, _ENDPOINT_MAP, _ROLE_MAP)
     assert result == set()
 
 
@@ -455,7 +536,7 @@ async def test_get_blocked_tools_invalid_key_401():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert result == set(_ENDPOINT_MAP.keys())
 
@@ -483,7 +564,7 @@ async def test_get_blocked_tools_403_fail_open(caplog):
                 api_key,
                 "https://example.com/api",
                 _ENDPOINT_MAP,
-                _WRITE_NAMES,
+                _ROLE_MAP,
             )
         assert result == set()
         assert any(
@@ -513,7 +594,7 @@ async def test_get_blocked_tools_key_not_found():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert result == set()
 
@@ -545,7 +626,7 @@ async def test_get_blocked_tools_pagination():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert "create_document" in result
         assert instance.list_api_keys.call_count == 2
@@ -578,7 +659,7 @@ async def test_get_blocked_tools_last4_collision_union():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         # documents:read tools should NOT be blocked
         assert "read_document" not in result
@@ -617,7 +698,7 @@ async def test_get_blocked_tools_last4_collision_null_wins():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         # null scope = full access → nothing blocked
         assert result == set()
@@ -661,7 +742,7 @@ async def test_get_blocked_tools_last4_collision_across_pages():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         # Both pages' scopes should be combined
         assert "read_document" not in result
@@ -685,7 +766,7 @@ async def test_enabled_values():
             install_dynamic_tool_list(
                 mcp,
                 build_tool_endpoint_map(mcp),
-                build_write_tool_names(mcp),
+                build_role_blocked_map(mcp),
             )
             handler_after = mcp._mcp_server.request_handlers[ListToolsRequest]
             assert handler_after is not handler_before, (
@@ -705,7 +786,7 @@ def _mock_auth_info(role: str):
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_viewer_role():
-    """Viewer role + full-access key → write tools blocked."""
+    """Viewer role + full-access key → viewer-blocked tools."""
     api_key = "key-viewer-role"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
@@ -718,14 +799,19 @@ async def test_get_blocked_tools_viewer_role():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
-        assert _WRITE_NAMES <= result
+        assert _ROLE_MAP["viewer"] <= result
+        # Viewer can comment
+        assert "add_comment" not in result
+        # Viewer cannot list archived/trash
+        assert "list_archived_documents" in result
+        assert "list_trash" in result
 
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_member_role():
-    """Member role + full-access key → nothing blocked."""
+    """Member role + full-access key → only admin tools blocked."""
     api_key = "key-member-role"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
@@ -738,7 +824,29 @@ async def test_get_blocked_tools_member_role():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
+        )
+        # Member sees most tools, only admin-only blocked
+        assert "export_all_collections" in result
+        assert "create_document" not in result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_admin_role():
+    """Admin role + full-access key → nothing blocked."""
+    api_key = "key-admin-role"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
+        instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
+
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _ROLE_MAP,
         )
         assert result == set()
 
@@ -762,7 +870,7 @@ async def test_get_blocked_tools_auth_info_fails_scope_works():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
         assert "create_document" in result
 
@@ -791,9 +899,9 @@ async def test_get_blocked_tools_auth_info_403_warning(caplog):
                 api_key,
                 "https://example.com/api",
                 _ENDPOINT_MAP,
-                _WRITE_NAMES,
+                _ROLE_MAP,
             )
-        # Fail-open: no write tools blocked from role check
+        # Fail-open: no role-blocked tools
         # Full-access key: no scope blocking either
         assert result == set()
         assert any(
@@ -818,9 +926,9 @@ async def test_get_blocked_tools_scope_fails_role_works():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
-        assert _WRITE_NAMES <= result
+        assert _ROLE_MAP["viewer"] <= result
 
 
 @pytest.mark.anyio
@@ -840,9 +948,9 @@ async def test_get_blocked_tools_viewer_plus_scope_union():
             api_key,
             "https://example.com/api",
             _ENDPOINT_MAP,
-            _WRITE_NAMES,
+            _ROLE_MAP,
         )
-        # Write tools from role check
-        assert _WRITE_NAMES <= result
-        # Scope-blocked read tools too
+        # Role-blocked tools from viewer check
+        assert _ROLE_MAP["viewer"] <= result
+        # Scope-blocked tools too
         assert "export_all_collections" in result

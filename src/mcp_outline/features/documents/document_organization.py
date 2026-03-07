@@ -28,7 +28,10 @@ def register_tools(mcp) -> None:
             destructiveHint=True,
             idempotentHint=False,
         ),
-        meta={"endpoint": "documents.move"},
+        meta={
+            "endpoint": "documents.move",
+            "min_role": "member",
+        },
     )
     async def move_document(
         document_id: str,

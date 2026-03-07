@@ -36,7 +36,10 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-        meta={"endpoint": "documents.info"},
+        meta={
+            "endpoint": "documents.info",
+            "min_role": "viewer",
+        },
     )
     async def read_document(document_id: str) -> str:
         """
@@ -65,7 +68,10 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-        meta={"endpoint": "documents.export"},
+        meta={
+            "endpoint": "documents.export",
+            "min_role": "viewer",
+        },
     )
     async def export_document(document_id: str) -> str:
         """

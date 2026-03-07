@@ -1,9 +1,9 @@
 """Build tool metadata maps by introspecting registered tools.
 
 After ``register_all(mcp)`` is called, the builder functions in
-this module derive ``TOOL_ENDPOINT_MAP`` and ``WRITE_TOOL_NAMES``
-from the ``meta`` and ``annotations`` already present on each
-registered tool — no separate hand-maintained files needed.
+this module derive ``TOOL_ENDPOINT_MAP`` and role-blocked maps
+from the ``meta`` already present on each registered tool — no
+separate hand-maintained files needed.
 """
 
 from __future__ import annotations
@@ -12,6 +12,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
+
+# Outline workspace roles ordered by privilege level.
+_ROLE_LEVELS: dict[str, int] = {
+    "viewer": 0,
+    "member": 1,
+    "admin": 2,
+}
 
 
 def build_tool_endpoint_map(
@@ -30,15 +37,27 @@ def build_tool_endpoint_map(
     return result
 
 
-def build_write_tool_names(
+def build_role_blocked_map(
     mcp: "FastMCP",
-) -> frozenset[str]:
-    """Return tool names where ``readOnlyHint`` is ``False``."""
-    names: set[str] = set()
+) -> dict[str, frozenset[str]]:
+    """Return ``{role: blocked_tool_names}`` from ``min_role``.
+
+    Each tool carries ``meta={"min_role": "viewer"|"member"|"admin"}``
+    declaring the minimum Outline role required.  For each role in
+    the hierarchy, tools whose ``min_role`` exceeds that role are
+    added to its blocked set.
+
+    Verified against Outline route handlers
+    (``collections.ts``, ``documents.ts``) and
+    ``AuthenticationHelper.ts``.
+    """
+    blocked: dict[str, set[str]] = {r: set() for r in _ROLE_LEVELS}
     for name, tool in mcp._tool_manager._tools.items():
-        if (
-            tool.annotations is not None
-            and tool.annotations.readOnlyHint is False
-        ):
-            names.add(name)
-    return frozenset(names)
+        min_role = (tool.meta or {}).get("min_role")
+        if min_role is None:
+            continue
+        min_level = _ROLE_LEVELS.get(min_role, 0)
+        for role, level in _ROLE_LEVELS.items():
+            if level < min_level:
+                blocked[role].add(name)
+    return {r: frozenset(s) for r, s in blocked.items()}

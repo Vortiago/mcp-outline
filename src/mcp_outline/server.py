@@ -15,8 +15,8 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
+    build_role_blocked_map,
     build_tool_endpoint_map,
-    build_write_tool_names,
     install_dynamic_tool_list,
 )
 from mcp_outline.patches import patch_for_copilot_cli
@@ -55,10 +55,10 @@ register_all(mcp)
 
 # Build tool metadata maps by introspecting registered tools
 tool_endpoint_map = build_tool_endpoint_map(mcp)
-write_tool_names = build_write_tool_names(mcp)
+role_blocked_map = build_role_blocked_map(mcp)
 
 # Install per-request dynamic tool filtering (off by default)
-install_dynamic_tool_list(mcp, tool_endpoint_map, write_tool_names)
+install_dynamic_tool_list(mcp, tool_endpoint_map, role_blocked_map)
 
 
 def main() -> None:
