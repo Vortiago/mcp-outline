@@ -2,7 +2,7 @@
   "mcpServers": {
     "mcp-outline": {
       "command": "uvx",
-      "args": ["mcp-outline"],
+      "args": ["mcp-outline==1.7.1"],
       "env": {
         "OUTLINE_API_KEY": "${OUTLINE_API_KEY:-}",
         "OUTLINE_API_URL": "${OUTLINE_API_URL:-}",
