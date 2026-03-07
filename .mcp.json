@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "outline": {
+    "mcp-outline": {
       "command": "uvx",
       "args": ["mcp-outline"],
       "env": {
