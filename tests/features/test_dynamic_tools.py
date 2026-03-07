@@ -11,6 +11,7 @@ the code path real MCP clients hit.  Calling
 attribute — which can diverge from the registered handler.
 """
 
+import logging
 import os
 from unittest.mock import AsyncMock, patch
 
@@ -412,8 +413,8 @@ async def test_get_blocked_tools_invalid_key_401():
 
 
 @pytest.mark.anyio
-async def test_get_blocked_tools_403_fail_open():
-    """403 from apiKeys.list → fail-open (empty set)."""
+async def test_get_blocked_tools_403_fail_open(caplog):
+    """403 from apiKeys.list → fail-open + warning log."""
     api_key = "key-missing-scope"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
@@ -426,8 +427,17 @@ async def test_get_blocked_tools_403_fail_open():
             )
         )
 
-        result = await get_blocked_tools(api_key, "https://example.com/api")
+        with caplog.at_level(
+            logging.WARNING,
+            logger="mcp_outline.features.dynamic_tools.filtering",
+        ):
+            result = await get_blocked_tools(
+                api_key, "https://example.com/api"
+            )
         assert result == set()
+        assert any(
+            "apiKeys.list" in msg and "403" in msg for msg in caplog.messages
+        )
 
 
 @pytest.mark.anyio

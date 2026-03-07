@@ -112,10 +112,25 @@ async def get_blocked_tools(
                         api_key[-4:],
                     )
                     return set(TOOL_ENDPOINT_MAP.keys())
-                logger.debug(
-                    "apiKeys.list failed (%s), skipping scope check",
-                    e,
-                )
+                if e.status_code == 403:
+                    logger.warning(
+                        "Dynamic tool list: API key ending "
+                        "in '…%s' returned 403 "
+                        "(authorization_error). The key "
+                        "likely lacks the 'apiKeys.list' "
+                        "scope required for tool "
+                        "filtering. Add 'apiKeys.list' "
+                        "to the key's scope array in "
+                        "Outline Settings → API Keys. "
+                        "Scope-based filtering has been "
+                        "skipped for this request.",
+                        api_key[-4:],
+                    )
+                else:
+                    logger.debug(
+                        "apiKeys.list failed (%s), skipping scope check",
+                        e,
+                    )
                 return blocked
 
             for key_data in keys:
