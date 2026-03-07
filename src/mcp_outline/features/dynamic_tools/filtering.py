@@ -51,6 +51,23 @@ async def _get_role_blocked_tools(
         role = data.get("user", {}).get("role")
         if role == "viewer":
             return set(WRITE_TOOL_NAMES)
+    except OutlineError as exc:
+        if exc.status_code == 403:
+            logger.warning(
+                "Dynamic tool list: auth.info returned "
+                "403 (authorization_error). The API key "
+                "likely lacks the 'auth.info' scope "
+                "required for role-based filtering. "
+                "Add 'auth.info' to the key's scope "
+                "array in Outline Settings → API Keys. "
+                "Role-based filtering has been skipped "
+                "for this request.",
+            )
+        else:
+            logger.debug(
+                "auth.info check failed (%s), skipping role check",
+                exc,
+            )
     except Exception as exc:
         logger.debug(
             "auth.info check failed (%s), skipping role check",

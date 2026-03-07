@@ -673,6 +673,37 @@ async def test_get_blocked_tools_auth_info_fails_scope_works():
 
 
 @pytest.mark.anyio
+async def test_get_blocked_tools_auth_info_403_warning(caplog):
+    """auth.info 403 → fail-open + warning log."""
+    api_key = "key-auth-403x"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = AsyncMock(
+            side_effect=OutlineError(
+                "HTTP 403: authorization_error",
+                status_code=403,
+            )
+        )
+        instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
+
+        with caplog.at_level(
+            logging.WARNING,
+            logger="mcp_outline.features.dynamic_tools.filtering",
+        ):
+            result = await get_blocked_tools(
+                api_key, "https://example.com/api"
+            )
+        # Fail-open: no write tools blocked from role check
+        # Full-access key: no scope blocking either
+        assert result == set()
+        assert any(
+            "auth.info" in msg and "403" in msg for msg in caplog.messages
+        )
+
+
+@pytest.mark.anyio
 async def test_get_blocked_tools_scope_fails_role_works():
     """apiKeys.list error → role check still applied."""
     api_key = "key-scope-fail"
