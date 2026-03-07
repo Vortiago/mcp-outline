@@ -39,6 +39,9 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 
+from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
+    TOOL_ENDPOINT_MAP,
+)
 from mcp_outline.features.dynamic_tools.write_tool_names import (
     WRITE_TOOL_NAMES,
 )
@@ -53,48 +56,13 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 
 # -------------------------------------------------------------------
-# Expected tool sets
+# Expected tool sets — derived from source-of-truth maps
 # -------------------------------------------------------------------
 
 # All tools registered when AI tools are disabled.
-# The completeness unit test ``test_tool_endpoint_map_covers_all_tools``
-# guards against drift between this set and ``register_all()``.
-ALL_TOOLS = {
-    # Read (16 tools — AI excluded)
-    "read_document",
-    "export_document",
-    "search_documents",
-    "get_document_id_from_title",
-    "list_collections",
-    "get_collection_structure",
-    "export_collection",
-    "export_all_collections",
-    "list_document_comments",
-    "get_comment",
-    "get_document_backlinks",
-    "get_attachment_url",
-    "fetch_attachment",
-    "list_document_attachments",
-    "list_archived_documents",
-    "list_trash",
-    # Write (16 tools)
-    "create_document",
-    "update_document",
-    "add_comment",
-    "archive_document",
-    "unarchive_document",
-    "delete_document",
-    "restore_document",
-    "move_document",
-    "create_collection",
-    "update_collection",
-    "delete_collection",
-    "batch_create_documents",
-    "batch_update_documents",
-    "batch_move_documents",
-    "batch_archive_documents",
-    "batch_delete_documents",
-}
+# Derived from TOOL_ENDPOINT_MAP (validated by
+# ``test_tool_endpoint_map_covers_all_tools``).
+ALL_TOOLS = set(TOOL_ENDPOINT_MAP) - {"ask_ai_about_documents"}
 
 
 # -------------------------------------------------------------------

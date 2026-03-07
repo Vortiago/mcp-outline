@@ -282,6 +282,29 @@ async def test_tool_endpoint_map_covers_all_tools(
     assert not extra, f"Tools in TOOL_ENDPOINT_MAP but not registered: {extra}"
 
 
+@pytest.mark.anyio
+async def test_all_tools_have_read_only_hint(
+    fresh_mcp_server,
+):
+    """Every registered tool must set readOnlyHint explicitly.
+
+    A tool without annotations (or with ``readOnlyHint=None``)
+    would slip through both the WRITE_TOOL_NAMES cross-check
+    and the TOOL_ENDPOINT_MAP completeness check.  This test
+    ensures the read/write classification is exhaustive so
+    that derived sets (``ALL_TOOLS``, ``READ_TOOLS``) in E2E
+    tests stay correct.
+    """
+    register_all(fresh_mcp_server)
+    tools = await fresh_mcp_server.list_tools()
+    missing = [
+        t.name
+        for t in tools
+        if t.annotations is None or t.annotations.readOnlyHint is None
+    ]
+    assert not missing, f"Tools without explicit readOnlyHint: {missing}"
+
+
 # ------------------------------------------------------------------
 # get_blocked_tools — scope-based filtering
 # ------------------------------------------------------------------
