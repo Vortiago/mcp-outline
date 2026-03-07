@@ -94,11 +94,14 @@ Then connect from your client with a user-specific key:
 Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to automatically filter the tool list based on each user's Outline role and API key scopes. This pairs well with per-user Outline API keys — each user sees only the tools their key allows.
 
 **How it works:**
-1. On each `tools/list` request, the server calls Outline's `auth.info` endpoint
-2. If the user's role is `viewer`, write tools are hidden
-3. If the API key has restricted scopes that exclude write endpoints, write tools are hidden
-4. If `auth.info` fails for any reason, all tools are returned (fail-open)
 
-**Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
+On each `tools/list` request, the server performs two independent checks:
+
+1. **Role check** (`auth.info`) — if the user's role is `viewer`, all write tools are hidden
+2. **Scope check** (`apiKeys.list`) — if the API key has restricted scopes, tools for excluded endpoints are hidden. See the [Outline API documentation](https://www.getoutline.com/developers) for details on scope formats and available scopes.
+
+Both results are combined. Each check fails open independently — if either call fails (e.g. the key lacks `apiKeys.list` scope), that check is skipped and all tools remain visible. The only exception is a 401 (invalid key), which hides all tools.
+
+> **Note:** This is a convenience feature, not a security boundary. Even if a tool is hidden from the list, Outline's own API enforces permissions on individual operations.
 
 This feature composes with `OUTLINE_READ_ONLY` and `OUTLINE_DISABLE_DELETE`. If `OUTLINE_READ_ONLY=true`, write tools are never registered regardless of this setting.
