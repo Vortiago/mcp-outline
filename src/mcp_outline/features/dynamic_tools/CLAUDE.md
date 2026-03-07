@@ -32,6 +32,15 @@ export    → "read"
 `write`.  So `attachments:read` and `collections:read` do **not**
 grant access to `attachments.redirect` or `collections.export_all`.
 
+## Role-Based Filtering
+
+In addition to scope matching, `get_blocked_tools` calls `auth.info`
+to check the user's Outline role.  If the role is `"viewer"`, all
+write tools (from `WRITE_TOOL_NAMES`) are blocked.  This check is
+independent of scope matching — both results are combined (union).
+Fails open: if `auth.info` returns an error, only scope matching
+is applied.
+
 **Outline bug (v1.5.0)**: global scopes like `"read"` get `/api/`
 prepended by storage normalisation and become broken route scopes.
 Use namespaced scopes (`documents:read`) instead.

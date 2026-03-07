@@ -17,6 +17,9 @@ from mcp_outline.features.dynamic_tools.scope_matching import (
 from mcp_outline.features.dynamic_tools.tool_endpoint_map import (
     TOOL_ENDPOINT_MAP,
 )
+from mcp_outline.features.dynamic_tools.write_tool_names import (
+    WRITE_TOOL_NAMES,
+)
 from mcp_outline.utils.outline_client import OutlineClient, OutlineError
 
 if TYPE_CHECKING:
@@ -39,25 +42,56 @@ def _is_enabled() -> bool:
     )
 
 
+async def _get_role_blocked_tools(
+    client: OutlineClient,
+) -> Set[str]:
+    """Block write tools when the user's role is ``viewer``."""
+    try:
+        data = await client.get_auth_info()
+        role = data.get("user", {}).get("role")
+        if role == "viewer":
+            return set(WRITE_TOOL_NAMES)
+    except Exception as exc:
+        logger.debug(
+            "auth.info check failed (%s), skipping role check",
+            exc,
+        )
+    return set()
+
+
 async def get_blocked_tools(
     api_key: Optional[str],
     api_url: Optional[str],
 ) -> Set[str]:
     """Return tool names *api_key* cannot access.
 
-    Calls ``apiKeys.list``, matches by ``last4``, then applies
-    scope matching locally.  Fail-open on errors (except 401
-    which blocks all tools).
+    Performs two independent checks (results unioned):
+
+    1. ``auth.info`` — blocks write tools for viewer role
+    2. ``apiKeys.list`` — blocks tools excluded by key scopes
+
+    Each check fails open independently (except 401 on
+    ``apiKeys.list`` which blocks all tools).
     """
     if not api_key:
         return set()
 
     try:
         client = OutlineClient(api_key=api_key, api_url=api_url)
-        last4 = api_key[-4:]
+    except Exception as exc:
+        logger.debug(
+            "Dynamic tool list: client init failed (%s),"
+            " returning full tool list",
+            exc,
+        )
+        return set()
 
-        # Fetch API keys, paginating if the key isn't in
-        # the first page.
+    # Check 1: role-based blocking (auth.info)
+    blocked = await _get_role_blocked_tools(client)
+
+    # Check 2: scope-based blocking (apiKeys.list)
+    try:
+        last4 = api_key[-4:]
         scopes: Optional[List[str]] = None
         found = False
         offset = 0
@@ -67,14 +101,12 @@ async def get_blocked_tools(
                 keys = await client.list_api_keys(limit=limit, offset=offset)
             except OutlineError as e:
                 if e.status_code == 401:
-                    # Key is completely invalid → block all.
                     return set(TOOL_ENDPOINT_MAP.keys())
-                # 403 / other → fail-open.
                 logger.debug(
-                    "apiKeys.list failed (%s), returning full tool list",
+                    "apiKeys.list failed (%s), skipping scope check",
                     e,
                 )
-                return set()
+                return blocked
 
             for key_data in keys:
                 if key_data.get("last4") == last4:
@@ -83,10 +115,8 @@ async def get_blocked_tools(
                         scopes = key_scope
                         found = True
                     elif key_scope is None:
-                        # Full-access key wins.
                         scopes = None
                     elif scopes is not None:
-                        # last4 collision → union.
                         scopes = list(set(scopes) | set(key_scope))
 
             if len(keys) < limit:
@@ -96,20 +126,20 @@ async def get_blocked_tools(
         if not found:
             logger.debug(
                 "API key last4=%s not found in "
-                "apiKeys.list, returning full tool list",
+                "apiKeys.list, skipping scope check",
                 last4,
             )
-            return set()
+            return blocked
 
-        return blocked_tools_for_scopes(scopes)
+        blocked |= blocked_tools_for_scopes(scopes)
 
     except Exception as exc:
         logger.debug(
-            "Dynamic tool list: scope check failed (%s),"
-            " returning full tool list",
+            "Dynamic tool list: scope check failed (%s), skipping scope check",
             exc,
         )
-        return set()
+
+    return blocked
 
 
 # ------------------------------------------------------------------

@@ -601,3 +601,99 @@ async def test_enabled_values():
             assert handler_after is not handler_before, (
                 f"Expected enabled for value '{val}'"
             )
+
+
+# ------------------------------------------------------------------
+# get_blocked_tools — role-based filtering (auth.info)
+# ------------------------------------------------------------------
+
+
+def _mock_auth_info(role: str):
+    """Build an AsyncMock returning auth.info with *role*."""
+    return AsyncMock(return_value={"user": {"role": role}})
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_viewer_role():
+    """Viewer role + full-access key → write tools blocked."""
+    api_key = "key-viewer-role"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("viewer")
+        instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert WRITE_TOOL_NAMES <= result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_member_role():
+    """Member role + full-access key → nothing blocked."""
+    api_key = "key-member-role"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("member")
+        instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert result == set()
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_auth_info_fails_scope_works():
+    """auth.info error → scope check still applied."""
+    api_key = "key-auth-fail"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = AsyncMock(
+            side_effect=OutlineError("auth.info failed")
+        )
+        instance.list_api_keys = AsyncMock(
+            return_value=[_mock_key(api_key, scope=["documents:read"])]
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert "create_document" in result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_scope_fails_role_works():
+    """apiKeys.list error → role check still applied."""
+    api_key = "key-scope-fail"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("viewer")
+        instance.list_api_keys = AsyncMock(
+            side_effect=Exception("network error")
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        assert WRITE_TOOL_NAMES <= result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_viewer_plus_scope_union():
+    """Viewer + scoped key → union of both blocked sets."""
+    api_key = "key-viewer-scoped"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("viewer")
+        instance.list_api_keys = AsyncMock(
+            return_value=[_mock_key(api_key, scope=["documents:read"])]
+        )
+
+        result = await get_blocked_tools(api_key, "https://example.com/api")
+        # Write tools from role check
+        assert WRITE_TOOL_NAMES <= result
+        # Scope-blocked read tools too
+        assert "export_all_collections" in result

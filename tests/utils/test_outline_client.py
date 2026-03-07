@@ -695,3 +695,28 @@ class TestOutlineClient:
             with pytest.raises(OutlineError) as exc_info:
                 await client.list_api_keys()
             assert exc_info.value.status_code == 401
+
+    # -- get_auth_info tests ----------------------------------
+
+    @pytest.mark.asyncio
+    async def test_get_auth_info_success(self):
+        """get_auth_info returns data dict from auth.info."""
+        client = OutlineClient()
+        mock_data = {
+            "user": {"role": "viewer", "name": "Test"},
+            "team": {"name": "TestTeam"},
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {}
+        mock_response.json.return_value = {"data": mock_data}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            result = await client.get_auth_info()
+            assert result == mock_data
+            assert result["user"]["role"] == "viewer"
