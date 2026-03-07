@@ -101,6 +101,16 @@ async def get_blocked_tools(
                 keys = await client.list_api_keys(limit=limit, offset=offset)
             except OutlineError as e:
                 if e.status_code == 401:
+                    logger.warning(
+                        "Dynamic tool list: API key ending "
+                        "in '…%s' returned 401 "
+                        "(authentication_required). The key "
+                        "may be invalid, expired, or "
+                        "revoked. All tools have been "
+                        "hidden. Verify the key in Outline "
+                        "Settings → API Keys.",
+                        api_key[-4:],
+                    )
                     return set(TOOL_ENDPOINT_MAP.keys())
                 logger.debug(
                     "apiKeys.list failed (%s), skipping scope check",
