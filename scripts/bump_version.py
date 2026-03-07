@@ -9,7 +9,9 @@ minor, or patch) from the current version in server.json.
 import json
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -50,35 +52,30 @@ def valid_bumps(
     ]
 
 
-def update_json_file(path: Path, version: str, updater: object) -> None:
+def update_json_file(
+    path: Path,
+    version: str,
+    updater: Callable[[dict[str, Any], str], None],
+) -> None:
     """Read, update, and write a JSON file."""
     data = json.loads(path.read_text())
-    updater(data, version)  # type: ignore[operator]
+    updater(data, version)
     path.write_text(json.dumps(data, indent=2) + "\n")
 
 
-def update_server_json(
-    data: dict,
-    version: str,  # type: ignore[type-arg]
-) -> None:
+def update_server_json(data: dict[str, Any], version: str) -> None:
     """Update both version fields in server.json."""
     data["version"] = version
     if "packages" in data and len(data["packages"]) > 0:
         data["packages"][0]["version"] = version
 
 
-def update_plugin_json(
-    data: dict,
-    version: str,  # type: ignore[type-arg]
-) -> None:
+def update_plugin_json(data: dict[str, Any], version: str) -> None:
     """Update version in plugin.json."""
     data["version"] = version
 
 
-def update_marketplace_json(
-    data: dict,
-    version: str,  # type: ignore[type-arg]
-) -> None:
+def update_marketplace_json(data: dict[str, Any], version: str) -> None:
     """Update version in marketplace.json plugins."""
     if "plugins" in data and len(data["plugins"]) > 0:
         data["plugins"][0]["version"] = version
@@ -86,14 +83,13 @@ def update_marketplace_json(
 
 def update_mcp_json(path: Path, version: str) -> None:
     """Update pinned version in .mcp.json args."""
-    data = json.loads(path.read_text())
-    servers = data.get("mcpServers", {})
-    for server in servers.values():
-        args = server.get("args", [])
-        for i, arg in enumerate(args):
-            if arg.startswith("mcp-outline"):
-                args[i] = f"mcp-outline=={version}"
-    path.write_text(json.dumps(data, indent=2) + "\n")
+    text = path.read_text()
+    text = re.sub(
+        r"mcp-outline==[\d.]+",
+        f"mcp-outline=={version}",
+        text,
+    )
+    path.write_text(text)
 
 
 def main() -> None:
