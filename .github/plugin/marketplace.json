@@ -1,0 +1,22 @@
+{
+  "name": "mcp-outline",
+  "owner": {
+    "name": "Vortiago",
+    "url": "https://github.com/Vortiago"
+  },
+  "metadata": {
+    "description": "Outline knowledge base integration"
+  },
+  "plugins": [
+    {
+      "name": "mcp-outline",
+      "source": "./",
+      "description": "Connect to Outline for document search, reading, creation, and management",
+      "version": "1.7.1",
+      "author": {
+        "name": "Vortiago"
+      },
+      "license": "MIT"
+    }
+  ]
+}

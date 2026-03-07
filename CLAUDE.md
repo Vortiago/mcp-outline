@@ -397,6 +397,7 @@ Use `uv run poe bump-version <new_version>` to update all version files:
 - `server.json` (top-level and packages version)
 - `.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
+- `.github/plugin/marketplace.json`
 - `.mcp.json` (pinned uvx version in args)
 
 The script validates that the new version is a valid semver bump (patch, minor, or major) from the current version. It rejects invalid formats, downgrades, and arbitrary jumps.

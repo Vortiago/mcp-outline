@@ -85,6 +85,18 @@ Then add to your MCP client config (works with VS Code, Claude Desktop, Cursor, 
 ```
 
 <details>
+<summary>VS Code Agent Plugin</summary>
+
+Add this repo as a plugin marketplace source in VS Code settings:
+
+```json
+"chat.plugins.marketplaces": ["Vortiago/mcp-outline"]
+```
+
+Then search for `@agentPlugins mcp-outline` in the Extensions view.
+</details>
+
+<details>
 <summary>Claude Code</summary>
 
 ```bash

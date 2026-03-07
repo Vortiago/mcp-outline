@@ -14,5 +14,6 @@
     "wiki",
     "knowledge-base",
     "mcp"
-  ]
+  ],
+  "mcpServers": ".mcp.json"
 }

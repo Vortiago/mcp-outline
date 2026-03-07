@@ -9,6 +9,7 @@ Where mcp-outline is listed and which files control each listing.
 | **MCP Official Registry** | `server.json` | CI on tag (`publish-mcp-registry.yml`) | Version patched from tag at publish time |
 | **Glama** | `glama.json` | Manual claim at [glama.ai](https://glama.ai) | Only sets maintainer for ownership |
 | **Claude Code Plugin** | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.mcp.json` | Repo discovery | Install: `/plugin marketplace add Vortiago/mcp-outline` |
+| **VS Code / Copilot CLI Plugin** | `.github/plugin/marketplace.json`, `.claude-plugin/plugin.json`, `.mcp.json` | Repo discovery | Add repo as marketplace source via `chat.plugins.marketplaces` setting |
 
 ## File reference
 
@@ -16,4 +17,5 @@ Where mcp-outline is listed and which files control each listing.
 - **`glama.json`** — Glama ownership claim. Minimal: just `$schema` + `maintainers`.
 - **`.claude-plugin/plugin.json`** — Claude Code plugin metadata (name, description, keywords).
 - **`.claude-plugin/marketplace.json`** — Claude Code marketplace entry. Lists plugins available from this repo.
-- **`.mcp.json`** — MCP server config used by the Claude Code plugin. Defines how to run the server with env vars.
+- **`.github/plugin/marketplace.json`** — VS Code / Copilot CLI marketplace entry. Same format as Claude Code marketplace, in the Copilot-standard location.
+- **`.mcp.json`** — MCP server config used by both Claude Code and VS Code plugins. Defines how to run the server with env vars.

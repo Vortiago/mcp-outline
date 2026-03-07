@@ -21,6 +21,9 @@ VERSION_FILES = {
     ".claude-plugin/marketplace.json": (
         ROOT / ".claude-plugin" / "marketplace.json"
     ),
+    ".github/plugin/marketplace.json": (
+        ROOT / ".github" / "plugin" / "marketplace.json"
+    ),
     ".mcp.json": ROOT / ".mcp.json",
 }
 
@@ -126,6 +129,11 @@ def main() -> None:
     )
     update_json_file(
         VERSION_FILES[".claude-plugin/marketplace.json"],
+        new_version,
+        update_marketplace_json,
+    )
+    update_json_file(
+        VERSION_FILES[".github/plugin/marketplace.json"],
         new_version,
         update_marketplace_json,
     )
