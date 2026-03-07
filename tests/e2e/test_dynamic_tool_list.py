@@ -39,6 +39,10 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 
+from mcp_outline.features.dynamic_tools.write_tool_names import (
+    WRITE_TOOL_NAMES,
+)
+
 from .helpers import OUTLINE_URL
 
 HTTP_PORT = 3997
@@ -549,26 +553,7 @@ async def test_http_header_filters_tools(
 # Viewer role tests — auth.info role-based filtering
 # -------------------------------------------------------------------
 
-WRITE_TOOLS = {
-    "create_document",
-    "update_document",
-    "add_comment",
-    "archive_document",
-    "unarchive_document",
-    "delete_document",
-    "restore_document",
-    "move_document",
-    "create_collection",
-    "update_collection",
-    "delete_collection",
-    "batch_create_documents",
-    "batch_update_documents",
-    "batch_move_documents",
-    "batch_archive_documents",
-    "batch_delete_documents",
-}
-
-READ_TOOLS = ALL_TOOLS - WRITE_TOOLS
+READ_TOOLS = ALL_TOOLS - WRITE_TOOL_NAMES
 
 
 async def test_viewer_full_access_key_blocks_writes(
