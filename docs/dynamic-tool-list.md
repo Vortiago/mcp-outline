@@ -21,7 +21,7 @@ flowchart TB
     subgraph Runtime ["Runtime (per request)"]
         F["tools/list request"] --> G["Resolve API key"]
         G --> H["Check 1: Role (auth.info)"]
-        G --> I["Check 2: Scopes (apiKeys.list)"]
+        H --> I["Check 2: Scopes (apiKeys.list)"]
         H --> J["Union blocked sets"]
         I --> J
         J --> K["Filter tool list"]
@@ -52,30 +52,12 @@ After `register_all(mcp)`, `introspect.py` scans all registered tools via `mcp._
 
 These maps are passed to `install_dynamic_tool_list()`, which wraps the `tools/list` protocol handler with a filtering function.
 
-```mermaid
-flowchart LR
-    subgraph "Tool Decorator"
-        META["meta={endpoint: 'docs.delete'}"]
-        ANN["annotations={readOnlyHint: False}"]
-    end
-
-    subgraph "introspect.py"
-        BEM["build_tool_endpoint_map()"]
-        BWN["build_write_tool_names()"]
-    end
-
-    META --> BEM
-    ANN --> BWN
-    BEM --> MAP["tool_endpoint_map\n{delete_document: 'documents.delete', ...}"]
-    BWN --> SET["write_tool_names\n{delete_document, create_document, ...}"]
-```
-
 ## Runtime: Per-Request Filtering
 
 On each `tools/list` call, the wrapped handler:
 
 1. Resolves the API key from `x-outline-api-key` header (HTTP) or `OUTLINE_API_KEY` env var (stdio)
-2. Runs two independent checks
+2. Runs two checks sequentially (role, then scopes)
 3. Unions the blocked sets
 4. Filters out blocked tools from the response
 
@@ -187,12 +169,6 @@ src/mcp_outline/features/dynamic_tools/
 ├── scope_matching.py    # Pure functions: Outline's scope algorithm
 └── CLAUDE.md            # LLM-oriented reference
 ```
-
-| Module | Role |
-|--------|------|
-| `introspect.py` | Scans `mcp._tool_manager._tools` to build `tool_endpoint_map` and `write_tool_names` |
-| `filtering.py` | Wraps `tools/list` handler, resolves API key, calls both checks, unions results |
-| `scope_matching.py` | `is_endpoint_accessible(endpoint, scopes)` — pure function, no I/O |
 
 ## Adding a New Tool
 
