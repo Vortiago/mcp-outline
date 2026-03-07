@@ -379,14 +379,71 @@ def _viewer_credentials(outline_stack, _outline_credentials):
 
     Uses the admin session token to demote the second Dex user
     to ``viewer`` via ``users.update``.  Returns
-    ``(api_key, access_token)`` for the viewer user.
+    ``(full_access_key, scoped_keys, access_token)``.
+
+    **Order matters**: all API keys must be created *before*
+    the role is changed to viewer, because Outline's policy
+    forbids viewers from calling ``apiKeys.create``.  The
+    scoped keys needed by individual tests are pre-created
+    here and handed out via dedicated fixtures.
     """
     admin_token = _outline_credentials[1]
     viewer_token = _login("user@example.com", "user")
     user_id = _get_user_id(viewer_token)
+
+    # Create all keys while user is still a member
+    full_key = _create_full_access_key(viewer_token)
+    scoped_keys = _create_viewer_scoped_keys(viewer_token)
+
+    # Now demote to viewer — keys remain valid
     _set_user_role(admin_token, user_id, "viewer")
-    key = _create_full_access_key(viewer_token)
-    return key, viewer_token
+
+    return full_key, scoped_keys, viewer_token
+
+
+def _create_viewer_scoped_keys(
+    access_token: str,
+) -> dict:
+    """Pre-create scoped API keys for viewer role tests.
+
+    Must be called while the user still has ``member`` role.
+    Returns a dict keyed by test name.
+    """
+    return {
+        "with_auth_info": _create_scoped_key(
+            access_token,
+            "e2e-viewer-with-auth-info",
+            ["apiKeys.list", "auth.info", "documents:write"],
+        ),
+        "without_auth_info": _create_scoped_key(
+            access_token,
+            "e2e-viewer-no-auth-info",
+            ["apiKeys.list", "documents:write"],
+        ),
+    }
+
+
+def _create_scoped_key(
+    access_token: str,
+    name: str,
+    scope: list,
+) -> str:
+    """Create a scoped API key via the Outline admin API.
+
+    Like ``_create_api_key_with_scope`` in the test file but
+    usable from conftest (no pytest.skip on failure — raises
+    instead).
+    """
+    resp = httpx.post(
+        f"{OUTLINE_URL}/api/apiKeys.create",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+        json={"name": name, "scope": scope},
+        timeout=30.0,
+    )
+    resp.raise_for_status()
+    return resp.json()["data"]["value"]
 
 
 @pytest.fixture(scope="session")
@@ -396,9 +453,18 @@ def viewer_api_key(_viewer_credentials):
 
 
 @pytest.fixture(scope="session")
-def viewer_access_token(_viewer_credentials):
-    """Session token for the viewer user.
+def viewer_scoped_keys(_viewer_credentials):
+    """Pre-created scoped API keys for the viewer user.
 
-    Needed to create scoped API keys via ``apiKeys.create``.
+    Keys are created while the user is still a member,
+    then the user is demoted to viewer.  Returns a dict
+    with keys ``"with_auth_info"`` and
+    ``"without_auth_info"``.
     """
     return _viewer_credentials[1]
+
+
+@pytest.fixture(scope="session")
+def viewer_access_token(_viewer_credentials):
+    """Session token for the viewer user."""
+    return _viewer_credentials[2]

@@ -589,7 +589,7 @@ async def test_viewer_full_access_key_blocks_writes(
 
 async def test_viewer_scoped_key_with_auth_info(
     outline_stack,
-    viewer_access_token,
+    viewer_scoped_keys,
 ):
     """Viewer + scoped key (with auth.info) → role+scope union.
 
@@ -602,11 +602,7 @@ async def test_viewer_scoped_key_with_auth_info(
     filtering work correctly together when the key includes
     ``auth.info`` in its scope array.
     """
-    key = _create_api_key_with_scope(
-        viewer_access_token,
-        "e2e-viewer-with-auth-info",
-        ["apiKeys.list", "auth.info", "documents:write"],
-    )
+    key = viewer_scoped_keys["with_auth_info"]
 
     # Role blocks all writes.  Scope allows only documents.
     # Union: document read tools only.
@@ -631,7 +627,7 @@ async def test_viewer_scoped_key_with_auth_info(
 
 async def test_viewer_scoped_key_without_auth_info(
     outline_stack,
-    viewer_access_token,
+    viewer_scoped_keys,
 ):
     """Viewer + scoped key (no auth.info) → write tools leak.
 
@@ -646,11 +642,7 @@ async def test_viewer_scoped_key_without_auth_info(
     have access to.  The server logs a WARNING to help
     operators diagnose this misconfiguration.
     """
-    key = _create_api_key_with_scope(
-        viewer_access_token,
-        "e2e-viewer-no-auth-info",
-        ["apiKeys.list", "documents:write"],
-    )
+    key = viewer_scoped_keys["without_auth_info"]
 
     # auth.info → 403, role check fails open.
     # Scope allows ALL document methods (read + write).
