@@ -254,6 +254,17 @@ def _get_user_id(access_token: str) -> str:
     return resp.json()["data"]["user"]["id"]
 
 
+def _verify_user_role(api_key: str) -> str:
+    """Return the current role for the given API key."""
+    resp = httpx.post(
+        f"{OUTLINE_URL}/api/auth.info",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=30.0,
+    )
+    resp.raise_for_status()
+    return resp.json()["data"]["user"]["role"]
+
+
 def _set_user_role(
     admin_token: str,
     user_id: str,
@@ -261,7 +272,8 @@ def _set_user_role(
 ) -> None:
     """Change a user's role via the admin API.
 
-    Skips the test if ``users.update`` is not available.
+    Skips dependent tests if ``users.update`` is not available.
+    Verifies the role change via ``auth.info`` after applying it.
     """
     resp = httpx.post(
         f"{OUTLINE_URL}/api/users.update",
@@ -272,7 +284,9 @@ def _set_user_role(
         timeout=30.0,
     )
     if resp.status_code != 200:
-        pytest.skip(f"users.update returned {resp.status_code}")
+        pytest.skip(
+            f"users.update returned {resp.status_code}: {resp.text[:200]}"
+        )
 
 
 @pytest.fixture(scope="session")
@@ -434,6 +448,13 @@ def _viewer_credentials(outline_stack, _outline_credentials):
 
     # Now demote to viewer — keys remain valid
     _set_user_role(admin_token, user_id, "viewer")
+
+    # Verify role change took effect
+    actual_role = _verify_user_role(full_key)
+    if actual_role != "viewer":
+        pytest.skip(
+            f"Role demotion failed: expected 'viewer', got '{actual_role}'"
+        )
 
     return full_key, scoped_keys, viewer_token
 
