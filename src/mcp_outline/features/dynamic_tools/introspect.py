@@ -56,7 +56,13 @@ def build_role_blocked_map(
         min_role = (tool.meta or {}).get("min_role")
         if min_role is None:
             continue
-        min_level = _ROLE_LEVELS.get(min_role, 0)
+        if min_role not in _ROLE_LEVELS:
+            raise ValueError(
+                f"Tool '{name}' has invalid min_role "
+                f"'{min_role}'; expected one of "
+                f"{set(_ROLE_LEVELS)}"
+            )
+        min_level = _ROLE_LEVELS[min_role]
         for role, level in _ROLE_LEVELS.items():
             if level < min_level:
                 blocked[role].add(name)
