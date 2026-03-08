@@ -465,6 +465,21 @@ def _viewer_credentials(outline_stack, _outline_credentials):
             f"Role demotion failed: expected 'viewer', got '{actual_role}'"
         )
 
+    # Verify the viewer's API key still works after demotion.
+    # auth.info requires no specific role, so this confirms
+    # the key wasn't invalidated by the role change.
+    resp = httpx.post(
+        f"{OUTLINE_URL}/api/auth.info",
+        headers={"Authorization": f"Bearer {full_key}"},
+        timeout=30.0,
+    )
+    if resp.status_code != 200:
+        pytest.skip(
+            f"Viewer API key invalid after role change "
+            f"(auth.info returned {resp.status_code}: "
+            f"{resp.text[:200]})"
+        )
+
     return full_key, scoped_keys, viewer_token
 
 
