@@ -105,7 +105,11 @@ async def _get_scope_blocked_tools(
     invalid — the caller should hide every tool.
     """
     try:
+        # Compute the suffix once so that `api_key` is never
+        # referenced again — avoids CodeQL "clear-text logging
+        # of sensitive information" alerts.
         last4 = api_key[-4:]
+
         scopes: Optional[list[str]] = None
         found = False
         offset = 0
@@ -123,7 +127,7 @@ async def _get_scope_blocked_tools(
                         "revoked. All tools have been "
                         "hidden. Verify the key in Outline "
                         "Settings → API Keys.",
-                        api_key[-4:],
+                        last4,
                     )
                     return set(tool_endpoint_map.keys()), True
                 if e.status_code == 403:
@@ -138,7 +142,7 @@ async def _get_scope_blocked_tools(
                         "Outline Settings → API Keys. "
                         "Scope-based filtering has been "
                         "skipped for this request.",
-                        api_key[-4:],
+                        last4,
                     )
                 else:
                     logger.debug(
