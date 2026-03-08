@@ -970,3 +970,58 @@ async def test_get_blocked_tools_viewer_plus_scope_union():
         assert _ROLE_MAP["viewer"] <= result
         # Scope-blocked tools too
         assert "export_all_collections" in result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_401_preserves_role_blocked():
+    """401 from apiKeys.list unions role-blocked tools."""
+    api_key = "key-viewer-401x"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("viewer")
+        instance.list_api_keys = AsyncMock(
+            side_effect=OutlineError(
+                "HTTP 401: authentication_required",
+                status_code=401,
+            )
+        )
+
+        result = await get_blocked_tools(
+            api_key,
+            "https://example.com/api",
+            _ENDPOINT_MAP,
+            _ROLE_MAP,
+        )
+        # All endpoint-map tools blocked (401)
+        assert set(_ENDPOINT_MAP.keys()) <= result
+        # Role-blocked tools also present in union
+        assert _ROLE_MAP["viewer"] <= result
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_unknown_role_warns(caplog):
+    """Unknown role from auth.info logs a warning."""
+    api_key = "key-unknown-role"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("guest")
+        instance.list_api_keys = AsyncMock(
+            return_value=[_mock_key(api_key, scope=None)]
+        )
+
+        with caplog.at_level(logging.WARNING):
+            result = await get_blocked_tools(
+                api_key,
+                "https://example.com/api",
+                _ENDPOINT_MAP,
+                _ROLE_MAP,
+            )
+
+        # Unknown role → no role-based blocking (fail-open)
+        assert not any(t in result for t in _ROLE_MAP.get("viewer", set()))
+        # Warning was logged
+        assert "unknown role 'guest'" in caplog.text
