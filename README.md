@@ -100,7 +100,8 @@ Then search for `@agentPlugins mcp-outline` in the Extensions view.
 <summary>Claude Code</summary>
 
 ```bash
-claude mcp add mcp-outline uvx mcp-outline
+/plugin marketplace add Vortiago/mcp-outline
+/plugin install mcp-outline@mcp-outline
 ```
 </details>
 
