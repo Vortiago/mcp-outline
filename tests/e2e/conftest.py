@@ -124,7 +124,7 @@ def _login(
     for attempt in range(retries):
         try:
             return _login_once(email, password)
-        except RuntimeError as exc:
+        except (RuntimeError, httpx.RequestError) as exc:
             last_exc = exc
             if attempt < retries - 1:
                 time.sleep(2 * (attempt + 1))
@@ -437,7 +437,7 @@ def _viewer_credentials(outline_stack, _outline_credentials):
     """Log in as ``user@example.com`` and set role to viewer.
 
     Uses the admin session token to demote the second Dex user
-    to ``viewer`` via ``users.update``.  Returns
+    to ``viewer`` via ``users.update_role``.  Returns
     ``(full_access_key, scoped_keys, access_token)``.
 
     **Order matters**: all API keys must be created *before*

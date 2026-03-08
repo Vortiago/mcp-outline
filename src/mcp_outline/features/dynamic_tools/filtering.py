@@ -190,7 +190,7 @@ async def get_blocked_tools(
 ) -> set[str]:
     """Return tool names *api_key* cannot access.
 
-    Performs two independent checks **concurrently** (results
+    Performs two independent checks sequentially (results
     unioned):
 
     1. ``auth.info`` — blocks tools by user role via ``min_role``

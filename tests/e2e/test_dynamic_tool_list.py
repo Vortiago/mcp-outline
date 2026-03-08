@@ -532,6 +532,12 @@ async def test_http_header_filters_tools(
 # -------------------------------------------------------------------
 
 # READ_TOOLS (viewer tools) already computed by _build_expected_tools()
+#
+# NOTE: These tests are skipped on Outline 1.5.0 because
+# ``users.update_role`` invalidates existing API keys.  The
+# ``_viewer_credentials`` fixture detects this and calls
+# ``pytest.skip``.  Role-based filtering is still covered by
+# unit tests in ``tests/features/test_dynamic_tools.py``.
 
 
 async def test_viewer_full_access_key_blocks_writes(
