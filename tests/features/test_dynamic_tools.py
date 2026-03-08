@@ -338,6 +338,22 @@ async def test_all_tools_have_min_role_meta(
     assert not missing, f"Tools without meta['min_role']: {missing}"
 
 
+@pytest.mark.asyncio
+async def test_build_role_blocked_map_rejects_invalid_min_role():
+    """Invalid min_role values must raise ValueError at startup."""
+    mcp = FastMCP("invalid-role-test")
+
+    @mcp.tool(
+        meta={"endpoint": "test.op", "min_role": "moderator"},
+    )
+    async def bad_tool() -> str:
+        """Tool with invalid min_role."""
+        return ""
+
+    with pytest.raises(ValueError, match="moderator"):
+        build_role_blocked_map(mcp)
+
+
 # ------------------------------------------------------------------
 # Role-blocked map correctness
 # ------------------------------------------------------------------
