@@ -83,9 +83,26 @@ def _parse_set_cookies(response):
     return cookies
 
 
+def _require_redirect(resp, step_description: str) -> str:
+    """Extract the ``Location`` header from a redirect response.
+
+    Raises ``RuntimeError`` with diagnostics when the response is
+    not a redirect or the header is missing.
+    """
+    location = resp.headers.get("location")
+    if location:
+        return location
+    body_preview = resp.text[:500] if hasattr(resp, "text") else ""
+    raise RuntimeError(
+        f"{step_description}: expected redirect, got HTTP "
+        f"{resp.status_code}. Body: {body_preview}"
+    )
+
+
 def _login(
     email: str = "admin@example.com",
     password: str = "admin",
+    retries: int = 3,
 ) -> str:
     """Authenticate via OIDC/Dex and return the session token.
 
@@ -97,8 +114,28 @@ def _login(
     3. Follow the callback URL back to Outline using the saved
        cookies (manual management — see module docstring).
 
+    Retries the full OIDC flow up to *retries* times with a
+    short back-off to handle transient failures (e.g. Outline
+    returning a non-redirect when hit concurrently).
+
     Returns the ``accessToken`` cookie value (session token).
     """
+    last_exc: Exception | None = None
+    for attempt in range(retries):
+        try:
+            return _login_once(email, password)
+        except RuntimeError as exc:
+            last_exc = exc
+            if attempt < retries - 1:
+                time.sleep(2 * (attempt + 1))
+    raise last_exc  # type: ignore[misc]
+
+
+def _login_once(
+    email: str,
+    password: str,
+) -> str:
+    """Single-attempt OIDC login (called by ``_login``)."""
     # Step 1: Start OIDC flow on Outline
     resp = httpx.get(
         f"{OUTLINE_URL}/auth/oidc",
@@ -106,7 +143,7 @@ def _login(
         timeout=30.0,
     )
     outline_cookies = _parse_set_cookies(resp)
-    dex_url = resp.headers["location"]
+    dex_url = _require_redirect(resp, "OIDC initiation")
 
     # Step 2: Complete Dex login with separate client
     with httpx.Client(follow_redirects=True, timeout=30.0) as dex_client:
@@ -155,7 +192,7 @@ def _login(
             data=form_data,
             follow_redirects=False,
         )
-        callback_url = resp.headers["location"]
+        callback_url = _require_redirect(resp, "Dex login POST")
 
     # Step 3: Follow callback with original Outline cookies
     cookie_hdr = "; ".join(f"{k}={v}" for k, v in outline_cookies.items())
