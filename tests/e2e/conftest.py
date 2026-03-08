@@ -254,15 +254,22 @@ def _get_user_id(access_token: str) -> str:
     return resp.json()["data"]["user"]["id"]
 
 
-def _verify_user_role(api_key: str) -> str:
-    """Return the current role for the given API key."""
+def _get_user_role(
+    admin_token: str,
+    user_id: str,
+) -> str | None:
+    """Return the current role for *user_id* via ``users.info``."""
     resp = httpx.post(
-        f"{OUTLINE_URL}/api/auth.info",
-        headers={"Authorization": f"Bearer {api_key}"},
+        f"{OUTLINE_URL}/api/users.info",
+        headers={
+            "Authorization": f"Bearer {admin_token}",
+        },
+        json={"id": user_id},
         timeout=30.0,
     )
-    resp.raise_for_status()
-    return resp.json()["data"]["user"]["role"]
+    if resp.status_code != 200:
+        return None
+    return resp.json()["data"].get("role")
 
 
 def _set_user_role(
@@ -450,8 +457,9 @@ def _viewer_credentials(outline_stack, _outline_credentials):
     # Now demote to viewer — keys remain valid
     _set_user_role(admin_token, user_id, "viewer")
 
-    # Verify role change took effect
-    actual_role = _verify_user_role(full_key)
+    # Verify role change took effect (use admin token since
+    # viewer API keys may not have auth.info access)
+    actual_role = _get_user_role(admin_token, user_id)
     if actual_role != "viewer":
         pytest.skip(
             f"Role demotion failed: expected 'viewer', got '{actual_role}'"
