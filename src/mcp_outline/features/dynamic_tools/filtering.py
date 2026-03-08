@@ -105,9 +105,8 @@ async def _get_scope_blocked_tools(
     invalid — the caller should hide every tool.
     """
     try:
-        # Compute the suffix once so that `api_key` is never
-        # referenced again — avoids CodeQL "clear-text logging
-        # of sensitive information" alerts.
+        # Extract last-4 suffix for key matching (Outline
+        # returns ``last4`` on each API key object).
         last4 = api_key[-4:]
 
         scopes: Optional[list[str]] = None
@@ -120,20 +119,19 @@ async def _get_scope_blocked_tools(
             except OutlineError as e:
                 if e.status_code == 401:
                     logger.warning(
-                        "Dynamic tool list: API key ending "
-                        "in '…%s' returned 401 "
+                        "Dynamic tool list: apiKeys.list "
+                        "returned 401 "
                         "(authentication_required). The key "
                         "may be invalid, expired, or "
                         "revoked. All tools have been "
                         "hidden. Verify the key in Outline "
                         "Settings → API Keys.",
-                        last4,
                     )
                     return set(tool_endpoint_map.keys()), True
                 if e.status_code == 403:
                     logger.warning(
-                        "Dynamic tool list: API key ending "
-                        "in '…%s' returned 403 "
+                        "Dynamic tool list: apiKeys.list "
+                        "returned 403 "
                         "(authorization_error). The key "
                         "likely lacks the 'apiKeys.list' "
                         "scope required for tool "
@@ -142,7 +140,6 @@ async def _get_scope_blocked_tools(
                         "Outline Settings → API Keys. "
                         "Scope-based filtering has been "
                         "skipped for this request.",
-                        last4,
                     )
                 else:
                     logger.debug(
@@ -168,9 +165,7 @@ async def _get_scope_blocked_tools(
 
         if not found:
             logger.debug(
-                "API key last4=%s not found in "
-                "apiKeys.list, skipping scope check",
-                last4,
+                "API key not found in apiKeys.list, skipping scope check",
             )
             return set(), False
 

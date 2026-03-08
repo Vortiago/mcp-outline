@@ -272,11 +272,12 @@ def _set_user_role(
 ) -> None:
     """Change a user's role via the admin API.
 
-    Skips dependent tests if ``users.update`` is not available.
-    Verifies the role change via ``auth.info`` after applying it.
+    Uses ``users.update_role`` (not ``users.update``, which only
+    handles profile fields like name/avatar).  Skips dependent
+    tests if the endpoint is not available.
     """
     resp = httpx.post(
-        f"{OUTLINE_URL}/api/users.update",
+        f"{OUTLINE_URL}/api/users.update_role",
         headers={
             "Authorization": f"Bearer {admin_token}",
         },
@@ -285,7 +286,7 @@ def _set_user_role(
     )
     if resp.status_code != 200:
         pytest.skip(
-            f"users.update returned {resp.status_code}: {resp.text[:200]}"
+            f"users.update_role returned {resp.status_code}: {resp.text[:200]}"
         )
 
 
