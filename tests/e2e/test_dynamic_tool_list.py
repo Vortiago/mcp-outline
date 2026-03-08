@@ -567,8 +567,11 @@ async def test_viewer_scoped_key_with_auth_info(
     """
     key = viewer_scoped_keys["with_auth_info"]
 
-    # Role blocks all writes.  Scope allows only documents.
-    # Union: document read tools only.
+    # Role blocks tools requiring member+.  Scope allows only
+    # documents namespace.  Union: document viewer-level tools only.
+    # list_archived_documents / list_trash have min_role=member,
+    # so the role check blocks them even though documents:write
+    # grants scope access to documents.archived / documents.deleted.
     expected = {
         "read_document",
         "export_document",
@@ -576,8 +579,6 @@ async def test_viewer_scoped_key_with_auth_info(
         "get_document_id_from_title",
         "get_document_backlinks",
         "list_document_attachments",
-        "list_archived_documents",
-        "list_trash",
     }
 
     names = await _list_tools_stdio(key)
