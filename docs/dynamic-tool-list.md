@@ -146,9 +146,18 @@ Level matching:
 - Methods that default to `write` scope (not in `methodToScope`): `update`, `delete`, `archive`, `restore`, `move`, `redirect`, `export_all`, `answerQuestion`, `archived`, `deleted`
 - Global scopes like `"read"` are broken in Outline v1.5.0 (storage normalisation prepends `/api/`). Use namespaced scopes (`documents:read`) instead
 
+## Interaction with `OUTLINE_READ_ONLY`
+
+When `OUTLINE_READ_ONLY=true`, write modules (content, lifecycle, organization, batch operations) are **never registered**. The dynamic tool list only filters tools that are actually registered, so `min_role` has no effect on tools that were excluded at startup. The two systems are independent:
+
+- `OUTLINE_READ_ONLY` controls which modules are **registered** (startup-time, all-or-nothing)
+- `min_role` controls which tools are **visible per-user** (request-time, role-based)
+
+If both are set, `OUTLINE_READ_ONLY` takes precedence — unregistered tools cannot be shown regardless of the user's role.
+
 ## Error Handling
 
-The system is **fail-open by design** — if any check fails, the full tool list is shown. This is intentional: the dynamic tool list is a UX convenience, not a security boundary. Outline's API enforces permissions on individual operations regardless.
+The system is **fail-open by design** — if any check fails, that check is skipped and no tools are blocked by it. This is intentional: the dynamic tool list is a UX convenience, not a security boundary. Outline's API enforces permissions on individual operations regardless.
 
 The single exception is **401 on `apiKeys.list`**, which indicates the key is invalid/expired/revoked. In this case, all tools are hidden to avoid showing tools that will all fail anyway.
 
@@ -156,12 +165,12 @@ The single exception is **401 on `apiKeys.list`**, which indicates the key is in
 |----------|----------|
 | `auth.info` returns 403 | Log warning, skip role check |
 | `auth.info` returns other error | Skip role check |
-| `apiKeys.list` returns **401** | **Block all tools** |
+| `apiKeys.list` returns **401** | **Block all tools** (unioned with role blocks) |
 | `apiKeys.list` returns 403 | Log warning, skip scope check |
 | `apiKeys.list` returns other error | Skip scope check |
 | Key not found by last4 | Skip scope check |
 | Client init fails | Return full tool list |
-| Any unexpected exception | Return full tool list |
+| Any unexpected exception in scope check | Skip scope check (role blocks preserved) |
 
 ## Module Structure
 

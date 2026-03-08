@@ -97,7 +97,7 @@ Set `OUTLINE_DYNAMIC_TOOL_LIST=true` to automatically filter the tool list based
 
 On each `tools/list` request, the server performs two independent checks:
 
-1. **Role check** (`auth.info`) — if the user's role is `viewer`, all write tools are hidden
+1. **Role check** (`auth.info`) — tools requiring a higher role than the user's are hidden (e.g. viewers cannot see member/admin tools)
 2. **Scope check** (`apiKeys.list`) — if the API key has restricted scopes, tools for excluded endpoints are hidden. See the [Outline API documentation](https://www.getoutline.com/developers) for details on scope formats and available scopes.
 
 Both results are combined. Each check fails open independently — if either call fails (e.g. the key lacks `apiKeys.list` scope), that check is skipped and all tools remain visible. The only exception is a 401 (invalid key), which hides all tools.

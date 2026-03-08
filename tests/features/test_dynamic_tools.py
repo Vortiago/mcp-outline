@@ -14,7 +14,7 @@ attribute — which can diverge from the registered handler.
 
 import logging
 import os
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
@@ -1025,3 +1025,49 @@ async def test_get_blocked_tools_unknown_role_warns(caplog):
         assert not any(t in result for t in _ROLE_MAP.get("viewer", set()))
         # Warning was logged
         assert "unknown role 'guest'" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_get_blocked_tools_auth_info_401_warns(caplog):
+    """401 from auth.info logs a warning and skips role check."""
+    api_key = "key-auth401-role"
+    with patch(
+        "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
+    ) as mock_cls:
+        instance = mock_cls.return_value
+        instance.get_auth_info = AsyncMock(
+            side_effect=OutlineError(
+                "HTTP 401: authentication_required",
+                status_code=401,
+            )
+        )
+        instance.list_api_keys = AsyncMock(
+            return_value=[_mock_key(api_key, scope=None)]
+        )
+
+        with caplog.at_level(logging.WARNING):
+            result = await get_blocked_tools(
+                api_key,
+                "https://example.com/api",
+                _ENDPOINT_MAP,
+                _ROLE_MAP,
+            )
+
+        # Role check failed open → no role-based blocking
+        assert not any(t in result for t in _ROLE_MAP.get("viewer", set()))
+        # Warning was logged for the 401
+        assert "auth.info returned 401" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_build_role_blocked_map_empty_registry():
+    """Empty tool registry → all roles have empty blocked sets."""
+    mock_mcp = MagicMock()
+    mock_mcp._tool_manager._tools = {}
+
+    result = build_role_blocked_map(mock_mcp)
+    assert result == {
+        "viewer": frozenset(),
+        "member": frozenset(),
+        "admin": frozenset(),
+    }
