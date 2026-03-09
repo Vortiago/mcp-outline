@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
 # Outline workspace roles ordered by privilege level.
-_ROLE_LEVELS: dict[str, int] = {
+ROLE_LEVELS: dict[str, int] = {
     "viewer": 0,
     "member": 1,
     "admin": 2,
@@ -51,19 +51,19 @@ def build_role_blocked_map(
     (``collections.ts``, ``documents.ts``) and
     ``AuthenticationHelper.ts``.
     """
-    blocked: dict[str, set[str]] = {r: set() for r in _ROLE_LEVELS}
+    blocked: dict[str, set[str]] = {r: set() for r in ROLE_LEVELS}
     for name, tool in mcp._tool_manager._tools.items():
         min_role = (tool.meta or {}).get("min_role")
         if min_role is None:
             continue
-        if min_role not in _ROLE_LEVELS:
+        if min_role not in ROLE_LEVELS:
             raise ValueError(
                 f"Tool '{name}' has invalid min_role "
                 f"'{min_role}'; expected one of "
-                f"{set(_ROLE_LEVELS)}"
+                f"{set(ROLE_LEVELS)}"
             )
-        min_level = _ROLE_LEVELS[min_role]
-        for role, level in _ROLE_LEVELS.items():
+        min_level = ROLE_LEVELS[min_role]
+        for role, level in ROLE_LEVELS.items():
             if level < min_level:
                 blocked[role].add(name)
     return {r: frozenset(s) for r, s in blocked.items()}

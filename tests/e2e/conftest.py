@@ -83,6 +83,20 @@ def _parse_set_cookies(response):
     return cookies
 
 
+def _outline_api(
+    token: str,
+    endpoint: str,
+    json: dict | None = None,
+) -> httpx.Response:
+    """POST to an Outline API endpoint with Bearer auth."""
+    return httpx.post(
+        f"{OUTLINE_URL}/api/{endpoint}",
+        headers={"Authorization": f"Bearer {token}"},
+        json=json or {},
+        timeout=30.0,
+    )
+
+
 def _require_redirect(resp, step_description: str) -> str:
     """Extract the ``Location`` header from a redirect response.
 
@@ -215,17 +229,30 @@ def _login_once(
     return access_token
 
 
-def _create_full_access_key(access_token: str) -> str:
-    """Create a full-access API key and return its value."""
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/apiKeys.create",
-        headers={
-            "Authorization": f"Bearer {access_token}",
-        },
-        json={"name": "e2e-test"},
-        timeout=30.0,
-    )
-    resp.raise_for_status()
+def _create_api_key(
+    access_token: str,
+    name: str = "e2e-test",
+    scope: list | None = None,
+    *,
+    skip_on_error: bool = False,
+) -> str:
+    """Create an Outline API key and return its value.
+
+    Args:
+        access_token: OIDC session token (Bearer).
+        name: Key name shown in Outline Settings.
+        scope: Scope array, or ``None`` for full access.
+        skip_on_error: If ``True``, call ``pytest.skip``
+            instead of raising on non-200 responses.
+    """
+    json_body: dict = {"name": name}
+    if scope is not None:
+        json_body["scope"] = scope
+    resp = _outline_api(access_token, "apiKeys.create", json_body)
+    if resp.status_code != 200:
+        if skip_on_error:
+            pytest.skip(f"apiKeys.create returned {resp.status_code}")
+        resp.raise_for_status()
     return resp.json()["data"]["value"]
 
 
@@ -237,19 +264,13 @@ def _login_and_create_api_key():
     token.
     """
     token = _login("admin@example.com", "admin")
-    key = _create_full_access_key(token)
+    key = _create_api_key(token)
     return key, token
 
 
 def _get_user_id(access_token: str) -> str:
     """Return the user ID for the given session token."""
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/auth.info",
-        headers={
-            "Authorization": f"Bearer {access_token}",
-        },
-        timeout=30.0,
-    )
+    resp = _outline_api(access_token, "auth.info")
     resp.raise_for_status()
     return resp.json()["data"]["user"]["id"]
 
@@ -259,14 +280,7 @@ def _get_user_role(
     user_id: str,
 ) -> str | None:
     """Return the current role for *user_id* via ``users.info``."""
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/users.info",
-        headers={
-            "Authorization": f"Bearer {admin_token}",
-        },
-        json={"id": user_id},
-        timeout=30.0,
-    )
+    resp = _outline_api(admin_token, "users.info", {"id": user_id})
     if resp.status_code != 200:
         return None
     return resp.json()["data"].get("role")
@@ -283,13 +297,10 @@ def _set_user_role(
     handles profile fields like name/avatar).  Skips dependent
     tests if the endpoint is not available.
     """
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/users.update_role",
-        headers={
-            "Authorization": f"Bearer {admin_token}",
-        },
-        json={"id": user_id, "role": role},
-        timeout=30.0,
+    resp = _outline_api(
+        admin_token,
+        "users.update_role",
+        {"id": user_id, "role": role},
     )
     if resp.status_code != 200:
         pytest.skip(
@@ -451,7 +462,7 @@ def _viewer_credentials(outline_stack, _outline_credentials):
     user_id = _get_user_id(viewer_token)
 
     # Create all keys while user is still a member
-    full_key = _create_full_access_key(viewer_token)
+    full_key = _create_api_key(viewer_token)
     scoped_keys = _create_viewer_scoped_keys(viewer_token)
 
     # Now demote to viewer — keys remain valid
@@ -468,11 +479,7 @@ def _viewer_credentials(outline_stack, _outline_credentials):
     # Verify the viewer's API key still works after demotion.
     # auth.info requires no specific role, so this confirms
     # the key wasn't invalidated by the role change.
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/auth.info",
-        headers={"Authorization": f"Bearer {full_key}"},
-        timeout=30.0,
-    )
+    resp = _outline_api(full_key, "auth.info")
     if resp.status_code != 200:
         pytest.skip(
             f"Viewer API key invalid after role change "
@@ -492,40 +499,17 @@ def _create_viewer_scoped_keys(
     Returns a dict keyed by test name.
     """
     return {
-        "with_auth_info": _create_scoped_key(
+        "with_auth_info": _create_api_key(
             access_token,
             "e2e-viewer-with-auth-info",
             ["apiKeys.list", "auth.info", "documents:write"],
         ),
-        "without_auth_info": _create_scoped_key(
+        "without_auth_info": _create_api_key(
             access_token,
             "e2e-viewer-no-auth-info",
             ["apiKeys.list", "documents:write"],
         ),
     }
-
-
-def _create_scoped_key(
-    access_token: str,
-    name: str,
-    scope: list,
-) -> str:
-    """Create a scoped API key via the Outline admin API.
-
-    Like ``_create_api_key_with_scope`` in the test file but
-    usable from conftest (no pytest.skip on failure — raises
-    instead).
-    """
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/apiKeys.create",
-        headers={
-            "Authorization": f"Bearer {access_token}",
-        },
-        json={"name": name, "scope": scope},
-        timeout=30.0,
-    )
-    resp.raise_for_status()
-    return resp.json()["data"]["value"]
 
 
 @pytest.fixture(scope="session")

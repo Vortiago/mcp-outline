@@ -11,11 +11,13 @@ from mcp_outline.features.dynamic_tools.filtering import (
     install_dynamic_tool_list,
 )
 from mcp_outline.features.dynamic_tools.introspect import (
+    ROLE_LEVELS,
     build_role_blocked_map,
     build_tool_endpoint_map,
 )
 
 __all__ = [
+    "ROLE_LEVELS",
     "build_role_blocked_map",
     "build_tool_endpoint_map",
     "get_blocked_tools",

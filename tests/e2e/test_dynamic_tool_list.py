@@ -46,6 +46,7 @@ from mcp_outline.features.dynamic_tools.introspect import (
     build_tool_endpoint_map,
 )
 
+from .conftest import _create_api_key
 from .helpers import OUTLINE_URL
 
 HTTP_PORT = 3997
@@ -112,37 +113,6 @@ async def _list_tools_stdio(api_key: str) -> set[str]:
             await session.initialize()
             result = await session.list_tools()
             return {t.name for t in result.tools}
-
-
-def _create_api_key_with_scope(
-    access_token: str,
-    name: str,
-    scope: list,
-) -> str:
-    """Create a scoped API key via the Outline admin API.
-
-    Uses the OIDC *access_token* (session token) to call
-    ``apiKeys.create``.  This endpoint requires a session
-    token -- API keys cannot create other API keys.
-
-    Raises ``pytest.skip`` if the Outline instance does not
-    support scoped API keys.
-
-    Returns the API key value string.
-    """
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/apiKeys.create",
-        headers={"Authorization": f"Bearer {access_token}"},
-        json={"name": name, "scope": scope},
-        timeout=30.0,
-    )
-    if resp.status_code != 200:
-        pytest.skip(
-            "Outline does not support scoped API keys "
-            f"(apiKeys.create returned {resp.status_code})"
-        )
-
-    return resp.json()["data"]["value"]
 
 
 def _assert_tools(
@@ -287,7 +257,7 @@ async def test_route_scoped_read_only(
     Scope: explicit ``namespace.method`` entries for every
     read-only endpoint in the TOOL_ENDPOINT_MAP.
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-route-read-only",
         [
@@ -306,6 +276,7 @@ async def test_route_scoped_read_only(
             "documents.archived",
             "documents.deleted",
         ],
+        skip_on_error=True,
     )
 
     expected = {
@@ -351,7 +322,7 @@ async def test_namespace_read_scope(
     route scope.  ``collections.export_all`` likewise defaults
     to ``write`` and needs ``collections:write`` or a route scope.
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-namespace-read",
         [
@@ -360,6 +331,7 @@ async def test_namespace_read_scope(
             "collections:read",
             "comments:read",
         ],
+        skip_on_error=True,
     )
 
     expected = {
@@ -393,10 +365,11 @@ async def test_namespace_write_documents_only(
     stay blocked (attachment tools now map to the ``attachments``
     namespace).
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-namespace-write-docs",
         ["apiKeys.list", "documents:write"],
+        skip_on_error=True,
     )
 
     expected = {
@@ -442,7 +415,7 @@ async def test_mixed_namespace_and_route_scope(
     Attachment, export, comment, and other write tools are
     blocked.
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-mixed-scope",
         [
@@ -451,6 +424,7 @@ async def test_mixed_namespace_and_route_scope(
             "collections.create",
             "collections.list",
         ],
+        skip_on_error=True,
     )
 
     expected = {
@@ -480,10 +454,11 @@ async def test_namespace_create_scope(
     matches methods whose ``methodToScope`` is ``create``
     (i.e. the ``create`` method itself).
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-namespace-create-docs",
         ["apiKeys.list", "documents:create"],
+        skip_on_error=True,
     )
 
     expected = {
@@ -516,10 +491,11 @@ async def test_http_header_filters_tools(
     _assert_tools(admin_names, ALL_TOOLS, "http header admin key")
 
     # Scoped key via header -> subset
-    scoped_key = _create_api_key_with_scope(
+    scoped_key = _create_api_key(
         outline_access_token,
         "e2e-http-header-scoped",
         ["apiKeys.list", "documents:read"],
+        skip_on_error=True,
     )
     scoped_names = await _list_tools_http(scoped_key)
     assert "read_document" in scoped_names
