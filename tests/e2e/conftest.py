@@ -92,7 +92,7 @@ def _outline_api(
     return httpx.post(
         f"{OUTLINE_URL}/api/{endpoint}",
         headers={"Authorization": f"Bearer {token}"},
-        json=json or {},
+        json=json,
         timeout=30.0,
     )
 
