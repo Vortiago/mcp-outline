@@ -80,12 +80,12 @@ async def _get_role_blocked_tools(
         else:
             logger.debug(
                 "auth.info check failed (%s), skipping role check",
-                exc,
+                type(exc).__name__,
             )
     except Exception as exc:
         logger.debug(
             "auth.info check failed (%s), skipping role check",
-            exc,
+            type(exc).__name__,
         )
     return set()
 
@@ -144,7 +144,7 @@ async def _get_scope_blocked_tools(
                 else:
                     logger.debug(
                         "apiKeys.list failed (%s), skipping scope check",
-                        e,
+                        type(e).__name__,
                     )
                 return set(), False
 
@@ -177,7 +177,7 @@ async def _get_scope_blocked_tools(
     except Exception as exc:
         logger.debug(
             "Dynamic tool list: scope check failed (%s), skipping scope check",
-            exc,
+            type(exc).__name__,
         )
         return set(), False
 
@@ -208,7 +208,7 @@ async def get_blocked_tools(
         logger.debug(
             "Dynamic tool list: client init failed (%s),"
             " returning full tool list",
-            exc,
+            type(exc).__name__,
         )
         return set()
 
@@ -270,7 +270,7 @@ def install_dynamic_tool_list(
         except Exception as exc:
             logger.debug(
                 "Dynamic tool filtering failed (%s), returning full tool list",
-                exc,
+                type(exc).__name__,
             )
 
         return tools
