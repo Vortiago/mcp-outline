@@ -385,6 +385,52 @@ uv run poe test-integration
 uv run poe test-e2e
 ```
 
+### Verifying CI on GitHub
+
+After pushing, verify all GitHub Actions checks pass. E2E tests run
+in CI and cannot be fully replicated locally without the Docker
+Compose E2E stack. Use the GitHub API to check status:
+
+```bash
+# Get status of all check runs for a commit
+curl -s "https://api.github.com/repos/Vortiago/mcp-outline/commits/<SHA>/check-runs" \
+  -H "Accept: application/vnd.github+json" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for cr in data.get('check_runs', []):
+    print(f'{cr[\"name\"]}: {cr[\"status\"]}/{cr[\"conclusion\"]}')
+print(f'Total: {data.get(\"total_count\", 0)}')
+"
+```
+
+Replace `<SHA>` with the full or abbreviated commit hash. Expected
+checks (all must show `completed/success`):
+
+- **Unit Tests** (Python 3.10, 3.11, 3.12, 3.13)
+- **CodeQL** (actions + python analyses)
+- **E2E Tests** + E2E Test Report
+- **Build**
+
+If checks are still running (`in_progress` or `queued`),
+wait and re-run the command. E2E tests typically take 2-4 minutes.
+
+To get failure details (test annotations) for a specific check run:
+
+```bash
+# List failed test annotations for a check run
+curl -s "https://api.github.com/repos/Vortiago/mcp-outline/check-runs/<CHECK_RUN_ID>/annotations" \
+  -H "Accept: application/vnd.github+json" \
+  | python3 -c "
+import sys, json
+for a in json.load(sys.stdin):
+    print(f'{a[\"path\"]}:{a[\"start_line\"]} - {a[\"message\"]}')
+"
+```
+
+The `<CHECK_RUN_ID>` is available in the check-runs response
+(`cr["id"]`).
+
 ## Common Patterns
 
 **Pagination**: Use `offset` and `limit` parameters for large result sets
