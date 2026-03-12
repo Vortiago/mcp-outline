@@ -95,9 +95,7 @@ async def get_blocked_tools(
 
         if not found:
             logger.debug(
-                "API key last4=%s not found in "
-                "apiKeys.list, returning full tool list",
-                last4,
+                "API key not found in apiKeys.list, returning full tool list",
             )
             return set()
 
