@@ -6,6 +6,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Optional
 
+import anyio
 from mcp.types import Tool as MCPTool
 
 from mcp_outline.features.documents.common import (
@@ -36,6 +37,43 @@ def _is_enabled() -> bool:
     )
 
 
+def _log_api_error(
+    endpoint: str,
+    exc: OutlineError,
+    check_name: str,
+) -> None:
+    """Log a structured warning/debug for API errors."""
+    if exc.status_code == 401:
+        logger.warning(
+            "Dynamic tool list: %s returned 401 "
+            "(authentication_required). The API key "
+            "may be invalid, expired, or revoked. "
+            "%s has been skipped for this request.",
+            endpoint,
+            check_name,
+        )
+    elif exc.status_code == 403:
+        logger.warning(
+            "Dynamic tool list: %s returned 403 "
+            "(authorization_error). The API key "
+            "likely lacks the '%s' scope. "
+            "Add '%s' to the key's scope array "
+            "in Outline Settings → API Keys. "
+            "%s has been skipped for this request.",
+            endpoint,
+            endpoint,
+            endpoint,
+            check_name,
+        )
+    else:
+        logger.debug(
+            "%s check failed (%s), skipping %s",
+            endpoint,
+            type(exc).__name__,
+            check_name.lower(),
+        )
+
+
 async def _get_role_blocked_tools(
     client: OutlineClient,
     role_blocked_map: dict[str, frozenset[str]],
@@ -58,30 +96,7 @@ async def _get_role_blocked_tools(
                 role,
             )
     except OutlineError as exc:
-        if exc.status_code == 401:
-            logger.warning(
-                "Dynamic tool list: auth.info returned "
-                "401 (authentication_required). The API "
-                "key may be invalid, expired, or revoked. "
-                "Role-based filtering has been skipped "
-                "for this request.",
-            )
-        elif exc.status_code == 403:
-            logger.warning(
-                "Dynamic tool list: auth.info returned "
-                "403 (authorization_error). The API key "
-                "likely lacks the 'auth.info' scope "
-                "required for role-based filtering. "
-                "Add 'auth.info' to the key's scope "
-                "array in Outline Settings → API Keys. "
-                "Role-based filtering has been skipped "
-                "for this request.",
-            )
-        else:
-            logger.debug(
-                "auth.info check failed (%s), skipping role check",
-                type(exc).__name__,
-            )
+        _log_api_error("auth.info", exc, "Role-based filtering")
     except Exception as exc:
         logger.debug(
             "auth.info check failed (%s), skipping role check",
@@ -94,16 +109,14 @@ async def _get_scope_blocked_tools(
     client: OutlineClient,
     api_key: str,
     tool_endpoint_map: dict[str, str],
-) -> tuple[set[str], bool]:
+) -> set[str]:
     """Block tools the API key's scopes don't grant access to.
 
     Calls ``apiKeys.list``, finds the key by its last 4 characters,
     and checks each tool's endpoint against the scopes.
 
-    Returns a tuple of ``(blocked_tools, block_all)``.
-    *block_all* is ``True`` when a 401 indicates the key is
-    invalid; ``blocked_tools`` contains all tool names in
-    that case.
+    On a 401 (invalid/expired key), returns all tool names so
+    that every tool is hidden.
     """
     try:
         # Extract last-4 suffix for key matching (Outline
@@ -122,32 +135,18 @@ async def _get_scope_blocked_tools(
                     logger.warning(
                         "Dynamic tool list: apiKeys.list "
                         "returned 401 "
-                        "(authentication_required). The key "
-                        "may be invalid, expired, or "
-                        "revoked. All tools have been "
-                        "hidden. Verify the key in Outline "
+                        "(authentication_required). "
+                        "All tools have been hidden. "
+                        "Verify the key in Outline "
                         "Settings → API Keys.",
                     )
-                    return set(tool_endpoint_map.keys()), True
-                if e.status_code == 403:
-                    logger.warning(
-                        "Dynamic tool list: apiKeys.list "
-                        "returned 403 "
-                        "(authorization_error). The key "
-                        "likely lacks the 'apiKeys.list' "
-                        "scope required for tool "
-                        "filtering. Add 'apiKeys.list' "
-                        "to the key's scope array in "
-                        "Outline Settings → API Keys. "
-                        "Scope-based filtering has been "
-                        "skipped for this request.",
-                    )
-                else:
-                    logger.debug(
-                        "apiKeys.list failed (%s), skipping scope check",
-                        type(e).__name__,
-                    )
-                return set(), False
+                    return set(tool_endpoint_map.keys())
+                _log_api_error(
+                    "apiKeys.list",
+                    e,
+                    "Scope-based filtering",
+                )
+                return set()
 
             for key_data in keys:
                 if key_data.get("last4") == last4:
@@ -168,19 +167,16 @@ async def _get_scope_blocked_tools(
             logger.debug(
                 "API key not found in apiKeys.list, skipping scope check",
             )
-            return set(), False
+            return set()
 
-        return (
-            blocked_tools_for_scopes(scopes, tool_endpoint_map),
-            False,
-        )
+        return blocked_tools_for_scopes(scopes, tool_endpoint_map)
 
     except Exception as exc:
         logger.debug(
             "Dynamic tool list: scope check failed (%s), skipping scope check",
             type(exc).__name__,
         )
-        return set(), False
+        return set()
 
 
 async def get_blocked_tools(
@@ -191,8 +187,7 @@ async def get_blocked_tools(
 ) -> set[str]:
     """Return tool names *api_key* cannot access.
 
-    Performs two independent checks sequentially (results
-    unioned):
+    Runs two independent checks concurrently (results unioned):
 
     1. ``auth.info`` — blocks tools by user role via ``min_role``
     2. ``apiKeys.list`` — blocks tools excluded by key scopes
@@ -213,17 +208,22 @@ async def get_blocked_tools(
         )
         return set()
 
-    # Check 1: role-based blocking (auth.info)
-    role_blocked = await _get_role_blocked_tools(client, role_blocked_map)
+    role_blocked: set[str] = set()
+    scope_blocked: set[str] = set()
 
-    # Check 2: scope-based blocking (apiKeys.list)
-    scope_blocked, block_all = await _get_scope_blocked_tools(
-        client, api_key, tool_endpoint_map
-    )
+    async def _role_check() -> None:
+        nonlocal role_blocked
+        role_blocked = await _get_role_blocked_tools(client, role_blocked_map)
 
-    if block_all:
-        # 401 from apiKeys.list — key is invalid, hide everything.
-        return scope_blocked | role_blocked
+    async def _scope_check() -> None:
+        nonlocal scope_blocked
+        scope_blocked = await _get_scope_blocked_tools(
+            client, api_key, tool_endpoint_map
+        )
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(_role_check)
+        tg.start_soon(_scope_check)
 
     return role_blocked | scope_blocked
 
