@@ -56,12 +56,10 @@ def _log_api_error(
         logger.warning(
             "Dynamic tool list: %s returned 403 "
             "(authorization_error). The API key "
-            "likely lacks the '%s' scope. "
-            "Add '%s' to the key's scope array "
+            "may lack the required scope for this "
+            "endpoint. Check the key's scope array "
             "in Outline Settings → API Keys. "
             "%s has been skipped for this request.",
-            endpoint,
-            endpoint,
             endpoint,
             check_name,
         )
@@ -88,7 +86,14 @@ async def _get_role_blocked_tools(
         role = data.get("user", {}).get("role")
         if role in role_blocked_map:
             return set(role_blocked_map[role])
-        if role is not None:
+        if role is None:
+            logger.warning(
+                "Dynamic tool list: auth.info returned "
+                "no role (missing or null). Role-based "
+                "filtering has been skipped for this "
+                "request.",
+            )
+        else:
             logger.warning(
                 "Dynamic tool list: auth.info returned "
                 "unknown role '%s'. Role-based filtering "

@@ -426,6 +426,7 @@ async def test_get_blocked_tools_full_access():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(return_value=[_mock_key(api_key)])
 
         result = await get_blocked_tools(
@@ -445,6 +446,7 @@ async def test_get_blocked_tools_read_only_key():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             return_value=[
                 _mock_key(
@@ -475,6 +477,7 @@ async def test_get_blocked_tools_partial_scope():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             return_value=[
                 _mock_key(
@@ -566,6 +569,7 @@ async def test_get_blocked_tools_403_fail_open(caplog):
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             side_effect=OutlineError(
                 "HTTP 403: authorization_error",
@@ -597,6 +601,7 @@ async def test_get_blocked_tools_key_not_found():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             return_value=[
                 {
@@ -632,6 +637,7 @@ async def test_get_blocked_tools_pagination():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             side_effect=[
                 filler,
@@ -657,6 +663,7 @@ async def test_get_blocked_tools_last4_collision_union():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             return_value=[
                 {
@@ -696,6 +703,7 @@ async def test_get_blocked_tools_last4_collision_null_wins():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             return_value=[
                 {
@@ -751,6 +759,7 @@ async def test_get_blocked_tools_last4_collision_across_pages():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             side_effect=[page1, page2],
         )
