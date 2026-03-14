@@ -90,6 +90,18 @@ npx @modelcontextprotocol/inspector http://localhost:3000
 
 ![MCP Inspector](mcp_inspector_guide.png)
 
+## Testing the Claude Code Plugin Locally
+
+```bash
+# Local source (dev)
+claude --plugin-dir . --mcp-config .mcp.dev.json
+
+# Published package (as end users see it)
+claude --plugin-dir .
+```
+
+Use `/reload-plugins` to pick up changes without restarting (except MCP server config changes).
+
 ## Architecture Notes
 
 **Rate Limiting**: Automatically handled via header tracking (`RateLimit-Remaining`, `RateLimit-Reset`) with exponential backoff retry (up to 3 attempts). Returns an error to the user after exhausting retries. No configuration needed.
