@@ -86,13 +86,13 @@ def _parse_set_cookies(response):
 def _outline_api(
     token: str,
     endpoint: str,
-    json: dict | None = None,
+    payload: dict | None = None,
 ) -> httpx.Response:
     """POST to an Outline API endpoint with Bearer auth."""
     return httpx.post(
         f"{OUTLINE_URL}/api/{endpoint}",
         headers={"Authorization": f"Bearer {token}"},
-        json=json,
+        json=payload,
         timeout=30.0,
     )
 

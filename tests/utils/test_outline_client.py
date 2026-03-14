@@ -720,3 +720,26 @@ class TestOutlineClient:
             result = await client.get_auth_info()
             assert result == mock_data
             assert result["user"]["role"] == "viewer"
+
+    @pytest.mark.asyncio
+    async def test_get_auth_info_error_propagation(self):
+        """get_auth_info propagates OutlineError."""
+        client = OutlineClient()
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.headers = {}
+        mock_response.text = "authentication_required"
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "401",
+            request=MagicMock(),
+            response=mock_response,
+        )
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            with pytest.raises(OutlineError) as exc_info:
+                await client.get_auth_info()
+            assert exc_info.value.status_code == 401

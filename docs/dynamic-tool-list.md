@@ -163,6 +163,7 @@ The single exception is **401 on `apiKeys.list`**, which indicates the key is in
 
 | Scenario | Behavior |
 |----------|----------|
+| `auth.info` returns 401 | Log warning, skip role check |
 | `auth.info` returns 403 | Log warning, skip role check |
 | `auth.info` returns other error | Skip role check |
 | `apiKeys.list` returns **401** | **Block all tools** (unioned with role blocks) |

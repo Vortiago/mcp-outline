@@ -338,7 +338,7 @@ async def test_all_tools_have_min_role_meta(
     assert not missing, f"Tools without meta['min_role']: {missing}"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_build_role_blocked_map_rejects_invalid_min_role():
     """Invalid min_role values must raise ValueError at startup."""
     mcp = FastMCP("invalid-role-test")
@@ -541,6 +541,7 @@ async def test_get_blocked_tools_invalid_key_401():
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
     ) as mock_cls:
         instance = mock_cls.return_value
+        instance.get_auth_info = _mock_auth_info("admin")
         instance.list_api_keys = AsyncMock(
             side_effect=OutlineError(
                 "HTTP 401: authentication_required",

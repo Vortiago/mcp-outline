@@ -102,7 +102,8 @@ async def _get_scope_blocked_tools(
 
     Returns a tuple of ``(blocked_tools, block_all)``.
     *block_all* is ``True`` when a 401 indicates the key is
-    invalid — the caller should hide every tool.
+    invalid; ``blocked_tools`` contains all tool names in
+    that case.
     """
     try:
         # Extract last-4 suffix for key matching (Outline
