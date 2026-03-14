@@ -164,10 +164,13 @@ async def _get_scope_blocked_tools(
             offset += limit
 
         if not found:
-            logger.debug(
-                "API key not found in apiKeys.list, skipping scope check",
+            logger.warning(
+                "Dynamic tool list: API key not found in "
+                "apiKeys.list. All tools have been hidden. "
+                "Verify the key in Outline "
+                "Settings → API Keys.",
             )
-            return set()
+            return set(tool_endpoint_map.keys())
 
         return blocked_tools_for_scopes(scopes, tool_endpoint_map)
 

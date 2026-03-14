@@ -1,3 +1,27 @@
 {
-  "includeCoAuthoredBy": false
+  "includeCoAuthoredBy": false,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.env|*.env.*|uv.lock|*.lock) echo \"BLOCK: refusing to edit $f\" >&2; exit 1;; esac; done"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ruff format $CLAUDE_FILE_PATHS && uv run ruff check --fix $CLAUDE_FILE_PATHS"
+          }
+        ]
+      }
+    ]
+  }
 }

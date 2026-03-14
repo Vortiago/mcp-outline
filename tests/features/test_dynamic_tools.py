@@ -591,7 +591,7 @@ async def test_get_blocked_tools_403_fail_open(caplog):
 
 @pytest.mark.anyio
 async def test_get_blocked_tools_key_not_found():
-    """Key not found in apiKeys.list → fail-open."""
+    """Key not found in apiKeys.list → fail-closed."""
     api_key = "key-not-found-xxxx"
     with patch(
         "mcp_outline.features.dynamic_tools.filtering.OutlineClient"
@@ -613,7 +613,7 @@ async def test_get_blocked_tools_key_not_found():
             _ENDPOINT_MAP,
             _ROLE_MAP,
         )
-        assert result == set()
+        assert result == set(_ENDPOINT_MAP.keys())
 
 
 @pytest.mark.anyio

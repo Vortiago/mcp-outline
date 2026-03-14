@@ -443,6 +443,30 @@ The `<CHECK_RUN_ID>` is available in the check-runs response
 
 **Conditional Registration**: Use environment variables to control which tools are registered
 
-## Version Tagging
+## Version Tagging & Release
 
-When tagging version numbers look at changes since last version. Follow this rule for version number, go from left to right. First one hit is the new version number. Any feat!: => major version, any feat: => minor version, Only fix: => patch version. Use annotated tag with a short summary of what the release contains.
+### Version Number Rules
+
+Look at changes since last version. First match wins (left to right):
+- Any `feat!:` commit → **major** version bump
+- Any `feat:` commit → **minor** version bump
+- Only `fix:` commits → **patch** version bump
+
+### Bump Script
+
+Use `uv run poe bump-version <new_version>` to update all version files:
+- `server.json` (top-level and packages version)
+- `.claude-plugin/plugin.json`
+- `.claude-plugin/marketplace.json`
+- `.mcp.json` (pinned uvx version in args)
+
+The script validates that the new version is a valid semver bump (patch, minor, or major) from the current version. It rejects invalid formats, downgrades, and arbitrary jumps.
+
+### Release Workflow
+
+1. `uv run poe bump-version <version>` — update all version files
+2. Commit and create PR with the version bump
+3. Merge the PR
+4. Tag the merged commit: `git tag -a v<version> -m "summary"`
+5. Push the tag: `git push origin v<version>`
+6. CI handles: PyPI publish, GitHub release, Docker build
