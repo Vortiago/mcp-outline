@@ -21,7 +21,7 @@ flowchart TB
     subgraph Runtime ["Runtime (per request)"]
         F["tools/list request"] --> G["Resolve API key"]
         G --> H["Check 1: Role (auth.info)"]
-        H --> I["Check 2: Scopes (apiKeys.list)"]
+        G --> I["Check 2: Scopes (apiKeys.list)"]
         H --> J["Union blocked sets"]
         I --> J
         J --> K["Filter tool list"]
@@ -59,7 +59,7 @@ These maps are passed to `install_dynamic_tool_list()`, which wraps the `tools/l
 On each `tools/list` call, the wrapped handler:
 
 1. Resolves the API key from `x-outline-api-key` header (HTTP) or `OUTLINE_API_KEY` env var (stdio)
-2. Runs two checks sequentially (role, then scopes)
+2. Runs two checks concurrently (role and scopes)
 3. Unions the blocked sets
 4. Filters out blocked tools from the response
 
@@ -92,14 +92,16 @@ flowchart TD
     B -->|Other error| D
     B -->|200| E["Match key by last4"]
     E --> F{Key found?}
-    F -->|No| D
+    F -->|No| C
     F -->|Yes| G{scope == null?}
     G -->|"null (full access)"| D
     G -->|"[scopes...]"| H["For each tool:\nis_endpoint_accessible(endpoint, scopes)?"]
     H --> I["Block inaccessible tools"]
 ```
 
-**401 is special**: it means the key is invalid, expired, or revoked — *all* tools are hidden. Every other error fails open.
+**401 is special**: it means the key is invalid, expired, or revoked — *all* tools are hidden.
+
+**Key not found** is also fail-closed: if the key's last 4 characters don't match any key in `apiKeys.list`, all tools are hidden. This catches deleted or mismatched keys. Every other error fails open.
 
 **last4 collision**: if multiple keys share the same last 4 digits, their scopes are unioned. If any matching key has `scope: null` (full access), the result is treated as full access.
 
@@ -159,7 +161,7 @@ If both are set, `OUTLINE_READ_ONLY` takes precedence — unregistered tools can
 
 The system is **fail-open by design** — if any check fails, that check is skipped and no tools are blocked by it. This is intentional: the dynamic tool list is a UX convenience, not a security boundary. Outline's API enforces permissions on individual operations regardless.
 
-The single exception is **401 on `apiKeys.list`**, which indicates the key is invalid/expired/revoked. In this case, all tools are hidden to avoid showing tools that will all fail anyway.
+There are two exceptions: **401 on `apiKeys.list`** (key is invalid/expired/revoked) and **key not found by last4** (key deleted or mismatched). In both cases, all tools are hidden to avoid showing tools that will all fail anyway.
 
 | Scenario | Behavior |
 |----------|----------|
@@ -169,7 +171,7 @@ The single exception is **401 on `apiKeys.list`**, which indicates the key is in
 | `apiKeys.list` returns **401** | **Block all tools** (unioned with role blocks) |
 | `apiKeys.list` returns 403 | Log warning, skip scope check |
 | `apiKeys.list` returns other error | Skip scope check |
-| Key not found by last4 | Skip scope check |
+| **Key not found by last4** | **Block all tools** (unioned with role blocks) |
 | Client init fails | Return full tool list |
 | Any unexpected exception in scope check | Skip scope check (role blocks preserved) |
 
