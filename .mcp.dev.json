@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "mcp-outline": {
+      "command": "uv",
+      "args": ["run", "mcp-outline"],
+      "env": {
+        "OUTLINE_API_KEY": "${OUTLINE_API_KEY:-}",
+        "OUTLINE_API_URL": "${OUTLINE_API_URL:-}",
+        "OUTLINE_READ_ONLY": "${OUTLINE_READ_ONLY:-}",
+        "OUTLINE_DISABLE_DELETE": "${OUTLINE_DISABLE_DELETE:-}",
+        "OUTLINE_DISABLE_AI_TOOLS": "${OUTLINE_DISABLE_AI_TOOLS:-}",
+        "OUTLINE_VERIFY_SSL": "${OUTLINE_VERIFY_SSL:-}",
+        "OUTLINE_DYNAMIC_TOOL_LIST": "${OUTLINE_DYNAMIC_TOOL_LIST:-}"
+      }
+    }
+  }
+}

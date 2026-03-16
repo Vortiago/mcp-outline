@@ -74,7 +74,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=True,
             destructiveHint=False,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "collections.export",
+            "min_role": "member",
+        },
     )
     async def export_collection(
         collection_id: str, format: str = "outline-markdown"
@@ -123,7 +127,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=True,
             destructiveHint=False,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "collections.export_all",
+            "min_role": "admin",
+        },
     )
     async def export_all_collections(format: str = "outline-markdown") -> str:
         """
@@ -170,7 +178,11 @@ def register_tools(mcp) -> None:
                 readOnlyHint=False,
                 destructiveHint=False,
                 idempotentHint=False,
-            )
+            ),
+            meta={
+                "endpoint": "collections.create",
+                "min_role": "member",
+            },
         )
         async def create_collection(
             name: str, description: str = "", color: Optional[str] = None
@@ -220,7 +232,11 @@ def register_tools(mcp) -> None:
                 readOnlyHint=False,
                 destructiveHint=True,
                 idempotentHint=False,
-            )
+            ),
+            meta={
+                "endpoint": "collections.update",
+                "min_role": "member",
+            },
         )
         async def update_collection(
             collection_id: str,
@@ -278,7 +294,11 @@ def register_tools(mcp) -> None:
                 readOnlyHint=False,
                 destructiveHint=True,
                 idempotentHint=True,
-            )
+            ),
+            meta={
+                "endpoint": "collections.delete",
+                "min_role": "member",
+            },
         )
         async def delete_collection(collection_id: str) -> str:
             """

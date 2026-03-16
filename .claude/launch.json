@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "outline",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /c/Code/mcp-outline && docker compose up -d --wait && docker compose logs -f outline"],
+      "port": 3030
+    },
+    {
+      "name": "mcp-inspector",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /c/Code/mcp-outline && docker compose up -d --wait && MCP_AUTO_OPEN_ENABLED=false npx @modelcontextprotocol/inspector"],
+      "port": 6274
+    }
+  ]
+}

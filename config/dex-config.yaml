@@ -34,7 +34,8 @@ staticPasswords:
     userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
   - email: "user@example.com"
     # Password: user
-    hash: "$2a$10$DYY8A5a4z4kJ.XJ8nCw8h.vZJZGDqZlFLXjHLqBwYKvR5xXQQR5he"
+    # Generated with: python3 -c "import bcrypt; print(bcrypt.hashpw(b'user', bcrypt.gensalt(rounds=10)).decode())"
+    hash: "$2b$10$amYDhhAQjP3MPGkcbzbKUut.PXkJ0gbfjr1sMQNwrI315PmflJ/oO"
     username: "user"
     userID: "41331323-6f44-45e6-b3b9-465c8c5e3fe4"
 

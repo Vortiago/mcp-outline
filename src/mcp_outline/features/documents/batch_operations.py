@@ -123,7 +123,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "documents.archive",
+            "min_role": "member",
+        },
     )
     async def batch_archive_documents(document_ids: List[str]) -> str:
         """
@@ -212,7 +216,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "documents.move",
+            "min_role": "member",
+        },
     )
     async def batch_move_documents(
         document_ids: List[str],
@@ -324,7 +332,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "documents.delete",
+            "min_role": "member",
+        },
     )
     async def batch_delete_documents(
         document_ids: List[str], permanent: bool = False
@@ -444,7 +456,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "documents.update",
+            "min_role": "member",
+        },
     )
     async def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
         """
@@ -562,7 +578,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=True,
-        )
+        ),
+        meta={
+            "endpoint": "documents.create",
+            "min_role": "member",
+        },
     )
     async def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
         """

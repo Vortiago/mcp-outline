@@ -79,7 +79,11 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "attachments.redirect",
+            "min_role": "viewer",
+        },
     )
     async def get_attachment_url(attachment_id: str) -> str:
         """
@@ -109,7 +113,11 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "attachments.redirect",
+            "min_role": "viewer",
+        },
     )
     async def fetch_attachment(attachment_id: str) -> str:
         """
@@ -157,7 +165,11 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "documents.info",
+            "min_role": "viewer",
+        },
     )
     async def list_document_attachments(document_id: str) -> str:
         """

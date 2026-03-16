@@ -339,6 +339,19 @@ class OutlineClient:
         )
         return response.get("data", [])
 
+    async def get_auth_info(self) -> Dict[str, Any]:
+        """Get auth info for the current API key.
+
+        Returns:
+            Dict with ``user`` (including ``role``) and
+            ``team`` fields.
+
+        Raises:
+            OutlineError: If the request fails.
+        """
+        response = await self.post("auth.info")
+        return response.get("data", {})
+
     async def get_document(self, document_id: str) -> Dict[str, Any]:
         """
         Get a document by ID.

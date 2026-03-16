@@ -83,24 +83,73 @@ def _parse_set_cookies(response):
     return cookies
 
 
-def _login_and_create_api_key():
-    """Authenticate via OIDC/Dex and return a new API key value.
+def _outline_api(
+    token: str,
+    endpoint: str,
+    payload: dict | None = None,
+) -> httpx.Response:
+    """POST to an Outline API endpoint with Bearer auth."""
+    return httpx.post(
+        f"{OUTLINE_URL}/api/{endpoint}",
+        headers={"Authorization": f"Bearer {token}"},
+        json=payload,
+        timeout=30.0,
+    )
 
-    Four-step flow:
+
+def _require_redirect(resp, step_description: str) -> str:
+    """Extract the ``Location`` header from a redirect response.
+
+    Raises ``RuntimeError`` with diagnostics when the response is
+    not a redirect or the header is missing.
+    """
+    location = resp.headers.get("location")
+    if location:
+        return location
+    body_preview = resp.text[:500] if hasattr(resp, "text") else ""
+    raise RuntimeError(
+        f"{step_description}: expected redirect, got HTTP "
+        f"{resp.status_code}. Body: {body_preview}"
+    )
+
+
+def _login(
+    email: str = "admin@example.com",
+    password: str = "admin",
+    retries: int = 3,
+) -> str:
+    """Authenticate via OIDC/Dex and return the session token.
+
+    Three-step flow:
     1. GET ``/auth/oidc`` on Outline to start the OIDC redirect
        and capture the initial session cookies.
     2. Follow the redirect to Dex, handle optional connector
        selection, parse the login form, and POST credentials.
     3. Follow the callback URL back to Outline using the saved
        cookies (manual management — see module docstring).
-    4. POST to ``apiKeys.create`` using the ``accessToken``
-       cookie as a Bearer token and return the key value.
 
-    Returns a tuple of ``(api_key_value, access_token)`` so
-    downstream fixtures can create additional API keys using
-    the session token (``apiKeys.create`` requires a session
-    token, not an API key).
+    Retries the full OIDC flow up to *retries* times with a
+    short back-off to handle transient failures (e.g. Outline
+    returning a non-redirect when hit concurrently).
+
+    Returns the ``accessToken`` cookie value (session token).
     """
+    last_exc: Exception | None = None
+    for attempt in range(retries):
+        try:
+            return _login_once(email, password)
+        except (RuntimeError, httpx.RequestError) as exc:
+            last_exc = exc
+            if attempt < retries - 1:
+                time.sleep(2 * (attempt + 1))
+    raise last_exc  # type: ignore[misc]
+
+
+def _login_once(
+    email: str,
+    password: str,
+) -> str:
+    """Single-attempt OIDC login (called by ``_login``)."""
     # Step 1: Start OIDC flow on Outline
     resp = httpx.get(
         f"{OUTLINE_URL}/auth/oidc",
@@ -108,7 +157,7 @@ def _login_and_create_api_key():
         timeout=30.0,
     )
     outline_cookies = _parse_set_cookies(resp)
-    dex_url = resp.headers["location"]
+    dex_url = _require_redirect(resp, "OIDC initiation")
 
     # Step 2: Complete Dex login with separate client
     with httpx.Client(follow_redirects=True, timeout=30.0) as dex_client:
@@ -148,8 +197,8 @@ def _login_and_create_api_key():
             v = re.search(r'value="([^"]*)"', inp)
             if t and n and v and t.group(1) == "hidden":
                 form_data[n.group(1)] = html.unescape(v.group(1))
-        form_data["login"] = "admin@example.com"
-        form_data["password"] = "admin"
+        form_data["login"] = email
+        form_data["password"] = password
 
         # Submit login, capture redirect URL
         resp = dex_client.post(
@@ -157,7 +206,7 @@ def _login_and_create_api_key():
             data=form_data,
             follow_redirects=False,
         )
-        callback_url = resp.headers["location"]
+        callback_url = _require_redirect(resp, "Dex login POST")
 
     # Step 3: Follow callback with original Outline cookies
     cookie_hdr = "; ".join(f"{k}={v}" for k, v in outline_cookies.items())
@@ -174,20 +223,89 @@ def _login_and_create_api_key():
     if not access_token:
         raise RuntimeError(
             "No accessToken cookie after OIDC login "
-            f"(redirected to {resp.headers.get('location')})"
+            f"(redirected to "
+            f"{resp.headers.get('location')})"
         )
+    return access_token
 
-    # Step 4: Create API key using Bearer token
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/apiKeys.create",
-        headers={
-            "Authorization": f"Bearer {access_token}",
-        },
-        json={"name": "e2e-test"},
-        timeout=30.0,
-    )
+
+def _create_api_key(
+    access_token: str,
+    name: str = "e2e-test",
+    scope: list | None = None,
+    *,
+    skip_on_error: bool = False,
+) -> str:
+    """Create an Outline API key and return its value.
+
+    Args:
+        access_token: OIDC session token (Bearer).
+        name: Key name shown in Outline Settings.
+        scope: Scope array, or ``None`` for full access.
+        skip_on_error: If ``True``, call ``pytest.skip``
+            instead of raising on non-200 responses.
+    """
+    json_body: dict = {"name": name}
+    if scope is not None:
+        json_body["scope"] = scope
+    resp = _outline_api(access_token, "apiKeys.create", json_body)
+    if resp.status_code != 200:
+        if skip_on_error:
+            pytest.skip(f"apiKeys.create returned {resp.status_code}")
+        resp.raise_for_status()
+    return resp.json()["data"]["value"]
+
+
+def _login_and_create_api_key():
+    """Login as admin and create a full-access API key.
+
+    Returns ``(api_key_value, access_token)`` so downstream
+    fixtures can create additional API keys using the session
+    token.
+    """
+    token = _login("admin@example.com", "admin")
+    key = _create_api_key(token)
+    return key, token
+
+
+def _get_user_id(access_token: str) -> str:
+    """Return the user ID for the given session token."""
+    resp = _outline_api(access_token, "auth.info")
     resp.raise_for_status()
-    return resp.json()["data"]["value"], access_token
+    return resp.json()["data"]["user"]["id"]
+
+
+def _get_user_role(
+    admin_token: str,
+    user_id: str,
+) -> str | None:
+    """Return the current role for *user_id* via ``users.info``."""
+    resp = _outline_api(admin_token, "users.info", {"id": user_id})
+    if resp.status_code != 200:
+        return None
+    return resp.json()["data"].get("role")
+
+
+def _set_user_role(
+    admin_token: str,
+    user_id: str,
+    role: str,
+) -> None:
+    """Change a user's role via the admin API.
+
+    Uses ``users.update_role`` (not ``users.update``, which only
+    handles profile fields like name/avatar).  Skips dependent
+    tests if the endpoint is not available.
+    """
+    resp = _outline_api(
+        admin_token,
+        "users.update_role",
+        {"id": user_id, "role": role},
+    )
+    if resp.status_code != 200:
+        pytest.skip(
+            f"users.update_role returned {resp.status_code}: {resp.text[:200]}"
+        )
 
 
 @pytest.fixture(scope="session")
@@ -318,3 +436,101 @@ def mcp_session(mcp_server_params):
                 yield session
 
     return _create
+
+
+# ------------------------------------------------------------------
+# Viewer user fixtures
+# ------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def _viewer_credentials(outline_stack, _outline_credentials):
+    """Log in as ``user@example.com`` and set role to viewer.
+
+    Uses the admin session token to demote the second Dex user
+    to ``viewer`` via ``users.update_role``.  Returns
+    ``(full_access_key, scoped_keys, access_token)``.
+
+    **Order matters**: all API keys must be created *before*
+    the role is changed to viewer, because Outline's policy
+    forbids viewers from calling ``apiKeys.create``.  The
+    scoped keys needed by individual tests are pre-created
+    here and handed out via dedicated fixtures.
+    """
+    admin_token = _outline_credentials[1]
+    viewer_token = _login("user@example.com", "user")
+    user_id = _get_user_id(viewer_token)
+
+    # Create all keys while user is still a member
+    full_key = _create_api_key(viewer_token)
+    scoped_keys = _create_viewer_scoped_keys(viewer_token)
+
+    # Now demote to viewer — keys remain valid
+    _set_user_role(admin_token, user_id, "viewer")
+
+    # Verify role change took effect (use admin token since
+    # viewer API keys may not have auth.info access)
+    actual_role = _get_user_role(admin_token, user_id)
+    if actual_role != "viewer":
+        pytest.skip(
+            f"Role demotion failed: expected 'viewer', got '{actual_role}'"
+        )
+
+    # Verify the viewer's API key still works after demotion.
+    # auth.info requires no specific role, so this confirms
+    # the key wasn't invalidated by the role change.
+    resp = _outline_api(full_key, "auth.info")
+    if resp.status_code != 200:
+        pytest.skip(
+            f"Viewer API key invalid after role change "
+            f"(auth.info returned {resp.status_code}: "
+            f"{resp.text[:200]})"
+        )
+
+    return full_key, scoped_keys, viewer_token
+
+
+def _create_viewer_scoped_keys(
+    access_token: str,
+) -> dict:
+    """Pre-create scoped API keys for viewer role tests.
+
+    Must be called while the user still has ``member`` role.
+    Returns a dict keyed by test name.
+    """
+    return {
+        "with_auth_info": _create_api_key(
+            access_token,
+            "e2e-viewer-with-auth-info",
+            ["apiKeys.list", "auth.info", "documents:write"],
+        ),
+        "without_auth_info": _create_api_key(
+            access_token,
+            "e2e-viewer-no-auth-info",
+            ["apiKeys.list", "documents:write"],
+        ),
+    }
+
+
+@pytest.fixture(scope="session")
+def viewer_api_key(_viewer_credentials):
+    """Full-access API key for the viewer user."""
+    return _viewer_credentials[0]
+
+
+@pytest.fixture(scope="session")
+def viewer_scoped_keys(_viewer_credentials):
+    """Pre-created scoped API keys for the viewer user.
+
+    Keys are created while the user is still a member,
+    then the user is demoted to viewer.  Returns a dict
+    with keys ``"with_auth_info"`` and
+    ``"without_auth_info"``.
+    """
+    return _viewer_credentials[1]
+
+
+@pytest.fixture(scope="session")
+def viewer_access_token(_viewer_credentials):
+    """Session token for the viewer user."""
+    return _viewer_credentials[2]

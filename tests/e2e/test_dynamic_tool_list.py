@@ -38,7 +38,15 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.server.fastmcp import FastMCP
 
+from mcp_outline.features import register_all
+from mcp_outline.features.dynamic_tools.introspect import (
+    build_role_blocked_map,
+    build_tool_endpoint_map,
+)
+
+from .conftest import _create_api_key
 from .helpers import OUTLINE_URL
 
 HTTP_PORT = 3997
@@ -49,48 +57,23 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 
 # -------------------------------------------------------------------
-# Expected tool sets
+# Expected tool sets — derived from source-of-truth maps
 # -------------------------------------------------------------------
 
+
+def _build_expected_tools():
+    """Build expected tool sets by introspecting registered tools."""
+    _mcp = FastMCP("tool-set-builder")
+    register_all(_mcp)
+    endpoint_map = build_tool_endpoint_map(_mcp)
+    role_map = build_role_blocked_map(_mcp)
+    all_tools = set(endpoint_map) - {"ask_ai_about_documents"}
+    viewer_tools = all_tools - set(role_map["viewer"])
+    return all_tools, viewer_tools
+
+
 # All tools registered when AI tools are disabled.
-# The completeness unit test ``test_tool_endpoint_map_covers_all_tools``
-# guards against drift between this set and ``register_all()``.
-ALL_TOOLS = {
-    # Read (16 tools — AI excluded)
-    "read_document",
-    "export_document",
-    "search_documents",
-    "get_document_id_from_title",
-    "list_collections",
-    "get_collection_structure",
-    "export_collection",
-    "export_all_collections",
-    "list_document_comments",
-    "get_comment",
-    "get_document_backlinks",
-    "get_attachment_url",
-    "fetch_attachment",
-    "list_document_attachments",
-    "list_archived_documents",
-    "list_trash",
-    # Write (16 tools)
-    "create_document",
-    "update_document",
-    "add_comment",
-    "archive_document",
-    "unarchive_document",
-    "delete_document",
-    "restore_document",
-    "move_document",
-    "create_collection",
-    "update_collection",
-    "delete_collection",
-    "batch_create_documents",
-    "batch_update_documents",
-    "batch_move_documents",
-    "batch_archive_documents",
-    "batch_delete_documents",
-}
+ALL_TOOLS, READ_TOOLS = _build_expected_tools()
 
 
 # -------------------------------------------------------------------
@@ -130,37 +113,6 @@ async def _list_tools_stdio(api_key: str) -> set[str]:
             await session.initialize()
             result = await session.list_tools()
             return {t.name for t in result.tools}
-
-
-def _create_api_key_with_scope(
-    access_token: str,
-    name: str,
-    scope: list,
-) -> str:
-    """Create a scoped API key via the Outline admin API.
-
-    Uses the OIDC *access_token* (session token) to call
-    ``apiKeys.create``.  This endpoint requires a session
-    token -- API keys cannot create other API keys.
-
-    Raises ``pytest.skip`` if the Outline instance does not
-    support scoped API keys.
-
-    Returns the API key value string.
-    """
-    resp = httpx.post(
-        f"{OUTLINE_URL}/api/apiKeys.create",
-        headers={"Authorization": f"Bearer {access_token}"},
-        json={"name": name, "scope": scope},
-        timeout=30.0,
-    )
-    if resp.status_code != 200:
-        pytest.skip(
-            "Outline does not support scoped API keys "
-            f"(apiKeys.create returned {resp.status_code})"
-        )
-
-    return resp.json()["data"]["value"]
 
 
 def _assert_tools(
@@ -305,7 +257,7 @@ async def test_route_scoped_read_only(
     Scope: explicit ``namespace.method`` entries for every
     read-only endpoint in the TOOL_ENDPOINT_MAP.
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-route-read-only",
         [
@@ -324,6 +276,7 @@ async def test_route_scoped_read_only(
             "documents.archived",
             "documents.deleted",
         ],
+        skip_on_error=True,
     )
 
     expected = {
@@ -369,7 +322,7 @@ async def test_namespace_read_scope(
     route scope.  ``collections.export_all`` likewise defaults
     to ``write`` and needs ``collections:write`` or a route scope.
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-namespace-read",
         [
@@ -378,6 +331,7 @@ async def test_namespace_read_scope(
             "collections:read",
             "comments:read",
         ],
+        skip_on_error=True,
     )
 
     expected = {
@@ -411,10 +365,11 @@ async def test_namespace_write_documents_only(
     stay blocked (attachment tools now map to the ``attachments``
     namespace).
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-namespace-write-docs",
         ["apiKeys.list", "documents:write"],
+        skip_on_error=True,
     )
 
     expected = {
@@ -460,7 +415,7 @@ async def test_mixed_namespace_and_route_scope(
     Attachment, export, comment, and other write tools are
     blocked.
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-mixed-scope",
         [
@@ -469,6 +424,7 @@ async def test_mixed_namespace_and_route_scope(
             "collections.create",
             "collections.list",
         ],
+        skip_on_error=True,
     )
 
     expected = {
@@ -498,10 +454,11 @@ async def test_namespace_create_scope(
     matches methods whose ``methodToScope`` is ``create``
     (i.e. the ``create`` method itself).
     """
-    key = _create_api_key_with_scope(
+    key = _create_api_key(
         outline_access_token,
         "e2e-stdio-namespace-create-docs",
         ["apiKeys.list", "documents:create"],
+        skip_on_error=True,
     )
 
     expected = {
@@ -534,12 +491,135 @@ async def test_http_header_filters_tools(
     _assert_tools(admin_names, ALL_TOOLS, "http header admin key")
 
     # Scoped key via header -> subset
-    scoped_key = _create_api_key_with_scope(
+    scoped_key = _create_api_key(
         outline_access_token,
         "e2e-http-header-scoped",
         ["apiKeys.list", "documents:read"],
+        skip_on_error=True,
     )
     scoped_names = await _list_tools_http(scoped_key)
     assert "read_document" in scoped_names
     assert "list_collections" not in scoped_names
     assert "create_document" not in scoped_names
+
+
+# -------------------------------------------------------------------
+# Viewer role tests — auth.info role-based filtering
+# -------------------------------------------------------------------
+
+# READ_TOOLS (viewer tools) already computed by _build_expected_tools()
+#
+# NOTE: These tests are skipped on Outline 1.5.0 because
+# ``users.update_role`` invalidates existing API keys.  The
+# ``_viewer_credentials`` fixture detects this and calls
+# ``pytest.skip``.  Role-based filtering is still covered by
+# unit tests in ``tests/features/test_dynamic_tools.py``.
+
+
+async def test_viewer_full_access_key_blocks_writes(
+    outline_stack,
+    viewer_api_key,
+):
+    """Viewer + full-access key → only read tools.
+
+    The ``auth.info`` endpoint returns ``role: "viewer"``,
+    causing ``_get_role_blocked_tools`` to hide all write
+    tools.  Since the key has no scope restrictions, the
+    scope check contributes nothing — role check alone
+    determines the tool set.
+    """
+    names = await _list_tools_stdio(viewer_api_key)
+    _assert_tools(names, READ_TOOLS, "viewer full-access key")
+
+
+async def test_viewer_scoped_key_with_auth_info(
+    outline_stack,
+    viewer_scoped_keys,
+):
+    """Viewer + scoped key (with auth.info) → role+scope union.
+
+    Scope: ``documents:write`` grants all document methods.
+    Role: ``viewer`` blocks all write tools.
+    Union: all write tools blocked + non-document read tools
+    blocked = only document read tools visible.
+
+    This test verifies that role-based and scope-based
+    filtering work correctly together when the key includes
+    ``auth.info`` in its scope array.
+    """
+    key = viewer_scoped_keys["with_auth_info"]
+
+    # Role blocks tools requiring member+.  Scope allows only
+    # documents namespace.  Union: document viewer-level tools only.
+    # list_archived_documents / list_trash have min_role=member,
+    # so the role check blocks them even though documents:write
+    # grants scope access to documents.archived / documents.deleted.
+    expected = {
+        "read_document",
+        "export_document",
+        "search_documents",
+        "get_document_id_from_title",
+        "get_document_backlinks",
+        "list_document_attachments",
+    }
+
+    names = await _list_tools_stdio(key)
+    _assert_tools(
+        names,
+        expected,
+        "viewer scoped key with auth.info",
+    )
+
+
+async def test_viewer_scoped_key_without_auth_info(
+    outline_stack,
+    viewer_scoped_keys,
+):
+    """Viewer + scoped key (no auth.info) → write tools leak.
+
+    Without ``auth.info`` in the scope array, the role check
+    gets a 403 and fails open.  The scope check still works
+    and allows all document methods (read + write).  Because
+    the role check was skipped, the viewer's write tools are
+    **not** blocked — they leak through.
+
+    This documents the consequence of a missing ``auth.info``
+    scope: a viewer user can see write tools they shouldn't
+    have access to.  The server logs a WARNING to help
+    operators diagnose this misconfiguration.
+    """
+    key = viewer_scoped_keys["without_auth_info"]
+
+    # auth.info → 403, role check fails open.
+    # Scope allows ALL document methods (read + write).
+    expected = {
+        # Document read tools
+        "read_document",
+        "export_document",
+        "search_documents",
+        "get_document_id_from_title",
+        "get_document_backlinks",
+        "list_document_attachments",
+        "list_archived_documents",
+        "list_trash",
+        # Write tools leak because role check was skipped:
+        "create_document",
+        "update_document",
+        "archive_document",
+        "unarchive_document",
+        "delete_document",
+        "restore_document",
+        "move_document",
+        "batch_create_documents",
+        "batch_update_documents",
+        "batch_move_documents",
+        "batch_archive_documents",
+        "batch_delete_documents",
+    }
+
+    names = await _list_tools_stdio(key)
+    _assert_tools(
+        names,
+        expected,
+        "viewer scoped key without auth.info",
+    )

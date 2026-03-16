@@ -140,7 +140,11 @@ def register_tools(mcp) -> None:
     """
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "documents.search",
+            "min_role": "viewer",
+        },
     )
     async def search_documents(
         query: str,
@@ -200,7 +204,11 @@ def register_tools(mcp) -> None:
             return f"Unexpected error during search: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "collections.list",
+            "min_role": "viewer",
+        },
     )
     async def list_collections(limit: int = 100, offset: int = 0) -> str:
         """
@@ -235,7 +243,11 @@ def register_tools(mcp) -> None:
             return f"Unexpected error listing collections: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "collections.documents",
+            "min_role": "viewer",
+        },
     )
     async def get_collection_structure(collection_id: str) -> str:
         """
@@ -263,7 +275,11 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True)
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "documents.search",
+            "min_role": "viewer",
+        },
     )
     async def get_document_id_from_title(
         query: str, collection_id: Optional[str] = None

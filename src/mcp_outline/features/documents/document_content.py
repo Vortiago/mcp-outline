@@ -27,7 +27,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=False,
             idempotentHint=False,
-        )
+        ),
+        meta={
+            "endpoint": "documents.create",
+            "min_role": "member",
+        },
     )
     async def create_document(
         title: str,
@@ -100,7 +104,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=True,
             idempotentHint=False,
-        )
+        ),
+        meta={
+            "endpoint": "documents.update",
+            "min_role": "member",
+        },
     )
     async def update_document(
         document_id: str,
@@ -178,7 +186,11 @@ def register_tools(mcp) -> None:
             readOnlyHint=False,
             destructiveHint=False,
             idempotentHint=False,
-        )
+        ),
+        meta={
+            "endpoint": "comments.create",
+            "min_role": "viewer",
+        },
     )
     async def add_comment(
         document_id: str, text: str, parent_comment_id: Optional[str] = None
