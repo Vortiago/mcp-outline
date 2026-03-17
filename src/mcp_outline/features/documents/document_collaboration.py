@@ -82,7 +82,6 @@ def register_tools(mcp) -> None:
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
         meta={
             "endpoint": "comments.list",
-            "min_role": "viewer",
         },
     )
     async def list_document_comments(
@@ -141,7 +140,6 @@ def register_tools(mcp) -> None:
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
         meta={
             "endpoint": "comments.info",
-            "min_role": "viewer",
         },
     )
     async def get_comment(
@@ -210,7 +208,6 @@ def register_tools(mcp) -> None:
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
         meta={
             "endpoint": "documents.list",
-            "min_role": "viewer",
         },
     )
     async def get_document_backlinks(document_id: str) -> str:

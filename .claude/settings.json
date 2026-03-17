@@ -10,6 +10,24 @@
             "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.env|*.env.*|uv.lock|*.lock) echo \"BLOCK: refusing to edit $f\" >&2; exit 1;; esac; done"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.egg-info/*|__pycache__/*|*.pyc|.git/*) echo \"BLOCK: refusing to edit generated file $f\" >&2; exit 1;; esac; done"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in */server.json|*plugin.json|*marketplace.json|*.mcp.json) echo \"BLOCK: Version files should be updated via 'uv run poe bump-version <version>' to keep all 4 files in sync.\" >&2; exit 1;; esac; done"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -19,6 +37,33 @@
           {
             "type": "command",
             "command": "uv run ruff format $CLAUDE_FILE_PATHS && uv run ruff check --fix $CLAUDE_FILE_PATHS"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.json) python -m json.tool \"$f\" > /dev/null;; *.yml|*.yaml) python -c \"import yaml,sys; yaml.safe_load(open(sys.argv[1]))\" \"$f\";; esac; done"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.py) uv run pyright \"$f\";; esac; done"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in src/mcp_outline/features/documents/*.py) base=$(basename \"$f\" .py); test_file=\"tests/features/documents/test_${base}.py\"; [ -f \"$test_file\" ] && uv run pytest \"$test_file\" -x -q;; src/mcp_outline/utils/*.py) uv run pytest tests/utils/ -x -q;; esac; done"
           }
         ]
       }

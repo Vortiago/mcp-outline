@@ -194,7 +194,7 @@ async def new_operation(self, param: str) -> dict:
         readOnlyHint=False,
         destructiveHint=False,
     ),
-    meta={"endpoint": "namespace.method", "min_role": "member"},
+    meta={"endpoint": "namespace.method"},
 )
 async def new_tool_name(param: str) -> str:
     """Clear description."""
@@ -208,16 +208,12 @@ async def new_tool_name(param: str) -> str:
         return f"Error: {str(e)}"
 ```
 
-The `meta` dict requires two fields:
+The `meta` dict requires:
 - `"endpoint"` — the Outline API endpoint (e.g. `documents.create`,
-  `collections.list`). Used for scope matching.
-- `"min_role"` — minimum Outline role: `"viewer"`, `"member"`, or
-  `"admin"`. Used for role-based filtering. Verified against Outline
-  route handlers (`collections.ts`, `documents.ts`) and
-  `AuthenticationHelper.ts`.
+  `collections.list`). Used for scope matching in the dynamic tool list.
 
-The endpoint map and role-blocked map are derived automatically from
-tool metadata by `introspect.py` — no separate map files need updating.
+The endpoint map is derived automatically from tool metadata by
+`introspect.py` — no separate map files need updating.
 
 **Testing**: Mock OutlineClient, test success and error cases
 

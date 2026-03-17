@@ -30,7 +30,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.create",
-            "min_role": "member",
         },
     )
     async def create_document(
@@ -107,7 +106,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.update",
-            "min_role": "member",
         },
     )
     async def update_document(
@@ -189,7 +187,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "comments.create",
-            "min_role": "viewer",
         },
     )
     async def add_comment(

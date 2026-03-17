@@ -42,7 +42,6 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools.introspect import (
-    build_role_blocked_map,
     build_tool_endpoint_map,
 )
 
@@ -66,14 +65,12 @@ def _build_expected_tools():
     _mcp = FastMCP("tool-set-builder")
     register_all(_mcp)
     endpoint_map = build_tool_endpoint_map(_mcp)
-    role_map = build_role_blocked_map(_mcp)
     all_tools = set(endpoint_map) - {"ask_ai_about_documents"}
-    viewer_tools = all_tools - set(role_map["viewer"])
-    return all_tools, viewer_tools
+    return all_tools
 
 
 # All tools registered when AI tools are disabled.
-ALL_TOOLS, READ_TOOLS = _build_expected_tools()
+ALL_TOOLS = _build_expected_tools()
 
 
 # -------------------------------------------------------------------
@@ -501,125 +498,3 @@ async def test_http_header_filters_tools(
     assert "read_document" in scoped_names
     assert "list_collections" not in scoped_names
     assert "create_document" not in scoped_names
-
-
-# -------------------------------------------------------------------
-# Viewer role tests — auth.info role-based filtering
-# -------------------------------------------------------------------
-
-# READ_TOOLS (viewer tools) already computed by _build_expected_tools()
-#
-# NOTE: These tests are skipped on Outline 1.5.0 because
-# ``users.update_role`` invalidates existing API keys.  The
-# ``_viewer_credentials`` fixture detects this and calls
-# ``pytest.skip``.  Role-based filtering is still covered by
-# unit tests in ``tests/features/test_dynamic_tools.py``.
-
-
-async def test_viewer_full_access_key_blocks_writes(
-    outline_stack,
-    viewer_api_key,
-):
-    """Viewer + full-access key → only read tools.
-
-    The ``auth.info`` endpoint returns ``role: "viewer"``,
-    causing ``_get_role_blocked_tools`` to hide all write
-    tools.  Since the key has no scope restrictions, the
-    scope check contributes nothing — role check alone
-    determines the tool set.
-    """
-    names = await _list_tools_stdio(viewer_api_key)
-    _assert_tools(names, READ_TOOLS, "viewer full-access key")
-
-
-async def test_viewer_scoped_key_with_auth_info(
-    outline_stack,
-    viewer_scoped_keys,
-):
-    """Viewer + scoped key (with auth.info) → role+scope union.
-
-    Scope: ``documents:write`` grants all document methods.
-    Role: ``viewer`` blocks all write tools.
-    Union: all write tools blocked + non-document read tools
-    blocked = only document read tools visible.
-
-    This test verifies that role-based and scope-based
-    filtering work correctly together when the key includes
-    ``auth.info`` in its scope array.
-    """
-    key = viewer_scoped_keys["with_auth_info"]
-
-    # Role blocks tools requiring member+.  Scope allows only
-    # documents namespace.  Union: document viewer-level tools only.
-    # list_archived_documents / list_trash have min_role=member,
-    # so the role check blocks them even though documents:write
-    # grants scope access to documents.archived / documents.deleted.
-    expected = {
-        "read_document",
-        "export_document",
-        "search_documents",
-        "get_document_id_from_title",
-        "get_document_backlinks",
-        "list_document_attachments",
-    }
-
-    names = await _list_tools_stdio(key)
-    _assert_tools(
-        names,
-        expected,
-        "viewer scoped key with auth.info",
-    )
-
-
-async def test_viewer_scoped_key_without_auth_info(
-    outline_stack,
-    viewer_scoped_keys,
-):
-    """Viewer + scoped key (no auth.info) → write tools leak.
-
-    Without ``auth.info`` in the scope array, the role check
-    gets a 403 and fails open.  The scope check still works
-    and allows all document methods (read + write).  Because
-    the role check was skipped, the viewer's write tools are
-    **not** blocked — they leak through.
-
-    This documents the consequence of a missing ``auth.info``
-    scope: a viewer user can see write tools they shouldn't
-    have access to.  The server logs a WARNING to help
-    operators diagnose this misconfiguration.
-    """
-    key = viewer_scoped_keys["without_auth_info"]
-
-    # auth.info → 403, role check fails open.
-    # Scope allows ALL document methods (read + write).
-    expected = {
-        # Document read tools
-        "read_document",
-        "export_document",
-        "search_documents",
-        "get_document_id_from_title",
-        "get_document_backlinks",
-        "list_document_attachments",
-        "list_archived_documents",
-        "list_trash",
-        # Write tools leak because role check was skipped:
-        "create_document",
-        "update_document",
-        "archive_document",
-        "unarchive_document",
-        "delete_document",
-        "restore_document",
-        "move_document",
-        "batch_create_documents",
-        "batch_update_documents",
-        "batch_move_documents",
-        "batch_archive_documents",
-        "batch_delete_documents",
-    }
-
-    names = await _list_tools_stdio(key)
-    _assert_tools(
-        names,
-        expected,
-        "viewer scoped key without auth.info",
-    )

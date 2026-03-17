@@ -77,7 +77,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "collections.export",
-            "min_role": "member",
         },
     )
     async def export_collection(
@@ -130,7 +129,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "collections.export_all",
-            "min_role": "admin",
         },
     )
     async def export_all_collections(format: str = "outline-markdown") -> str:
@@ -181,7 +179,6 @@ def register_tools(mcp) -> None:
             ),
             meta={
                 "endpoint": "collections.create",
-                "min_role": "member",
             },
         )
         async def create_collection(
@@ -235,7 +232,6 @@ def register_tools(mcp) -> None:
             ),
             meta={
                 "endpoint": "collections.update",
-                "min_role": "member",
             },
         )
         async def update_collection(
@@ -297,7 +293,6 @@ def register_tools(mcp) -> None:
             ),
             meta={
                 "endpoint": "collections.delete",
-                "min_role": "member",
             },
         )
         async def delete_collection(collection_id: str) -> str:

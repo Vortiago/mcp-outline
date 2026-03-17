@@ -59,7 +59,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.answerQuestion",
-            "min_role": "viewer",
         },
     )
     async def ask_ai_about_documents(

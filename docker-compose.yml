@@ -57,7 +57,7 @@ services:
 
   # Outline - Document management platform
   outline:
-    image: docker.getoutline.com/outlinewiki/outline:1.5.0
+    image: docker.getoutline.com/outlinewiki/outline:1.6.0
     env_file: ./config/outline.env
     ports:
       - "${OUTLINE_HOST_PORT:-3030}:3030"

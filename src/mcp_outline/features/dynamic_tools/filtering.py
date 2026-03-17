@@ -6,7 +6,6 @@ import logging
 import os
 from typing import TYPE_CHECKING, Optional
 
-import anyio
 from mcp.types import Tool as MCPTool
 
 from mcp_outline.features.documents.common import (
@@ -72,44 +71,6 @@ def _log_api_error(
         )
 
 
-async def _get_role_blocked_tools(
-    client: OutlineClient,
-    role_blocked_map: dict[str, frozenset[str]],
-) -> set[str]:
-    """Block tools the user's Outline role cannot access.
-
-    Calls ``auth.info`` and looks up the role in
-    *role_blocked_map* (built from ``min_role`` metadata).
-    """
-    try:
-        data = await client.get_auth_info()
-        role = data.get("user", {}).get("role")
-        if role in role_blocked_map:
-            return set(role_blocked_map[role])
-        if role is None:
-            logger.warning(
-                "Dynamic tool list: auth.info returned "
-                "no role (missing or null). Role-based "
-                "filtering has been skipped for this "
-                "request.",
-            )
-        else:
-            logger.warning(
-                "Dynamic tool list: auth.info returned "
-                "unknown role '%s'. Role-based filtering "
-                "has been skipped for this request.",
-                role,
-            )
-    except OutlineError as exc:
-        _log_api_error("auth.info", exc, "Role-based filtering")
-    except Exception as exc:
-        logger.debug(
-            "auth.info check failed (%s), skipping role check",
-            type(exc).__name__,
-        )
-    return set()
-
-
 async def _get_scope_blocked_tools(
     client: OutlineClient,
     api_key: str,
@@ -160,8 +121,12 @@ async def _get_scope_blocked_tools(
                         scopes = key_scope
                         found = True
                     elif key_scope is None:
+                        # Any key with null scope (full access)
+                        # makes the combined result full access.
                         scopes = None
                     elif scopes is not None:
+                        # Both keys are scoped — union the scope
+                        # arrays so the widest access wins.
                         scopes = list(set(scopes) | set(key_scope))
 
             if len(keys) < limit:
@@ -191,17 +156,14 @@ async def get_blocked_tools(
     api_key: Optional[str],
     api_url: Optional[str],
     tool_endpoint_map: dict[str, str],
-    role_blocked_map: dict[str, frozenset[str]],
 ) -> set[str]:
     """Return tool names *api_key* cannot access.
 
-    Runs two independent checks concurrently (results unioned):
+    Checks the API key's scopes via ``apiKeys.list`` and blocks
+    tools excluded by the key's scope array.
 
-    1. ``auth.info`` — blocks tools by user role via ``min_role``
-    2. ``apiKeys.list`` — blocks tools excluded by key scopes
-
-    Each check fails open independently (except 401 on
-    ``apiKeys.list`` which blocks all tools).
+    Fails open (except 401 on ``apiKeys.list`` which blocks
+    all tools).
     """
     if not api_key:
         return set()
@@ -216,24 +178,7 @@ async def get_blocked_tools(
         )
         return set()
 
-    role_blocked: set[str] = set()
-    scope_blocked: set[str] = set()
-
-    async def _role_check() -> None:
-        nonlocal role_blocked
-        role_blocked = await _get_role_blocked_tools(client, role_blocked_map)
-
-    async def _scope_check() -> None:
-        nonlocal scope_blocked
-        scope_blocked = await _get_scope_blocked_tools(
-            client, api_key, tool_endpoint_map
-        )
-
-    async with anyio.create_task_group() as tg:
-        tg.start_soon(_role_check)
-        tg.start_soon(_scope_check)
-
-    return role_blocked | scope_blocked
+    return await _get_scope_blocked_tools(client, api_key, tool_endpoint_map)
 
 
 # ------------------------------------------------------------------
@@ -244,13 +189,12 @@ async def get_blocked_tools(
 def install_dynamic_tool_list(
     mcp: "FastMCP",
     tool_endpoint_map: dict[str, str],
-    role_blocked_map: dict[str, frozenset[str]],
 ) -> None:
     """Install per-request tool filtering on *mcp*.
 
     Re-registers the lowlevel ``tools/list`` handler so that
-    tools blocked by the API key's scopes or user role are
-    hidden.  Disabled by default; set
+    tools blocked by the API key's scopes are hidden.
+    Disabled by default; set
     ``OUTLINE_DYNAMIC_TOOL_LIST=true`` to enable.
 
     Call this **after** ``register_all(mcp)``.
@@ -271,7 +215,6 @@ def install_dynamic_tool_list(
                 api_key,
                 api_url,
                 tool_endpoint_map,
-                role_blocked_map,
             )
 
             if blocked:

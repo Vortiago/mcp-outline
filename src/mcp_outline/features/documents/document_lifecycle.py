@@ -34,7 +34,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.archive",
-            "min_role": "member",
         },
     )
     async def archive_document(document_id: str) -> str:
@@ -78,7 +77,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.restore",
-            "min_role": "member",
         },
     )
     async def unarchive_document(document_id: str) -> str:
@@ -120,7 +118,6 @@ def register_tools(mcp) -> None:
             ),
             meta={
                 "endpoint": "documents.delete",
-                "min_role": "member",
             },
         )
         async def delete_document(
@@ -188,7 +185,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.restore",
-            "min_role": "member",
         },
     )
     async def restore_document(document_id: str) -> str:
@@ -228,7 +224,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.archived",
-            "min_role": "member",
         },
     )
     async def list_archived_documents() -> str:
@@ -264,7 +259,6 @@ def register_tools(mcp) -> None:
         ),
         meta={
             "endpoint": "documents.deleted",
-            "min_role": "member",
         },
     )
     async def list_trash() -> str:

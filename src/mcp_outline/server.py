@@ -15,7 +15,6 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
-    build_role_blocked_map,
     build_tool_endpoint_map,
     install_dynamic_tool_list,
 )
@@ -55,10 +54,9 @@ register_all(mcp)
 
 # Build tool metadata maps by introspecting registered tools
 tool_endpoint_map = build_tool_endpoint_map(mcp)
-role_blocked_map = build_role_blocked_map(mcp)
 
 # Install per-request dynamic tool filtering (off by default)
-install_dynamic_tool_list(mcp, tool_endpoint_map, role_blocked_map)
+install_dynamic_tool_list(mcp, tool_endpoint_map)
 
 
 def main() -> None:
