@@ -7,6 +7,8 @@ asynchronously.
 
 """
 
+import uuid
+
 import anyio
 import pytest
 
@@ -84,19 +86,18 @@ async def test_get_document_id_from_title(mcp_session):
     """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Title Lookup")
-        doc_id = await _create_document(
-            session, coll_id, "UniqueTitle42Lookup"
-        )
+        unique_title = f"UniqueTitle_{uuid.uuid4().hex[:8]}"
+        doc_id = await _create_document(session, coll_id, unique_title)
 
-        for _ in range(5):
+        for _ in range(10):
             result = await session.call_tool(
                 "get_document_id_from_title",
-                arguments={"query": "UniqueTitle42Lookup"},
+                arguments={"query": unique_title},
             )
             text = _text(result)
             if "Document ID:" in text:
                 break
-            await anyio.sleep(1)
+            await anyio.sleep(2)
         else:
             pytest.fail("Title lookup failed")
 
@@ -136,7 +137,7 @@ async def test_search_documents(mcp_session):
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Search Collection")
 
-        unique = "xyzzy42unique"
+        unique = f"xyzzy{uuid.uuid4().hex[:8]}"
         await _create_document(
             session,
             coll_id,
