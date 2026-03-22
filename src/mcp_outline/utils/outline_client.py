@@ -240,7 +240,7 @@ class OutlineClient:
         while attempt < max_retries:
             try:
                 response = await self._client_pool.post(
-                    url, headers=headers, json=data or {}
+                    url, headers=headers, json=data
                 )
 
                 # Update rate limit state from response headers
