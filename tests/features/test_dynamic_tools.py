@@ -302,8 +302,8 @@ async def test_all_tools_have_read_only_hint(
     A tool without annotations (or with ``readOnlyHint=None``)
     would slip through the write-tool derivation.  This test
     ensures the read/write classification is exhaustive so
-    that derived sets (``ALL_TOOLS``, ``READ_TOOLS``) in E2E
-    tests stay correct.
+    that derived sets (e.g. ``ALL_TOOLS`` in E2E tests) stay
+    correct.
     """
     register_all(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
