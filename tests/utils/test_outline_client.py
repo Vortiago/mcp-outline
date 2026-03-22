@@ -743,3 +743,82 @@ class TestOutlineClient:
             with pytest.raises(OutlineError) as exc_info:
                 await client.get_auth_info()
             assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_get_auth_info_403_forbidden(self):
+        """get_auth_info raises OutlineError on 403 (missing scope)."""
+        client = OutlineClient()
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_response.headers = {}
+        mock_response.text = "forbidden"
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "403",
+            request=MagicMock(),
+            response=mock_response,
+        )
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            with pytest.raises(OutlineError) as exc_info:
+                await client.get_auth_info()
+            assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_get_auth_info_timeout(self):
+        """get_auth_info raises OutlineError on timeout."""
+        client = OutlineClient()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(side_effect=httpx.TimeoutException("timed out")),
+        ):
+            with pytest.raises(OutlineError) as exc_info:
+                await client.get_auth_info()
+            assert "timeout" in str(exc_info.value).lower()
+
+    @pytest.mark.asyncio
+    async def test_get_auth_info_missing_data_field(self):
+        """get_auth_info returns empty dict when response has no data."""
+        client = OutlineClient()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {}
+        mock_response.json.return_value = {"ok": True}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ):
+            result = await client.get_auth_info()
+            assert result == {}
+
+    # -- post() edge-case tests --------------------------------
+
+    @pytest.mark.asyncio
+    async def test_post_without_data_omits_body(self):
+        """post() passes json=None to httpx when data is not provided."""
+        client = OutlineClient()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {}
+        mock_response.json.return_value = {"data": {}}
+
+        with patch.object(
+            client._client_pool,
+            "post",
+            new=AsyncMock(return_value=mock_response),
+        ) as mock_post:
+            await client.post("auth.info")
+
+            call_kwargs = mock_post.call_args
+            assert call_kwargs.kwargs["json"] is None, (
+                "post() should pass json=None when data is not "
+                "provided, so httpx omits the request body"
+            )

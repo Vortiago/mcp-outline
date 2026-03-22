@@ -101,7 +101,15 @@ def test_sse_mode_allows_log_output():
 
     This is the inverse test - ensuring that logging works properly
     in SSE/HTTP modes where logs are helpful for debugging.
+
+    Uses a reader thread to collect output as it arrives, then
+    polls until the expected log line appears or a timeout expires.
+    This avoids the flakiness of a fixed sleep on platforms where
+    the server may take longer to start.
     """
+    import threading
+    import time
+
     # Start server in SSE mode
     env = os.environ.copy()
     env["MCP_TRANSPORT"] = "sse"
@@ -115,23 +123,47 @@ def test_sse_mode_allows_log_output():
         text=True,
     )
 
+    collected_lines: list[str] = []
+    lock = threading.Lock()
+
+    def _reader(stream):
+        for line in stream:
+            with lock:
+                collected_lines.append(line)
+
+    t_out = threading.Thread(
+        target=_reader, args=(process.stdout,), daemon=True
+    )
+    t_err = threading.Thread(
+        target=_reader, args=(process.stderr,), daemon=True
+    )
+    t_out.start()
+    t_err.start()
+
     try:
-        # Give server time to start and log
-        # Increased to 4 seconds to allow for slower startup on some systems
-        asyncio.run(asyncio.sleep(4))
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            with lock:
+                combined = "".join(collected_lines)
+            if "Starting MCP Outline server" in combined:
+                break
+            time.sleep(0.25)
     finally:
         process.terminate()
+        t_out.join(timeout=5)
+        t_err.join(timeout=5)
         try:
-            stdout, stderr = process.communicate(timeout=5)
+            process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            stdout, stderr = process.communicate()
+            process.wait()
 
-    # In SSE mode, we SHOULD see startup logs
-    combined_output = stdout + stderr
+    with lock:
+        combined_output = "".join(collected_lines)
 
     assert "Starting MCP Outline server" in combined_output, (
-        "SSE mode should produce startup logs"
+        "SSE mode should produce startup logs. "
+        f"Captured output: {combined_output!r}"
     )
 
     assert "sse" in combined_output.lower(), (
