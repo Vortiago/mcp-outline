@@ -12,7 +12,7 @@
       "name": "mcp-outline",
       "source": "./",
       "description": "Connect Claude Code to Outline for document search, reading, creation, and management",
-      "version": "1.7.1",
+      "version": "1.8.0",
       "author": {
         "name": "Vortiago"
       },
