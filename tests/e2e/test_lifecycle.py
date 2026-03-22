@@ -5,6 +5,7 @@ unarchive, delete/restore (via trash), and cross-collection move.
 
 """
 
+import anyio
 import pytest
 
 from .helpers import _create_collection, _create_document, _text
@@ -32,13 +33,18 @@ async def test_archive_and_unarchive_document(mcp_session):
         )
         assert "archived successfully" in _text(result)
 
-        # list_archived_documents
-        result = await session.call_tool(
-            "list_archived_documents",
-        )
-        text = _text(result)
+        # list_archived_documents (retry — archival may be async)
+        text = ""
+        for _ in range(10):
+            result = await session.call_tool(
+                "list_archived_documents",
+            )
+            text = _text(result)
+            if doc_id in text:
+                break
+            await anyio.sleep(2)
+        assert doc_id in text, f"Archived doc {doc_id} not found: {text}"
         assert "# Archived Documents" in text
-        assert doc_id in text
 
         # unarchive_document
         result = await session.call_tool(

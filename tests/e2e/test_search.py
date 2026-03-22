@@ -144,7 +144,7 @@ async def test_search_documents(mcp_session):
             f"Content with {unique}.",
         )
 
-        for _ in range(5):
+        for _ in range(10):
             result = await session.call_tool(
                 "search_documents",
                 arguments={"query": unique},
@@ -152,7 +152,7 @@ async def test_search_documents(mcp_session):
             text = _text(result)
             if unique in text:
                 break
-            await anyio.sleep(1)
+            await anyio.sleep(2)
         else:
             pytest.fail("Document not found in search")
 
