@@ -188,6 +188,53 @@ class TestDocumentContentTools:
     @patch(
         "mcp_outline.features.documents.document_content.get_outline_client"
     )
+    async def test_create_document_with_icon(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test create_document tool with icon emoji."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_CREATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["create_document"](
+            title="Test Document",
+            collection_id="col123",
+            icon="📋",
+        )
+
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args[0]
+
+        assert call_args[0] == "documents.create"
+        assert "icon" in call_args[1]
+        assert call_args[1]["icon"] == "📋"
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_create_document_icon_not_sent_when_none(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test icon is not included when not specified."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_CREATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["create_document"](
+            title="Test Document",
+            collection_id="col123",
+        )
+
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args[0]
+
+        assert "icon" not in call_args[1]
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
     async def test_create_document_failure(
         self, mock_get_client, register_content_tools
     ):
@@ -335,6 +382,81 @@ class TestDocumentContentTools:
             {
                 "id": "doc123",
                 "template": False,
+            },
+        )
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_update_document_with_icon(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test update_document tool with icon emoji."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            icon="🚀",
+        )
+
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {
+                "id": "doc123",
+                "icon": "🚀",
+            },
+        )
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_update_document_remove_icon(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test update_document with empty string removes icon."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            icon="",
+        )
+
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {
+                "id": "doc123",
+                "icon": "",
+            },
+        )
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_outline_client"
+    )
+    async def test_update_document_icon_not_sent_when_none(
+        self, mock_get_client, register_content_tools
+    ):
+        """Test icon is not sent when not specified."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        _ = await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            title="Updated Title",
+        )
+
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {
+                "id": "doc123",
+                "title": "Updated Title",
             },
         )
 
