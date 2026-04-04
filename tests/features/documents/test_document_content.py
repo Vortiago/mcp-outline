@@ -431,7 +431,7 @@ class TestDocumentContentTools:
             "documents.update",
             {
                 "id": "doc123",
-                "icon": "",
+                "icon": None,
             },
         )
 
