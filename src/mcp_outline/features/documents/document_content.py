@@ -178,7 +178,8 @@ def register_tools(mcp) -> None:
                 data["template"] = template
 
             if icon is not None:
-                # Empty string means "remove the icon" — Outline API expects null to clear it
+                # Empty string removes the icon;
+                # Outline API expects null to clear it.
                 data["icon"] = None if icon == "" else icon
 
             response = await client.post("documents.update", data)
