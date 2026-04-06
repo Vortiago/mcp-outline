@@ -131,6 +131,8 @@ Setup guides for more clients: [Docker (HTTP), Cline, Codex, Windsurf, and other
 | `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
 | `OUTLINE_CONNECT_TIMEOUT` | No | `5.0` | Connection timeout in seconds |
 | `OUTLINE_WRITE_TIMEOUT` | No | `30.0` | Write timeout in seconds |
+| `OUTLINE_CACHE_TTL` | No | `300` | Document cache TTL in seconds |
+| `OUTLINE_CACHE_MAX_SIZE` | No | `100` | Max cached documents |
 | `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
 | `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |
 | `MCP_PORT` | No | `3000` | HTTP server port (only for `sse` and `streamable-http` modes) |
@@ -157,12 +159,20 @@ Read-only mode takes precedence over disable-delete. See [Configuration Guide](d
 - `get_document_id_from_title(query, collection_id?)` - Find document ID by title search
 
 ### Document Reading
-- `read_document(document_id)` - Get document content
+- `read_document(document_id, offset?, limit?)` - Get document content with optional line-range pagination
 - `export_document(document_id)` - Export document as markdown
+
+### Document Navigation
+- `get_document_toc(document_id)` - Get table of contents with heading structure and line numbers
+- `read_document_section(document_id, heading)` - Read a specific section by heading match (case-insensitive substring)
 
 ### Document Management
 - `create_document(title, collection_id, text?, parent_document_id?, publish?)` - Create new document
-- `update_document(document_id, title?, text?, append?)` - Update document (append mode available)
+- `update_document(document_id, title?, text?, append?)` - Replace full document content (append mode available)
+
+### Document Editing
+- `edit_document(document_id, edits, save?)` - String-match editing with batched replacements; `save=False` stages changes locally
+- `save_document(document_id)` - Push staged edits to Outline
 - `move_document(document_id, collection_id?, parent_document_id?)` - Move document to different collection or parent
 
 ### Document Lifecycle

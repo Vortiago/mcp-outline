@@ -13,6 +13,10 @@ from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.features.documents.models import (
+    BatchCreateItem,
+    BatchUpdateItem,
+)
 
 
 def _create_result_entry(
@@ -462,35 +466,34 @@ def register_tools(mcp) -> None:
             "min_role": "member",
         },
     )
-    async def batch_update_documents(updates: List[Dict[str, Any]]) -> str:
+    async def batch_update_documents(
+        updates: List[BatchUpdateItem],
+    ) -> str:
         """
         Updates multiple documents with different changes.
 
-        This tool processes each update sequentially, continuing even if
-        individual operations fail. Rate limiting is handled automatically.
-
-        Each update dictionary should contain:
-        - id (required): Document ID to update
-        - title (optional): New title
-        - text (optional): New content
-        - append (optional): If True, appends text instead of replacing
+        This tool processes each update sequentially,
+        continuing even if individual operations fail.
+        Rate limiting is handled automatically.
 
         Use this tool when you need to:
         - Update multiple documents with different changes
         - Batch edit document titles or content
         - Append content to multiple documents
 
-        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
-        as the code fence language identifier for proper rendering.
+        Note: For Mermaid diagrams, use ```mermaidjs
+        (not ```mermaid) as the code fence language
+        identifier for proper rendering.
 
-        Recommended batch size: 10-50 documents per operation
+        Recommended batch size: 10-50 documents per
+        operation
 
         Args:
-            updates: List of update specifications, each containing id and
-                optional title, text, and append fields
+            updates: List of update specifications
 
         Returns:
-            Summary of batch operation with success/failure details
+            Summary of batch operation with
+            success/failure details
         """
         if not updates:
             return "Error: No updates provided."
@@ -503,29 +506,22 @@ def register_tools(mcp) -> None:
             client = await get_outline_client()
 
             for update_spec in updates:
-                doc_id = update_spec.get("id")
-
-                if not doc_id:
-                    results.append(
-                        _create_result_entry(
-                            "unknown",
-                            "failed",
-                            error="Missing document ID in update spec",
-                        )
-                    )
-                    failed += 1
-                    continue
+                doc_id = update_spec.id
 
                 try:
                     # Build update data
                     data: Dict[str, Any] = {"id": doc_id}
 
-                    if "title" in update_spec:
-                        data["title"] = update_spec["title"]
+                    if update_spec.title is not None:
+                        data["title"] = update_spec.title
 
-                    if "text" in update_spec:
-                        data["text"] = update_spec["text"]
-                        data["append"] = update_spec.get("append", False)
+                    if update_spec.text is not None:
+                        data["text"] = update_spec.text
+                        data["append"] = (
+                            update_spec.append
+                            if update_spec.append is not None
+                            else False
+                        )
 
                     response = await client.post("documents.update", data)
                     document = response.get("data", {})
@@ -584,38 +580,35 @@ def register_tools(mcp) -> None:
             "min_role": "member",
         },
     )
-    async def batch_create_documents(documents: List[Dict[str, Any]]) -> str:
+    async def batch_create_documents(
+        documents: List[BatchCreateItem],
+    ) -> str:
         """
-        Creates multiple documents in a single batch operation.
+        Creates multiple documents in a single batch
+        operation.
 
-        This tool processes each creation sequentially, continuing even if
-        individual operations fail. Rate limiting is handled automatically.
-
-        Each document dictionary should contain:
-        - title (required): Document title
-        - collection_id (required): Collection ID to create in
-        - text (optional): Markdown content
-        - parent_document_id (optional): Parent document for nesting
-        - publish (optional): Whether to publish immediately (default: True)
+        This tool processes each creation sequentially,
+        continuing even if individual operations fail.
+        Rate limiting is handled automatically.
 
         Use this tool when you need to:
         - Create multiple documents at once
         - Bulk import content into collections
         - Set up document structures efficiently
 
-        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
-        as the code fence language identifier for proper rendering.
+        Note: For Mermaid diagrams, use ```mermaidjs
+        (not ```mermaid) as the code fence language
+        identifier for proper rendering.
 
-        Recommended batch size: 10-50 documents per operation
+        Recommended batch size: 10-50 documents per
+        operation
 
         Args:
-            documents: List of document specifications, each containing
-                title, collection_id, and optional text, parent_document_id,
-                and publish fields
+            documents: List of document specifications
 
         Returns:
-            Summary of batch operation with created document IDs and
-            success/failure details
+            Summary of batch operation with created
+            document IDs and success/failure details
         """
         if not documents:
             return "Error: No documents provided."
@@ -629,42 +622,21 @@ def register_tools(mcp) -> None:
             client = await get_outline_client()
 
             for doc_spec in documents:
-                # Validate required fields
-                if "title" not in doc_spec:
-                    results.append(
-                        _create_result_entry(
-                            "unknown",
-                            "failed",
-                            error="Missing required field: title",
-                        )
-                    )
-                    failed += 1
-                    continue
-
-                if "collection_id" not in doc_spec:
-                    results.append(
-                        _create_result_entry(
-                            "unknown",
-                            "failed",
-                            error="Missing required field: collection_id",
-                        )
-                    )
-                    failed += 1
-                    continue
-
                 try:
                     # Build create data
-                    data = {
-                        "title": doc_spec["title"],
-                        "collectionId": doc_spec["collection_id"],
-                        "text": doc_spec.get("text", ""),
-                        "publish": doc_spec.get("publish", True),
+                    data: Dict[str, Any] = {
+                        "title": doc_spec.title,
+                        "collectionId": doc_spec.collection_id,
+                        "text": doc_spec.text or "",
+                        "publish": (
+                            doc_spec.publish
+                            if doc_spec.publish is not None
+                            else True
+                        ),
                     }
 
-                    if "parent_document_id" in doc_spec:
-                        data["parentDocumentId"] = doc_spec[
-                            "parent_document_id"
-                        ]
+                    if doc_spec.parent_document_id:
+                        data["parentDocumentId"] = doc_spec.parent_document_id
 
                     response = await client.post("documents.create", data)
                     document = response.get("data", {})

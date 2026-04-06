@@ -1,7 +1,8 @@
 """
 Document content management for the MCP Outline server.
 
-This module provides MCP tools for creating and updating document content.
+This module provides MCP tools for creating and updating
+document content, and adding comments.
 """
 
 from typing import Any, Dict, Optional
@@ -12,6 +13,7 @@ from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
 )
+from mcp_outline.utils.document_cache import get_document_cache
 
 
 def register_tools(mcp) -> None:
@@ -51,19 +53,20 @@ def register_tools(mcp) -> None:
         - Start a new document thread or topic
         - Create a reusable template document
 
-        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
-        as the code fence language identifier for proper rendering.
+        Note: For Mermaid diagrams, use ```mermaidjs
+        (not ```mermaid) as the code fence language
+        identifier for proper rendering.
 
         Args:
             title: The document title
-            collection_id: The collection ID to create the document in
+            collection_id: The collection ID to create in
             text: Optional markdown content for the document
-            parent_document_id: Optional parent document ID for nesting
-            publish: Whether to publish the document immediately (True) or
-                save as draft (False)
-            template: If True, creates the document as a template.
-                Templates appear in the "New from template" picker
-                rather than in the collection navigation.
+            parent_document_id: Optional parent document ID
+                for nesting
+            publish: Whether to publish immediately (True)
+                or save as draft (False)
+            template: If True, creates the document as a
+                template
 
         Returns:
             Result message with the new document ID
@@ -120,33 +123,30 @@ def register_tools(mcp) -> None:
         """
         Modifies an existing document's title or content.
 
-        IMPORTANT: This tool replaces the document content rather
-        than just adding to it.
-        To update a document with changed data, you need to first
-        read the document, add your changes to the content, and
-        then send the complete document with your changes.
+        IMPORTANT: This tool replaces the document content
+        rather than just adding to it. For partial edits
+        (changing specific text), prefer the edit_document
+        tool instead.
 
         Use this tool when you need to:
-        - Edit or update document content
+        - Replace the entire document content
         - Change a document's title
         - Append new content to an existing document
-        - Fix errors or add information to documents
         - Convert a document to or from a template
 
-        Note: For Mermaid diagrams, use ```mermaidjs (not ```mermaid)
-        as the code fence language identifier for proper rendering.
+        Note: For Mermaid diagrams, use ```mermaidjs
+        (not ```mermaid) as the code fence language
+        identifier for proper rendering.
 
         Args:
             document_id: The document ID to update
             title: New title (if None, keeps existing title)
-            text: New content (if None, keeps existing content)
-            append: If True, adds text to the end of document
+            text: New content (if None, keeps existing)
+            append: If True, adds text to end of document
                 instead of replacing
-            template: If True, converts the document to a template.
-                If False, converts a template back to a regular
-                document. Templates appear in the "New from
-                template" picker rather than in the collection
-                navigation.
+            template: If True, converts to a template.
+                If False, converts a template back to a
+                regular document.
 
         Returns:
             Result message confirming update
@@ -154,7 +154,6 @@ def register_tools(mcp) -> None:
         try:
             client = await get_outline_client()
 
-            # Only include fields that are being updated
             data: Dict[str, Any] = {"id": document_id}
 
             if title is not None:
@@ -173,8 +172,12 @@ def register_tools(mcp) -> None:
             if not document:
                 return "Failed to update document."
 
-            doc_title = document.get("title", "Untitled")
+            # Evict all cached copies of this document
+            # (across all API keys) to prevent stale reads
+            cache = get_document_cache()
+            await cache.evict_document(document_id)
 
+            doc_title = document.get("title", "Untitled")
             return f"Document updated successfully: {doc_title}"
         except OutlineClientError as e:
             return f"Error updating document: {str(e)}"
@@ -193,10 +196,13 @@ def register_tools(mcp) -> None:
         },
     )
     async def add_comment(
-        document_id: str, text: str, parent_comment_id: Optional[str] = None
+        document_id: str,
+        text: str,
+        parent_comment_id: Optional[str] = None,
     ) -> str:
         """
-        Adds a comment to a document or replies to an existing comment.
+        Adds a comment to a document or replies to an
+        existing comment.
 
         Use this tool when you need to:
         - Provide feedback on document content
@@ -207,7 +213,8 @@ def register_tools(mcp) -> None:
         Args:
             document_id: The document to comment on
             text: The comment text (supports markdown)
-            parent_comment_id: Optional ID of a parent comment (for replies)
+            parent_comment_id: Optional parent comment ID
+                (for replies)
 
         Returns:
             Result message with the new comment ID
@@ -215,7 +222,10 @@ def register_tools(mcp) -> None:
         try:
             client = await get_outline_client()
 
-            data = {"documentId": document_id, "text": text}
+            data = {
+                "documentId": document_id,
+                "text": text,
+            }
 
             if parent_comment_id:
                 data["parentCommentId"] = parent_comment_id
