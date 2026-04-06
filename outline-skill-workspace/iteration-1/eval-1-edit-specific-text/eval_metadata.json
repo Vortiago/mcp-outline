@@ -1,0 +1,10 @@
+{
+  "eval_id": 1,
+  "eval_name": "edit-specific-text",
+  "prompt": "In our Outline wiki, there's a doc called 'API Reference' and in the Authentication section it says 'Tokens expire after 24 hours'. Can you change that to say 'Tokens expire after 72 hours'?",
+  "assertions": [
+    {"text": "Uses edit_document with old_string containing 'Tokens expire after 24 hours' and new_string containing '72 hours'", "type": "tool_usage"},
+    {"text": "Does NOT use update_document with full text replacement for this change", "type": "tool_usage"},
+    {"text": "Finds the document ID first via search before editing", "type": "tool_usage"}
+  ]
+}

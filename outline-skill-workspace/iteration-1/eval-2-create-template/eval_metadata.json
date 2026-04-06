@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "eval_name": "create-template",
+  "prompt": "I need to create a new document in our Engineering collection in Outline. It should be titled 'Incident Response Runbook' and contain sections for Severity Levels, Escalation Path, and Communication Templates. Make it a template so the team can use it for new incidents.",
+  "assertions": [
+    {"text": "Uses list_collections to discover the Engineering collection ID", "type": "tool_usage"},
+    {"text": "Uses create_document with template=True", "type": "tool_usage"},
+    {"text": "Generated document contains markdown headings for Severity Levels, Escalation Path, and Communication Templates", "type": "content"}
+  ]
+}

@@ -42,6 +42,7 @@ def register_tools(mcp) -> None:
         parent_document_id: Optional[str] = None,
         publish: bool = True,
         template: Optional[bool] = None,
+        icon: Optional[str] = None,
     ) -> str:
         """
         Creates a new document in a specified collection.
@@ -67,6 +68,9 @@ def register_tools(mcp) -> None:
                 or save as draft (False)
             template: If True, creates the document as a
                 template
+            icon: Optional emoji character to use as the
+                document icon (e.g. "📋", "🚀"). If None,
+                no icon is set.
 
         Returns:
             Result message with the new document ID
@@ -86,6 +90,9 @@ def register_tools(mcp) -> None:
 
             if template is not None:
                 data["template"] = template
+
+            if icon is not None:
+                data["icon"] = icon
 
             response = await client.post("documents.create", data)
             document = response.get("data", {})
@@ -119,6 +126,7 @@ def register_tools(mcp) -> None:
         text: Optional[str] = None,
         append: bool = False,
         template: Optional[bool] = None,
+        icon: Optional[str] = None,
     ) -> str:
         """
         Modifies an existing document's title or content.
@@ -147,6 +155,10 @@ def register_tools(mcp) -> None:
             template: If True, converts to a template.
                 If False, converts a template back to a
                 regular document.
+            icon: Optional emoji character to use as the
+                document icon (e.g. "📋", "🚀"). If None,
+                keeps existing icon. Pass an empty string
+                to remove the icon.
 
         Returns:
             Result message confirming update
@@ -165,6 +177,11 @@ def register_tools(mcp) -> None:
 
             if template is not None:
                 data["template"] = template
+
+            if icon is not None:
+                # Empty string removes the icon;
+                # Outline API expects null to clear it.
+                data["icon"] = None if icon == "" else icon
 
             response = await client.post("documents.update", data)
             document = response.get("data", {})

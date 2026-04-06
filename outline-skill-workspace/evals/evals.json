@@ -1,0 +1,52 @@
+{
+  "skill_name": "outline",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I need to make a bunch of changes to our onboarding guide in Outline - it's a huge document. Specifically I need to update the team Slack channel from #new-hires to #onboarding-2026, change the VPN setup instructions to reference the new Cloudflare Access portal instead of the old OpenVPN guide, and update the laptop ordering section to mention the new M4 MacBook Pro option. Can you handle all of that?",
+      "expected_output": "Should find the doc, then use edit_document with multiple edits batched into one call (or staged with save=False if too many). Should NOT read the full document and use update_document.",
+      "files": [],
+      "assertions": [
+        {"text": "Uses edit_document (not update_document) for the changes", "type": "tool_usage"},
+        {"text": "Batches multiple edits into a single edit_document call rather than making separate calls per change", "type": "tool_usage"},
+        {"text": "Uses old_string/new_string keys (not old_text/new_text or other variants)", "type": "correctness"},
+        {"text": "Reads the relevant sections first to get exact text before constructing old_string values", "type": "tool_usage"}
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "We're restructuring our Outline wiki. I need to move all the API-related docs from the Engineering collection into a new API Documentation collection. First can you check what's in Engineering, then move the relevant ones?",
+      "expected_output": "Should use list_collections to find Engineering, get_collection_structure to see the doc tree, then batch_move_documents (or move_document) to move API-related docs. Should know to create the target collection first if it doesn't exist.",
+      "files": [],
+      "assertions": [
+        {"text": "Uses list_collections to find available collections", "type": "tool_usage"},
+        {"text": "Uses get_collection_structure to inspect the Engineering collection's document tree", "type": "tool_usage"},
+        {"text": "Creates the 'API Documentation' collection with create_collection before moving docs", "type": "tool_usage"},
+        {"text": "Uses batch_move_documents or move_document to relocate the documents", "type": "tool_usage"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I want to add a Mermaid architecture diagram to our system overview doc in Outline. Can you add a diagram showing the flow from API Gateway through Auth Service to the Backend and Database?",
+      "expected_output": "Should find the doc, then use edit_document to add the diagram. Must use mermaidjs (not mermaid) as the code fence language. Should read the document first to know where to insert.",
+      "files": [],
+      "assertions": [
+        {"text": "Uses mermaidjs (not mermaid) as the code fence language for the Mermaid diagram", "type": "correctness"},
+        {"text": "Uses edit_document or update_document(append=True) to add the diagram rather than replacing the whole doc", "type": "tool_usage"},
+        {"text": "Reads the document or a section first to determine where to place the diagram", "type": "tool_usage"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to do a massive rewrite of our deployment guide in Outline - basically rewriting 5 different sections. The doc is really long. What's the best approach to handle this without losing work?",
+      "expected_output": "Should recommend using edit_document with save=False for staging, making multiple edit calls, then save_document at the end. Should explain the staging workflow.",
+      "files": [],
+      "assertions": [
+        {"text": "Recommends or uses edit_document with save=False for staging changes", "type": "tool_usage"},
+        {"text": "Explains that save_document should be called once at the end to push all changes", "type": "correctness"},
+        {"text": "Suggests reading sections individually rather than loading the entire document", "type": "tool_usage"},
+        {"text": "Mentions that this approach minimizes API calls (1 read + 1 write)", "type": "correctness"}
+      ]
+    }
+  ]
+}
