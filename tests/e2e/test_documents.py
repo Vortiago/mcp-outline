@@ -181,3 +181,240 @@ async def test_update_document(mcp_session):
         text = _text(result)
         assert "# Updated Title" in text
         assert "Updated text." in text
+
+
+# Multi-line body used by pagination, TOC, section, and edit tests.
+_MULTILINE_BODY = """\
+# Introduction
+Intro paragraph.
+
+## Background
+Background details.
+
+## Goals
+Goal 1.
+Goal 2.
+
+# Architecture
+Arch overview.
+
+## Components
+Component list.
+
+### Frontend
+Frontend details.\
+"""
+
+
+async def test_read_document_with_offset_limit(mcp_session):
+    """Read a subset of lines using offset and limit.
+
+    Guards against: offset/limit parameters being ignored,
+    producing the full document when a range was requested.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Offset Coll")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "Offset Doc",
+            _MULTILINE_BODY,
+        )
+
+        result = await session.call_tool(
+            "read_document",
+            arguments={
+                "document_id": doc_id,
+                "offset": 3,
+                "limit": 3,
+            },
+        )
+        text = _text(result)
+        assert "Lines" in text
+        assert "total" in text
+        # Should NOT contain the very first line
+        assert "# Introduction" not in text
+
+
+async def test_get_document_toc(mcp_session):
+    """Retrieve the table of contents for a headed document.
+
+    Guards against: heading parsing failing on real Outline
+    content (which includes auto-generated metadata).
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E TOC Coll")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "TOC Doc",
+            _MULTILINE_BODY,
+        )
+
+        result = await session.call_tool(
+            "get_document_toc",
+            arguments={"document_id": doc_id},
+        )
+        text = _text(result)
+        assert "Table of Contents" in text
+        assert "# Introduction" in text
+        assert "## Background" in text
+        assert "# Architecture" in text
+
+
+async def test_read_document_section(mcp_session):
+    """Read a specific section by heading match.
+
+    Guards against: section boundaries being wrong or
+    substring matching failing on real document content.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Section Coll")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "Section Doc",
+            _MULTILINE_BODY,
+        )
+
+        result = await session.call_tool(
+            "read_document_section",
+            arguments={
+                "document_id": doc_id,
+                "heading": "Background",
+            },
+        )
+        text = _text(result)
+        assert "Section: ## Background" in text
+        assert "Background details." in text
+        # Should not include Goals content
+        assert "Goal 1." not in text
+
+
+async def test_read_document_section_not_found(mcp_session):
+    """Verify a helpful error when no section matches.
+
+    Guards against: cryptic error messages when the heading
+    doesn't match any section in the document.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E SecNotFound")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "Section NF Doc",
+            _MULTILINE_BODY,
+        )
+
+        result = await session.call_tool(
+            "read_document_section",
+            arguments={
+                "document_id": doc_id,
+                "heading": "nonexistent",
+            },
+        )
+        text = _text(result)
+        assert "No heading matching" in text
+        assert "Available headings:" in text
+
+
+async def test_edit_document_immediate_save(mcp_session):
+    """Edit a document with save=True (default) and verify.
+
+    Guards against: edits being applied locally but not
+    pushed to Outline, or the replacement being wrong.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Edit Coll")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "Edit Doc",
+            "Hello world. Goodbye world.",
+        )
+
+        result = await session.call_tool(
+            "edit_document",
+            arguments={
+                "document_id": doc_id,
+                "edits": [
+                    {
+                        "old_string": "Hello world.",
+                        "new_string": "Hi earth.",
+                    }
+                ],
+            },
+        )
+        text = _text(result)
+        assert "Applied 1 edit(s)" in text
+        assert "Saved to Outline" in text
+
+        # Verify via read
+        result = await session.call_tool(
+            "read_document",
+            arguments={"document_id": doc_id},
+        )
+        text = _text(result)
+        assert "Hi earth." in text
+        assert "Goodbye world." in text
+
+
+async def test_edit_document_staged_then_save(mcp_session):
+    """Stage edits across two calls, save=True on the last.
+
+    Guards against: staged edits being lost between tool
+    calls, or save=True on the final call failing to push
+    all accumulated changes.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Staged Coll")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "Staged Doc",
+            "AAA BBB CCC",
+        )
+
+        # Stage first edit
+        result = await session.call_tool(
+            "edit_document",
+            arguments={
+                "document_id": doc_id,
+                "edits": [
+                    {
+                        "old_string": "AAA",
+                        "new_string": "XXX",
+                    }
+                ],
+                "save": False,
+            },
+        )
+        assert "unsaved changes" in _text(result)
+
+        # Final edit with save=True pushes all changes
+        result = await session.call_tool(
+            "edit_document",
+            arguments={
+                "document_id": doc_id,
+                "edits": [
+                    {
+                        "old_string": "CCC",
+                        "new_string": "ZZZ",
+                    }
+                ],
+                "save": True,
+            },
+        )
+        assert "Saved to Outline" in _text(result)
+
+        # Verify both edits landed
+        result = await session.call_tool(
+            "read_document",
+            arguments={"document_id": doc_id},
+        )
+        text = _text(result)
+        assert "XXX" in text
+        assert "BBB" in text
+        assert "ZZZ" in text
+        assert "AAA" not in text
+        assert "CCC" not in text

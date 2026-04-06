@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from mcp_outline.features.documents.common import OutlineClientError
+from mcp_outline.features.documents.common import (
+    OutlineClientError,
+)
 
 
 # Mock FastMCP for registering tools
@@ -399,10 +401,14 @@ class TestBatchUpdateDocuments:
         }
         mock_get_client.return_value = mock_client
 
+        from mcp_outline.features.documents.models import (
+            BatchUpdateItem,
+        )
+
         updates = [
-            {"id": "doc1", "title": "New Title 1"},
-            {"id": "doc2", "text": "New content"},
-            {"id": "doc3", "title": "Title 3", "text": "Content 3"},
+            BatchUpdateItem(id="doc1", title="New Title 1"),
+            BatchUpdateItem(id="doc2", text="New content"),
+            BatchUpdateItem(id="doc3", title="Title 3", text="Content 3"),
         ]
 
         result = await register_batch_tools.tools["batch_update_documents"](
@@ -428,7 +434,17 @@ class TestBatchUpdateDocuments:
         }
         mock_get_client.return_value = mock_client
 
-        updates = [{"id": "doc1", "text": "Appended content", "append": True}]
+        from mcp_outline.features.documents.models import (
+            BatchUpdateItem,
+        )
+
+        updates = [
+            BatchUpdateItem(
+                id="doc1",
+                text="Appended content",
+                append=True,
+            )
+        ]
 
         result = await register_batch_tools.tools["batch_update_documents"](
             updates
@@ -445,18 +461,15 @@ class TestBatchUpdateDocuments:
     async def test_batch_update_missing_id(
         self, mock_get_client, register_batch_tools
     ):
-        """Test batch_update_documents with missing document ID."""
-        mock_client = AsyncMock()
-        mock_get_client.return_value = mock_client
+        """Test that missing id is caught by Pydantic validation."""
+        from pydantic import ValidationError
 
-        updates = [{"title": "No ID"}]
-
-        result = await register_batch_tools.tools["batch_update_documents"](
-            updates
+        from mcp_outline.features.documents.models import (
+            BatchUpdateItem,
         )
 
-        assert "Failed: 1" in result
-        assert "Missing document ID" in result
+        with pytest.raises(ValidationError):
+            BatchUpdateItem(title="No ID")  # type: ignore[call-arg]
 
     @pytest.mark.asyncio
     @patch(
@@ -473,9 +486,13 @@ class TestBatchUpdateDocuments:
         ]
         mock_get_client.return_value = mock_client
 
+        from mcp_outline.features.documents.models import (
+            BatchUpdateItem,
+        )
+
         updates = [
-            {"id": "doc1", "title": "Title 1"},
-            {"id": "doc2", "title": "Title 2"},
+            BatchUpdateItem(id="doc1", title="Title 1"),
+            BatchUpdateItem(id="doc2", title="Title 2"),
         ]
 
         result = await register_batch_tools.tools["batch_update_documents"](
@@ -519,14 +536,20 @@ class TestBatchCreateDocuments:
         ]
         mock_get_client.return_value = mock_client
 
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
+        )
+
         documents = [
-            {"title": "Doc 1", "collection_id": "col1"},
-            {"title": "Doc 2", "collection_id": "col1", "text": "Content"},
-            {
-                "title": "Doc 3",
-                "collection_id": "col1",
-                "publish": False,
-            },
+            BatchCreateItem(title="Doc 1", collection_id="col1"),
+            BatchCreateItem(
+                title="Doc 2", collection_id="col1", text="Content"
+            ),
+            BatchCreateItem(
+                title="Doc 3",
+                collection_id="col1",
+                publish=False,
+            ),
         ]
 
         result = await register_batch_tools.tools["batch_create_documents"](
@@ -548,18 +571,15 @@ class TestBatchCreateDocuments:
     async def test_batch_create_missing_title(
         self, mock_get_client, register_batch_tools
     ):
-        """Test batch_create_documents with missing title."""
-        mock_client = AsyncMock()
-        mock_get_client.return_value = mock_client
+        """Test that missing title is caught by Pydantic."""
+        from pydantic import ValidationError
 
-        documents = [{"collection_id": "col1"}]
-
-        result = await register_batch_tools.tools["batch_create_documents"](
-            documents
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
         )
 
-        assert "Failed: 1" in result
-        assert "Missing required field: title" in result
+        with pytest.raises(ValidationError):
+            BatchCreateItem(collection_id="col1")  # type: ignore[call-arg]
 
     @pytest.mark.asyncio
     @patch(
@@ -568,18 +588,15 @@ class TestBatchCreateDocuments:
     async def test_batch_create_missing_collection_id(
         self, mock_get_client, register_batch_tools
     ):
-        """Test batch_create_documents with missing collection_id."""
-        mock_client = AsyncMock()
-        mock_get_client.return_value = mock_client
+        """Test that missing collection_id is caught by Pydantic."""
+        from pydantic import ValidationError
 
-        documents = [{"title": "Document"}]
-
-        result = await register_batch_tools.tools["batch_create_documents"](
-            documents
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
         )
 
-        assert "Failed: 1" in result
-        assert "Missing required field: collection_id" in result
+        with pytest.raises(ValidationError):
+            BatchCreateItem(title="Document")  # type: ignore[call-arg]
 
     @pytest.mark.asyncio
     @patch(
@@ -595,12 +612,16 @@ class TestBatchCreateDocuments:
         }
         mock_get_client.return_value = mock_client
 
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
+        )
+
         documents = [
-            {
-                "title": "Child",
-                "collection_id": "col1",
-                "parent_document_id": "parent123",
-            }
+            BatchCreateItem(
+                title="Child",
+                collection_id="col1",
+                parent_document_id="parent123",
+            )
         ]
 
         result = await register_batch_tools.tools["batch_create_documents"](
@@ -627,10 +648,14 @@ class TestBatchCreateDocuments:
         ]
         mock_get_client.return_value = mock_client
 
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
+        )
+
         documents = [
-            {"title": "Doc 1", "collection_id": "col1"},
-            {"title": "Doc 2", "collection_id": "col1"},
-            {"title": "Doc 3", "collection_id": "col1"},
+            BatchCreateItem(title="Doc 1", collection_id="col1"),
+            BatchCreateItem(title="Doc 2", collection_id="col1"),
+            BatchCreateItem(title="Doc 3", collection_id="col1"),
         ]
 
         result = await register_batch_tools.tools["batch_create_documents"](

@@ -50,6 +50,15 @@ def _get_header_api_key() -> Optional[str]:
     return None
 
 
+def get_resolved_api_key() -> str:
+    """Return the API key for the current request.
+
+    Priority: ``x-outline-api-key`` HTTP header > ``OUTLINE_API_KEY``
+    environment variable. Returns empty string when neither is set.
+    """
+    return _get_header_api_key() or os.getenv("OUTLINE_API_KEY", "")
+
+
 async def get_outline_client() -> OutlineClient:
     """Get the document outline client (async).
 
@@ -64,8 +73,7 @@ async def get_outline_client() -> OutlineClient:
         OutlineClientError: If client creation fails
     """
     try:
-        # Per-request header takes priority over env var
-        api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
+        api_key = get_resolved_api_key() or None
         api_url = os.getenv("OUTLINE_API_URL")
 
         # Create an instance of the outline client

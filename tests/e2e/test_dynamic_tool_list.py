@@ -278,6 +278,8 @@ async def test_route_scoped_read_only(
 
     expected = {
         "read_document",
+        "get_document_toc",
+        "read_document_section",
         "export_document",
         "search_documents",
         "get_document_id_from_title",
@@ -333,6 +335,8 @@ async def test_namespace_read_scope(
 
     expected = {
         "read_document",  # documents.info
+        "get_document_toc",  # documents.info
+        "read_document_section",  # documents.info
         "export_document",  # documents.export
         "search_documents",  # documents.search
         "get_document_id_from_title",  # documents.search
@@ -372,6 +376,8 @@ async def test_namespace_write_documents_only(
     expected = {
         # Read document tools
         "read_document",
+        "get_document_toc",
+        "read_document_section",
         "export_document",
         "search_documents",
         "get_document_id_from_title",
@@ -382,6 +388,7 @@ async def test_namespace_write_documents_only(
         # Write document tools
         "create_document",
         "update_document",
+        "edit_document",
         "archive_document",
         "unarchive_document",
         "delete_document",
@@ -427,6 +434,8 @@ async def test_mixed_namespace_and_route_scope(
     expected = {
         # Document read tools (from documents:read)
         "read_document",
+        "get_document_toc",
+        "read_document_section",
         "export_document",
         "search_documents",
         "get_document_id_from_title",

@@ -1,0 +1,10 @@
+{
+  "eval_id": 0,
+  "eval_name": "navigate-large-doc",
+  "prompt": "I have a really long architecture document in Outline called 'Platform Architecture Overview'. I need to read just the section about our database layer. Can you find it and show me that section?",
+  "assertions": [
+    {"text": "Uses search_documents or get_document_id_from_title to find the document ID", "type": "tool_usage"},
+    {"text": "Uses get_document_toc to inspect the document structure before reading", "type": "tool_usage"},
+    {"text": "Uses read_document_section with a heading match rather than read_document with no offset/limit", "type": "tool_usage"}
+  ]
+}
