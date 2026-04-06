@@ -389,7 +389,6 @@ async def test_namespace_write_documents_only(
         "create_document",
         "update_document",
         "edit_document",
-        "save_document",
         "archive_document",
         "unarchive_document",
         "delete_document",

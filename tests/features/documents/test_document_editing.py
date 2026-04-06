@@ -1,5 +1,5 @@
 """
-Tests for document editing tools (edit_document, save_document).
+Tests for document editing tools (edit_document).
 """
 
 from unittest.mock import AsyncMock, patch
@@ -14,7 +14,6 @@ from mcp_outline.features.documents.models import (
 )
 from mcp_outline.utils.document_cache import (
     CachedDocument,
-    get_document_cache,
     reset_document_cache,
 )
 
@@ -33,14 +32,6 @@ class MockMCP:
             return func
 
         return decorator
-
-
-SAMPLE_CACHED_DOC_DATA = {
-    "id": "doc-edit",
-    "title": "Editable Doc",
-    "text": "Line one.\nLine two.\nLine three.",
-    "url": "/doc/editable",
-}
 
 
 @pytest.fixture
@@ -208,59 +199,3 @@ class TestEditDocument:
         )
         assert "Edit failed" in result
         assert "matches 2" in result
-
-
-class TestSaveDocument:
-    """Tests for save_document tool."""
-
-    @pytest.mark.asyncio
-    @patch(_PATCH_API_KEY, return_value="test-key")
-    async def test_save_no_unsaved_changes(
-        self,
-        mock_api_key,
-        register_editing_tools,
-    ):
-        result = await register_editing_tools.tools["save_document"](
-            document_id="doc-none"
-        )
-        assert "No unsaved changes" in result
-
-    @pytest.mark.asyncio
-    @patch(_PATCH_API_KEY, return_value="test-key")
-    @patch(_PATCH_CLIENT)
-    async def test_save_dirty_document(
-        self,
-        mock_get_client,
-        mock_api_key,
-        register_editing_tools,
-    ):
-        cache = get_document_cache()
-        await cache.put("test-key", "doc-save", SAMPLE_CACHED_DOC_DATA)
-        await cache.update_text(
-            "test-key",
-            "doc-save",
-            "Modified text.",
-            dirty=True,
-        )
-
-        mock_client = AsyncMock()
-        mock_client.post.return_value = {
-            "data": {
-                "title": "Editable Doc",
-                "text": "Modified text.",
-            }
-        }
-        mock_get_client.return_value = mock_client
-
-        result = await register_editing_tools.tools["save_document"](
-            document_id="doc-save"
-        )
-        assert "Document saved successfully" in result
-        mock_client.post.assert_called_once_with(
-            "documents.update",
-            {"id": "doc-save", "text": "Modified text."},
-        )
-
-        doc = await cache.get("test-key", "doc-save")
-        assert doc is not None
-        assert doc.dirty is False

@@ -95,8 +95,9 @@ def register_tools(mcp) -> None:
 
         By default (save=True), changes are pushed to
         Outline immediately. Set save=False to stage changes
-        locally, then call save_document when done. This is
-        useful for large rewrites spanning multiple calls.
+        locally for large rewrites spanning multiple calls,
+        then pass save=True on the final call to push all
+        accumulated changes.
 
         Args:
             document_id: The document ID to edit
@@ -154,69 +155,12 @@ def register_tools(mcp) -> None:
                     f"Applied {n} edit(s) to "
                     f"'{doc.title}'. "
                     f"Document has unsaved changes"
-                    f" — call save_document to push"
-                    f" to Outline."
+                    f" — call edit_document with"
+                    f" save=True to push to Outline."
                 )
         except ValueError as e:
             return f"Edit failed: {str(e)} No edits were applied."
         except OutlineClientError as e:
             return f"Error editing document: {str(e)}"
-        except Exception as e:
-            return f"Unexpected error: {str(e)}"
-
-    @mcp.tool(
-        annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=False,
-            idempotentHint=True,
-        ),
-        meta={
-            "endpoint": "documents.update",
-            "min_role": "member",
-        },
-    )
-    async def save_document(document_id: str) -> str:
-        """
-        Pushes staged (unsaved) edits to Outline.
-
-        Use this after calling edit_document with save=False
-        one or more times. If there are no unsaved changes,
-        this tool does nothing.
-
-        Args:
-            document_id: The document ID to save
-
-        Returns:
-            Result message confirming save
-        """
-        try:
-            api_key = get_resolved_api_key()
-            cache = get_document_cache()
-            doc = await cache.get(api_key, document_id)
-
-            if doc is None or not doc.dirty:
-                return "No unsaved changes for this document."
-
-            client = await get_outline_client()
-            response = await client.post(
-                "documents.update",
-                {"id": document_id, "text": doc.text},
-            )
-            result_doc = response.get("data", {})
-            saved_text = result_doc.get("text", doc.text)
-            saved_title = result_doc.get("title", doc.title)
-            await cache.evict_document(document_id)
-            await cache.put(
-                api_key,
-                document_id,
-                {
-                    "title": saved_title,
-                    "text": saved_text,
-                    "url": doc.url,
-                },
-            )
-            return f"Document saved successfully: {saved_title}"
-        except OutlineClientError as e:
-            return f"Error saving document: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"

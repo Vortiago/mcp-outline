@@ -66,7 +66,7 @@ _INSTRUCTIONS = (
     " title changes, or appending.\n\n"
     "Large rewrites: call edit_document with save=False "
     "to stage changes across multiple calls, then "
-    "save_document once at the end.\n\n"
+    "pass save=True on the final call.\n\n"
     "Markdown: Outline uses standard markdown. For Mermaid "
     "diagrams use mermaidjs (not mermaid) as the code "
     "fence language."

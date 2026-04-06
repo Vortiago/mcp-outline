@@ -171,8 +171,7 @@ Read-only mode takes precedence over disable-delete. See [Configuration Guide](d
 - `update_document(document_id, title?, text?, append?)` - Replace full document content (append mode available)
 
 ### Document Editing
-- `edit_document(document_id, edits, save?)` - String-match editing with batched replacements; `save=False` stages changes locally
-- `save_document(document_id)` - Push staged edits to Outline
+- `edit_document(document_id, edits, save?)` - String-match editing with batched replacements; `save=False` stages changes locally, `save=True` on the final call pushes all changes
 - `move_document(document_id, collection_id?, parent_document_id?)` - Move document to different collection or parent
 
 ### Document Lifecycle

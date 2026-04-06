@@ -360,11 +360,11 @@ async def test_edit_document_immediate_save(mcp_session):
 
 
 async def test_edit_document_staged_then_save(mcp_session):
-    """Stage edits across two calls, then save_document.
+    """Stage edits across two calls, save=True on the last.
 
     Guards against: staged edits being lost between tool
-    calls, or save_document failing to push accumulated
-    changes.
+    calls, or save=True on the final call failing to push
+    all accumulated changes.
     """
     async with mcp_session() as session:
         coll_id = await _create_collection(session, "E2E Staged Coll")
@@ -391,7 +391,7 @@ async def test_edit_document_staged_then_save(mcp_session):
         )
         assert "unsaved changes" in _text(result)
 
-        # Stage second edit
+        # Final edit with save=True pushes all changes
         result = await session.call_tool(
             "edit_document",
             arguments={
@@ -402,17 +402,10 @@ async def test_edit_document_staged_then_save(mcp_session):
                         "new_string": "ZZZ",
                     }
                 ],
-                "save": False,
+                "save": True,
             },
         )
-        assert "unsaved changes" in _text(result)
-
-        # Save
-        result = await session.call_tool(
-            "save_document",
-            arguments={"document_id": doc_id},
-        )
-        assert "saved successfully" in _text(result)
+        assert "Saved to Outline" in _text(result)
 
         # Verify both edits landed
         result = await session.call_tool(

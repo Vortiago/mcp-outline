@@ -18,7 +18,7 @@ This MCP server bridges AI assistants with Outline's document management platfor
 
 - **Search**: Find documents, collections, hierarchies
 - **Reading**: Read content (with pagination), TOC, section reading, export markdown
-- **Editing**: String-match editing with staging, save staged changes
+- **Editing**: String-match editing with optional staging
 - **Attachments**: Resolve URLs, fetch content, list attachments
 - **Content**: Create, update, comment (supports templates)
 - **Organization**: Move documents between collections
@@ -127,7 +127,7 @@ In-memory LRU cache with configurable TTL for document content. Reduces Outline 
 - **Singleton**: `get_document_cache()` returns module-level instance; `reset_document_cache()` for tests
 
 **Reading tools** (`read_document`, `get_document_toc`, `read_document_section`) cache on read via `_get_cached_or_fetch()`.
-**Edit tools** (`edit_document`) operate on cached text; `save_document` pushes dirty text to Outline.
+**Edit tools** (`edit_document`) operate on cached text; `save=True` (default) pushes to Outline immediately.
 **Update tool** (`update_document`) evicts the cache entry after a successful API call.
 
 ### Copilot CLI Patch (`patches/copilot_cli.py`)
