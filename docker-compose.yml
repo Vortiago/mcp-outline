@@ -35,10 +35,11 @@ services:
     networks:
       - outline
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "outline"]
-      interval: 10s
+      test: ["CMD", "pg_isready", "-U", "outline", "-d", "outline"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   # Redis - Cache and session management
