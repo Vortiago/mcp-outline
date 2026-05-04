@@ -25,7 +25,7 @@ services:
 
   # PostgreSQL - Database for Outline
   postgres:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     environment:
       POSTGRES_USER: outline
       POSTGRES_PASSWORD: outline
@@ -35,10 +35,11 @@ services:
     networks:
       - outline
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "outline"]
-      interval: 10s
+      test: ["CMD", "pg_isready", "-U", "outline", "-d", "outline"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   # Redis - Cache and session management

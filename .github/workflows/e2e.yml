@@ -39,6 +39,22 @@ jobs:
           DEX_HOST_PORT: "5557"
           OUTLINE_HOST_PORT: "3031"
 
+      - name: Dump container state on failure
+        if: failure()
+        run: |
+          echo "=== docker ps -a ==="
+          docker ps -a
+          echo "=== docker inspect postgres health ==="
+          docker inspect --format='{{json .State.Health}}' mcp-outline-e2e-postgres-1 || true
+          echo "=== postgres logs ==="
+          docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs postgres || true
+          echo "=== redis logs ==="
+          docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs redis || true
+          echo "=== dex logs ==="
+          docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs dex || true
+          echo "=== outline logs ==="
+          docker compose -p mcp-outline-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs outline || true
+
       - name: Run E2E tests
         run: uv run pytest tests/e2e/ -v -m e2e --junit-xml=e2e-results.xml
 

@@ -1,5 +1,12 @@
 # MCP Outline Server
 
+> ## 📢 Official Outline MCP Server Available
+>
+> Outline now ships an **official MCP server** — we recommend using it.
+> [Read the docs](https://docs.getoutline.com/s/guide/doc/mcp-6j9jtENNKL).
+
+---
+
 <!-- mcp-name: io.github.Vortiago/mcp-outline -->
 
 [![PyPI](https://img.shields.io/pypi/v/mcp-outline)](https://pypi.org/project/mcp-outline/)
