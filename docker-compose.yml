@@ -25,13 +25,13 @@ services:
 
   # PostgreSQL - Database for Outline
   postgres:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     environment:
       POSTGRES_USER: outline
       POSTGRES_PASSWORD: outline
       POSTGRES_DB: outline
     volumes:
-      - outline-postgres-data:/var/lib/postgresql
+      - outline-postgres-data:/var/lib/postgresql/data
     networks:
       - outline
     healthcheck:
