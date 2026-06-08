@@ -178,7 +178,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
-            "test query", None, 25, 0
+            "test query", None, 25, 0, statusFilter=None
         )
 
         # Verify result contains expected information
@@ -206,7 +206,32 @@ class TestDocumentSearchTools:
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
-            "test query", "coll1", 25, 0
+            "test query", "coll1", 25, 0, statusFilter=None
+        )
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_search_documents_with_status_filter(
+        self, mock_get_client, register_search_tools
+    ):
+        """Test search_documents tool with explicit status filter."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": SAMPLE_SEARCH_RESULTS,
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        _ = await register_search_tools.tools["search_documents"](
+            "test query", statusFilter=["draft", "archived"]
+        )
+
+        mock_client.search_documents.assert_called_once_with(
+            "test query",
+            None,
+            25,
+            0,
+            statusFilter=["draft", "archived"],
         )
 
     @pytest.mark.asyncio
@@ -409,7 +434,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called with pagination params
         mock_client.search_documents.assert_called_once_with(
-            "test query", None, 10, 20
+            "test query", None, 10, 20, statusFilter=None
         )
 
         # Verify pagination info in output

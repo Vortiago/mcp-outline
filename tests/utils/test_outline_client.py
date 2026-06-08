@@ -456,6 +456,74 @@ class TestOutlineClient:
         assert client.api_key == "quoted_key"
 
     @pytest.mark.asyncio
+    async def test_search_documents_defaults_to_published_status(self):
+        """documents.search defaults to published documents only."""
+        client = OutlineClient()
+
+        with patch.object(
+            client,
+            "post",
+            new=AsyncMock(return_value={"data": []}),
+        ) as mock_post:
+            await client.search_documents("policy")
+
+        mock_post.assert_called_once_with(
+            "documents.search",
+            {
+                "query": "policy",
+                "limit": 25,
+                "offset": 0,
+                "statusFilter": ["published"],
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_search_documents_forwards_status_filter(self):
+        """documents.search forwards an explicit statusFilter."""
+        client = OutlineClient()
+
+        with patch.object(
+            client,
+            "post",
+            new=AsyncMock(return_value={"data": []}),
+        ) as mock_post:
+            await client.search_documents(
+                "policy", statusFilter=["draft", "archived"]
+            )
+
+        mock_post.assert_called_once_with(
+            "documents.search",
+            {
+                "query": "policy",
+                "limit": 25,
+                "offset": 0,
+                "statusFilter": ["draft", "archived"],
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_search_documents_forwards_empty_status_filter(self):
+        """documents.search only defaults when statusFilter is None."""
+        client = OutlineClient()
+
+        with patch.object(
+            client,
+            "post",
+            new=AsyncMock(return_value={"data": []}),
+        ) as mock_post:
+            await client.search_documents("policy", statusFilter=[])
+
+        mock_post.assert_called_once_with(
+            "documents.search",
+            {
+                "query": "policy",
+                "limit": 25,
+                "offset": 0,
+                "statusFilter": [],
+            },
+        )
+
+    @pytest.mark.asyncio
     async def test_get_attachment_redirect_url_success(self):
         """Test get_attachment_redirect_url returns Location header."""
         client = OutlineClient()

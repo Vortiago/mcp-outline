@@ -187,3 +187,25 @@ async def test_ai_tools_have_open_world_hint(fresh_mcp_server):
         assert tool.annotations.openWorldHint is True, (
             f"Tool {tool_name} should have openWorldHint=True"
         )
+
+
+@pytest.mark.anyio
+async def test_search_documents_status_filter_schema(fresh_mcp_server):
+    """Test search_documents exposes statusFilter as an enum array."""
+    register_all(fresh_mcp_server)
+    tools = await fresh_mcp_server.list_tools()
+
+    tool = next((t for t in tools if t.name == "search_documents"), None)
+    assert tool is not None
+
+    status_filter = tool.inputSchema["properties"]["statusFilter"]
+    array_schema = next(
+        schema
+        for schema in status_filter["anyOf"]
+        if schema.get("type") == "array"
+    )
+    assert array_schema["items"]["enum"] == [
+        "draft",
+        "archived",
+        "published",
+    ]

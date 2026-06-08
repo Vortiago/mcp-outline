@@ -4,7 +4,7 @@ Document search tools for the MCP Outline server.
 This module provides MCP tools for searching and listing documents.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from mcp.types import ToolAnnotations
 
@@ -151,6 +151,9 @@ def register_tools(mcp) -> None:
         collection_id: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
+        statusFilter: Optional[
+            List[Literal["draft", "archived", "published"]]
+        ] = None,
     ) -> str:
         """
         Searches for documents using keywords or phrases across your knowledge
@@ -170,6 +173,10 @@ def register_tools(mcp) -> None:
         For example, use offset=25 to get results 26-50, offset=50 for
         51-75, etc.
 
+        STATUS FILTER: By default, searches published documents only. Pass
+        statusFilter to include other document states. Allowed values are
+        "draft", "archived", and "published".
+
         Use this tool when you need to:
         - Find documents containing specific terms or topics
         - Locate information across multiple documents
@@ -182,6 +189,9 @@ def register_tools(mcp) -> None:
             collection_id: Optional collection to limit the search to
             limit: Maximum results to return (default: 25, max: 100)
             offset: Number of results to skip for pagination (default: 0)
+            statusFilter: Optional list of statuses to search. Allowed values
+                are "draft", "archived", and "published". Defaults to
+                ["published"] when omitted.
 
         Returns:
             Formatted string containing search results with document titles,
@@ -190,7 +200,11 @@ def register_tools(mcp) -> None:
         try:
             client = await get_outline_client()
             response = await client.search_documents(
-                query, collection_id, limit, offset
+                query,
+                collection_id,
+                limit,
+                offset,
+                statusFilter=statusFilter,
             )
 
             # Extract results and pagination metadata
