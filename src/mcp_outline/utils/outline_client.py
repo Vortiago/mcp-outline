@@ -371,7 +371,7 @@ class OutlineClient:
         collection_id: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
-        statusFilter: Optional[
+        status_filter: Optional[
             List[Literal["draft", "archived", "published"]]
         ] = None,
     ) -> Dict[str, Any]:
@@ -383,7 +383,7 @@ class OutlineClient:
             collection_id: Optional collection to search within
             limit: Maximum number of results to return (default: 25)
             offset: Number of results to skip for pagination (default: 0)
-            statusFilter: Document statuses to include in results. Allowed
+            status_filter: Document statuses to include in results. Allowed
                 values are "draft", "archived", and "published". Defaults to
                 ["published"].
 
@@ -395,7 +395,7 @@ class OutlineClient:
             "limit": limit,
             "offset": offset,
             "statusFilter": (
-                statusFilter if statusFilter is not None else ["published"]
+                status_filter if status_filter is not None else ["published"]
             ),
         }
         if collection_id:

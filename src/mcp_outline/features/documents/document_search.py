@@ -151,7 +151,7 @@ def register_tools(mcp) -> None:
         collection_id: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
-        statusFilter: Optional[
+        status_filter: Optional[
             List[Literal["draft", "archived", "published"]]
         ] = None,
     ) -> str:
@@ -174,7 +174,7 @@ def register_tools(mcp) -> None:
         51-75, etc.
 
         STATUS FILTER: By default, searches published documents only. Pass
-        statusFilter to include other document states. Allowed values are
+        status_filter to include other document states. Allowed values are
         "draft", "archived", and "published".
 
         Use this tool when you need to:
@@ -189,7 +189,7 @@ def register_tools(mcp) -> None:
             collection_id: Optional collection to limit the search to
             limit: Maximum results to return (default: 25, max: 100)
             offset: Number of results to skip for pagination (default: 0)
-            statusFilter: Optional list of statuses to search. Allowed values
+            status_filter: Optional list of statuses to search. Allowed values
                 are "draft", "archived", and "published". Defaults to
                 ["published"] when omitted.
 
@@ -204,7 +204,7 @@ def register_tools(mcp) -> None:
                 collection_id,
                 limit,
                 offset,
-                statusFilter=statusFilter,
+                status_filter=status_filter,
             )
 
             # Extract results and pagination metadata

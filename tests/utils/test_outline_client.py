@@ -488,7 +488,7 @@ class TestOutlineClient:
             new=AsyncMock(return_value={"data": []}),
         ) as mock_post:
             await client.search_documents(
-                "policy", statusFilter=["draft", "archived"]
+                "policy", status_filter=["draft", "archived"]
             )
 
         mock_post.assert_called_once_with(
@@ -511,7 +511,7 @@ class TestOutlineClient:
             "post",
             new=AsyncMock(return_value={"data": []}),
         ) as mock_post:
-            await client.search_documents("policy", statusFilter=[])
+            await client.search_documents("policy", status_filter=[])
 
         mock_post.assert_called_once_with(
             "documents.search",

@@ -178,7 +178,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
-            "test query", None, 25, 0, statusFilter=None
+            "test query", None, 25, 0, status_filter=None
         )
 
         # Verify result contains expected information
@@ -206,7 +206,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called correctly
         mock_client.search_documents.assert_called_once_with(
-            "test query", "coll1", 25, 0, statusFilter=None
+            "test query", "coll1", 25, 0, status_filter=None
         )
 
     @pytest.mark.asyncio
@@ -223,7 +223,7 @@ class TestDocumentSearchTools:
         mock_get_client.return_value = mock_client
 
         _ = await register_search_tools.tools["search_documents"](
-            "test query", statusFilter=["draft", "archived"]
+            "test query", status_filter=["draft", "archived"]
         )
 
         mock_client.search_documents.assert_called_once_with(
@@ -231,7 +231,7 @@ class TestDocumentSearchTools:
             None,
             25,
             0,
-            statusFilter=["draft", "archived"],
+            status_filter=["draft", "archived"],
         )
 
     @pytest.mark.asyncio
@@ -434,7 +434,7 @@ class TestDocumentSearchTools:
 
         # Verify client was called with pagination params
         mock_client.search_documents.assert_called_once_with(
-            "test query", None, 10, 20, statusFilter=None
+            "test query", None, 10, 20, status_filter=None
         )
 
         # Verify pagination info in output
