@@ -57,6 +57,18 @@ def parse_headings(
     return headings
 
 
+def staged_changes_notice(doc: CachedDocument) -> str:
+    """Return an unsaved-changes notice, or "" if clean."""
+    if not doc.dirty:
+        return ""
+    return (
+        "\n\nNote: this document has staged"
+        " unsaved changes — call edit_document"
+        " with save=True to push them to"
+        " Outline."
+    )
+
+
 async def get_cached_or_fetch(
     document_id: str,
 ) -> CachedDocument:
@@ -148,13 +160,7 @@ def register_tools(mcp) -> None:
                     f"{numbered}"
                 )
 
-            if doc.dirty:
-                output += (
-                    "\n\nNote: this document has staged"
-                    " unsaved changes — call edit_document"
-                    " with save=True to push them to"
-                    " Outline."
-                )
+            output += staged_changes_notice(doc)
             if doc.url:
                 output += f"\n\nURL: {doc.url}"
             return output

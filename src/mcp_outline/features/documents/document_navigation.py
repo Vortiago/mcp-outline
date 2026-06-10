@@ -14,6 +14,7 @@ from mcp_outline.features.documents.document_reading import (
     format_lines_with_numbers,
     get_cached_or_fetch,
     parse_headings,
+    staged_changes_notice,
 )
 
 
@@ -70,7 +71,7 @@ def register_tools(mcp) -> None:
             for line_num, level, text in headings:
                 prefix = "#" * level
                 parts.append(f"{line_num:>{width}}  {prefix} {text}")
-            return "\n".join(parts)
+            return "\n".join(parts) + staged_changes_notice(doc)
         except OutlineClientError as e:
             return f"Error reading document: {str(e)}"
         except Exception as e:
@@ -172,7 +173,7 @@ def register_tools(mcp) -> None:
                 f" of {total} total)\n\n"
                 f"{numbered}"
             )
-            return output
+            return output + staged_changes_notice(doc)
         except OutlineClientError as e:
             return f"Error reading document: {str(e)}"
         except Exception as e:

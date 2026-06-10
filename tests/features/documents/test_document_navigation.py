@@ -123,6 +123,32 @@ class TestGetDocumentToc:
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)
     @patch(_PATCH_CLIENT)
+    async def test_toc_dirty_shows_unsaved_notice(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+        )
+
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        cache = get_document_cache()
+        await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
+        base = await cache.get("test-key", "doc789")
+        assert base is not None
+        await cache.stage_text(
+            "test-key", "doc789", base, "# Staged\nStaged text."
+        )
+
+        result = await register_nav_tools.tools["get_document_toc"]("doc789")
+        assert "Staged" in result
+        assert "unsaved changes" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
     async def test_toc_no_headings(
         self,
         mock_get_client,
@@ -183,6 +209,37 @@ class TestReadDocumentSection:
         )
         assert "Section: ## Background" in result
         assert "Background text." in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_section_dirty_shows_unsaved_notice(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+        )
+
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        cache = get_document_cache()
+        await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
+        base = await cache.get("test-key", "doc789")
+        assert base is not None
+        await cache.stage_text(
+            "test-key",
+            "doc789",
+            base,
+            "## Background\nStaged background text.",
+        )
+
+        result = await register_nav_tools.tools["read_document_section"](
+            "doc789", heading="Background"
+        )
+        assert "Staged background text." in result
+        assert "unsaved changes" in result
 
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)
