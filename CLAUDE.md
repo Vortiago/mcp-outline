@@ -126,7 +126,7 @@ In-memory LRU cache with configurable TTL for document content. Reduces Outline 
 - **Dirty tracking**: Staged edits set `dirty=True`; LRU eviction skips dirty entries
 - **Singleton**: `get_document_cache()` returns module-level instance; `reset_document_cache()` for tests
 
-**Reading tools** (`read_document`, `get_document_toc`, `read_document_section`) cache on read via `_get_cached_or_fetch()`.
+**Reading tools** (`read_document`, `get_document_toc`, `read_document_section`) cache on read via `get_cached_or_fetch()`.
 **Edit tools** (`edit_document`) operate on cached text; `save=True` (default) pushes to Outline immediately.
 **Update tool** (`update_document`) evicts the cache entry after a successful API call.
 
