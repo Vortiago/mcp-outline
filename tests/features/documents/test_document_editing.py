@@ -165,6 +165,28 @@ class TestEditDocument:
 
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY, return_value="test-key")
+    @patch(_PATCH_CLIENT)
+    @patch(_PATCH_FETCH)
+    async def test_edit_empty_edits_no_staged_changes(
+        self,
+        mock_fetch,
+        mock_get_client,
+        mock_api_key,
+        register_editing_tools,
+    ):
+        mock_fetch.return_value = _make_cached_doc()
+        mock_client = AsyncMock()
+        mock_get_client.return_value = mock_client
+
+        result = await register_editing_tools.tools["edit_document"](
+            document_id="doc-edit",
+            edits=[],
+        )
+        assert "No edits provided" in result
+        mock_client.post.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY, return_value="test-key")
     @patch(_PATCH_FETCH)
     async def test_edit_not_found(
         self,

@@ -111,6 +111,12 @@ def register_tools(mcp) -> None:
         try:
             doc = await get_cached_or_fetch(document_id)
 
+            if not edits:
+                return (
+                    "No edits provided and no staged changes"
+                    " to save. Nothing to do."
+                )
+
             new_text = _apply_edits(doc.text, edits)
 
             api_key = get_resolved_api_key()
