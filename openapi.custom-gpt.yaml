@@ -1,0 +1,1115 @@
+openapi: 3.1.0
+info:
+  title: MCP Outline Server (Custom GPT Action)
+  version: 1.0.0
+  description: |
+    OpenAPI schema for calling this project in HTTP mode (`MCP_TRANSPORT=streamable-http`)
+    through the MCP JSON-RPC endpoint.
+
+    Correct session flow:
+    1) `initialize`
+    2) `notifications/initialized`
+    3) `tools/list`
+    4) `tools/call` (and optionally `resources/list`, `resources/read`)
+
+    Notes:
+    - Endpoint base URL is typically `https://wiki.xensam.com/mcpext/mcp`.
+    - Main MCP endpoint path is `/mcp`.
+    - For per-request auth, send `x-outline-api-key` header.
+    - `x-outline-api-key` overrides `OUTLINE_API_KEY` if both are set.
+    - After `initialize`, reuse the `Mcp-Session-Id` response header in subsequent `/mcp` calls.
+servers:
+  - url: https://wiki.xensam.com/mcpint/mcp
+    description: MCP Outline server
+security:
+  - {}
+  - OutlineApiKey: []
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      description: Returns process health status.
+      responses:
+        "200":
+          description: Server healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  status:
+                    type: string
+                    const: healthy
+                required:
+                  - status
+  /ready:
+    get:
+      operationId: readinessCheck
+      summary: Readiness check
+      description: Verifies whether server can currently reach Outline API.
+      responses:
+        "200":
+          description: Readiness result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+  /mcp:
+    post:
+      operationId: mcpRequest
+      summary: Send one MCP JSON-RPC request
+      description: |
+        Sends a single MCP request to the streamable-http endpoint.
+
+        This server supports `initialize`, `notifications/initialized`,
+        `tools/list`, `tools/call`, `resources/list`, and `resources/read`.
+      security:
+        - {}
+        - OutlineApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/McpRequestEnvelope"
+            examples:
+              initialize:
+                summary: Initialize a new MCP session
+                value:
+                  jsonrpc: "2.0"
+                  id: init-1
+                  method: initialize
+                  params:
+                    protocolVersion: 2025-03-26
+                    capabilities: {}
+                    clientInfo:
+                      name: custom-gpt
+                      version: 1.0.0
+              initialized:
+                summary: Initialization notification
+                value:
+                  jsonrpc: "2.0"
+                  method: notifications/initialized
+                  params: {}
+              listTools:
+                summary: List available tools
+                value:
+                  jsonrpc: "2.0"
+                  id: tools-1
+                  method: tools/list
+                  params: {}
+              callTool:
+                summary: Call list_collections tool
+                value:
+                  jsonrpc: "2.0"
+                  id: call-1
+                  method: tools/call
+                  params:
+                    name: list_collections
+                    arguments:
+                      limit: 25
+                      offset: 0
+      responses:
+        "200":
+          description: JSON-RPC response
+          headers:
+            Mcp-Session-Id:
+              description: Returned by server after `initialize`; send in subsequent MCP calls.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpResponse"
+              examples:
+                toolsCallResult:
+                  summary: Typical tools/call result
+                  value:
+                    jsonrpc: "2.0"
+                    id: call-1
+                    result:
+                      content:
+                        - type: text
+                          text: |-
+                            # Collections
+
+                            No collections found.
+                      isError: false
+            text/event-stream:
+              schema:
+                type: string
+              example: |+
+                event: message
+                data: {...}
+
+        "400":
+          description: Bad request (invalid JSON-RPC payload)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JsonRpcErrorResponse"
+        "401":
+          description: Missing/invalid Outline API key for requested operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JsonRpcErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JsonRpcErrorResponse"
+components:
+  securitySchemes:
+    OutlineApiKey:
+      type: apiKey
+      in: header
+      name: x-outline-api-key
+      description: |
+        Optional if server has `OUTLINE_API_KEY` configured.
+        Recommended for per-request authentication in HTTP mode.
+  schemas:
+    ReadyResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        status:
+          type: string
+          enum:
+            - ready
+            - not_ready
+        outline_api:
+          type: string
+          enum:
+            - reachable
+            - unreachable
+        details:
+          type: string
+      required:
+        - status
+    RequestId:
+      oneOf:
+        - type: string
+        - type: integer
+    JsonRpcError:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data: {}
+      required:
+        - code
+        - message
+    JsonRpcErrorResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          oneOf:
+            - $ref: "#/components/schemas/RequestId"
+            - type: "null"
+        error:
+          $ref: "#/components/schemas/JsonRpcError"
+      required:
+        - jsonrpc
+        - id
+        - error
+    ClientInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+      required:
+        - name
+        - version
+    InitializeParams:
+      type: object
+      properties:
+        protocolVersion:
+          type: string
+          description: MCP protocol version string supported by your client.
+        capabilities:
+          type: object
+          additionalProperties: true
+        clientInfo:
+          $ref: "#/components/schemas/ClientInfo"
+      required:
+        - protocolVersion
+        - capabilities
+        - clientInfo
+    InitializeRequest:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        method:
+          type: string
+          const: initialize
+        params:
+          $ref: "#/components/schemas/InitializeParams"
+      required:
+        - jsonrpc
+        - id
+        - method
+        - params
+      additionalProperties: false
+    InitializedNotificationRequest:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        method:
+          type: string
+          const: notifications/initialized
+        params:
+          type: object
+          additionalProperties: true
+      required:
+        - jsonrpc
+        - method
+      additionalProperties: false
+    ToolsListRequest:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        method:
+          type: string
+          const: tools/list
+        params:
+          type: object
+          properties:
+            cursor:
+              type: string
+          additionalProperties: false
+      required:
+        - jsonrpc
+        - id
+        - method
+      additionalProperties: false
+    ToolName:
+      type: string
+      enum:
+        - search_documents
+        - list_collections
+        - get_collection_structure
+        - get_document_id_from_title
+        - read_document
+        - export_document
+        - get_attachment_url
+        - fetch_attachment
+        - list_document_attachments
+        - list_document_comments
+        - get_comment
+        - get_document_backlinks
+        - export_collection
+        - export_all_collections
+        - create_collection
+        - update_collection
+        - delete_collection
+        - ask_ai_about_documents
+        - create_document
+        - update_document
+        - add_comment
+        - archive_document
+        - unarchive_document
+        - delete_document
+        - restore_document
+        - list_archived_documents
+        - list_trash
+        - move_document
+        - batch_archive_documents
+        - batch_move_documents
+        - batch_delete_documents
+        - batch_update_documents
+        - batch_create_documents
+    NoArguments:
+      type: object
+      properties: {}
+      maxProperties: 0
+      additionalProperties: false
+    SearchDocumentsArguments:
+      type: object
+      properties:
+        query:
+          type: string
+        collection_id:
+          type: string
+        limit:
+          type: integer
+          default: 25
+        offset:
+          type: integer
+          default: 0
+        statusFilter:
+          type: array
+          default:
+            - published
+          items:
+            type: string
+            enum:
+              - draft
+              - archived
+              - published
+          description: Document statuses to search. Defaults to published only.
+      required:
+        - query
+      additionalProperties: false
+    ListCollectionsArguments:
+      type: object
+      properties:
+        limit:
+          type: integer
+          default: 100
+        offset:
+          type: integer
+          default: 0
+      additionalProperties: false
+    GetCollectionStructureArguments:
+      type: object
+      properties:
+        collection_id:
+          type: string
+      required:
+        - collection_id
+      additionalProperties: false
+    GetDocumentIdFromTitleArguments:
+      type: object
+      properties:
+        query:
+          type: string
+        collection_id:
+          type: string
+      required:
+        - query
+      additionalProperties: false
+    ReadDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    ExportDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    GetAttachmentUrlArguments:
+      type: object
+      properties:
+        attachment_id:
+          type: string
+      required:
+        - attachment_id
+      additionalProperties: false
+    FetchAttachmentArguments:
+      type: object
+      properties:
+        attachment_id:
+          type: string
+      required:
+        - attachment_id
+      additionalProperties: false
+    ListDocumentAttachmentsArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    ListDocumentCommentsArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+        include_anchor_text:
+          type: boolean
+          default: false
+        limit:
+          type: integer
+          default: 25
+        offset:
+          type: integer
+          default: 0
+      required:
+        - document_id
+      additionalProperties: false
+    GetCommentArguments:
+      type: object
+      properties:
+        comment_id:
+          type: string
+        include_anchor_text:
+          type: boolean
+          default: false
+      required:
+        - comment_id
+      additionalProperties: false
+    GetDocumentBacklinksArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    ExportCollectionArguments:
+      type: object
+      properties:
+        collection_id:
+          type: string
+        format:
+          type: string
+          default: outline-markdown
+      required:
+        - collection_id
+      additionalProperties: false
+    ExportAllCollectionsArguments:
+      type: object
+      properties:
+        format:
+          type: string
+          default: outline-markdown
+      additionalProperties: false
+    CreateCollectionArguments:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          default: ""
+        color:
+          type: string
+      required:
+        - name
+      additionalProperties: false
+    UpdateCollectionArguments:
+      type: object
+      properties:
+        collection_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+      required:
+        - collection_id
+      anyOf:
+        - required:
+            - name
+        - required:
+            - description
+        - required:
+            - color
+      additionalProperties: false
+    DeleteCollectionArguments:
+      type: object
+      properties:
+        collection_id:
+          type: string
+      required:
+        - collection_id
+      additionalProperties: false
+    AskAiAboutDocumentsArguments:
+      type: object
+      properties:
+        question:
+          type: string
+        collection_id:
+          type: string
+        document_id:
+          type: string
+      required:
+        - question
+      additionalProperties: false
+    CreateDocumentArguments:
+      type: object
+      properties:
+        title:
+          type: string
+        collection_id:
+          type: string
+        text:
+          type: string
+          default: ""
+        parent_document_id:
+          type: string
+        publish:
+          type: boolean
+          default: true
+        template:
+          type: boolean
+      required:
+        - title
+        - collection_id
+      additionalProperties: false
+    UpdateDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+        append:
+          type: boolean
+          default: false
+        template:
+          type: boolean
+      required:
+        - document_id
+      additionalProperties: false
+    AddCommentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+        text:
+          type: string
+        parent_comment_id:
+          type: string
+      required:
+        - document_id
+        - text
+      additionalProperties: false
+    ArchiveDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    UnarchiveDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    DeleteDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+        permanent:
+          type: boolean
+          default: false
+      required:
+        - document_id
+      additionalProperties: false
+    RestoreDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+      required:
+        - document_id
+      additionalProperties: false
+    MoveDocumentArguments:
+      type: object
+      properties:
+        document_id:
+          type: string
+        collection_id:
+          type: string
+        parent_document_id:
+          type: string
+      required:
+        - document_id
+      anyOf:
+        - required:
+            - collection_id
+        - required:
+            - parent_document_id
+      additionalProperties: false
+    BatchArchiveDocumentsArguments:
+      type: object
+      properties:
+        document_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - document_ids
+      additionalProperties: false
+    BatchMoveDocumentsArguments:
+      type: object
+      properties:
+        document_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        collection_id:
+          type: string
+        parent_document_id:
+          type: string
+      required:
+        - document_ids
+      anyOf:
+        - required:
+            - collection_id
+        - required:
+            - parent_document_id
+      additionalProperties: false
+    BatchDeleteDocumentsArguments:
+      type: object
+      properties:
+        document_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        permanent:
+          type: boolean
+          default: false
+      required:
+        - document_ids
+      additionalProperties: false
+    BatchUpdateItem:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+        append:
+          type: boolean
+      required:
+        - id
+      additionalProperties: false
+    BatchUpdateDocumentsArguments:
+      type: object
+      properties:
+        updates:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/BatchUpdateItem"
+      required:
+        - updates
+      additionalProperties: false
+    BatchCreateItem:
+      type: object
+      properties:
+        title:
+          type: string
+        collection_id:
+          type: string
+        text:
+          type: string
+        parent_document_id:
+          type: string
+        publish:
+          type: boolean
+      required:
+        - title
+        - collection_id
+      additionalProperties: false
+    BatchCreateDocumentsArguments:
+      type: object
+      properties:
+        documents:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/BatchCreateItem"
+      required:
+        - documents
+      additionalProperties: false
+    ToolArguments:
+      oneOf:
+        - $ref: "#/components/schemas/SearchDocumentsArguments"
+        - $ref: "#/components/schemas/ListCollectionsArguments"
+        - $ref: "#/components/schemas/GetCollectionStructureArguments"
+        - $ref: "#/components/schemas/GetDocumentIdFromTitleArguments"
+        - $ref: "#/components/schemas/ReadDocumentArguments"
+        - $ref: "#/components/schemas/ExportDocumentArguments"
+        - $ref: "#/components/schemas/GetAttachmentUrlArguments"
+        - $ref: "#/components/schemas/FetchAttachmentArguments"
+        - $ref: "#/components/schemas/ListDocumentAttachmentsArguments"
+        - $ref: "#/components/schemas/ListDocumentCommentsArguments"
+        - $ref: "#/components/schemas/GetCommentArguments"
+        - $ref: "#/components/schemas/GetDocumentBacklinksArguments"
+        - $ref: "#/components/schemas/ExportCollectionArguments"
+        - $ref: "#/components/schemas/ExportAllCollectionsArguments"
+        - $ref: "#/components/schemas/CreateCollectionArguments"
+        - $ref: "#/components/schemas/UpdateCollectionArguments"
+        - $ref: "#/components/schemas/DeleteCollectionArguments"
+        - $ref: "#/components/schemas/AskAiAboutDocumentsArguments"
+        - $ref: "#/components/schemas/CreateDocumentArguments"
+        - $ref: "#/components/schemas/UpdateDocumentArguments"
+        - $ref: "#/components/schemas/AddCommentArguments"
+        - $ref: "#/components/schemas/ArchiveDocumentArguments"
+        - $ref: "#/components/schemas/UnarchiveDocumentArguments"
+        - $ref: "#/components/schemas/DeleteDocumentArguments"
+        - $ref: "#/components/schemas/RestoreDocumentArguments"
+        - $ref: "#/components/schemas/NoArguments"
+        - $ref: "#/components/schemas/MoveDocumentArguments"
+        - $ref: "#/components/schemas/BatchArchiveDocumentsArguments"
+        - $ref: "#/components/schemas/BatchMoveDocumentsArguments"
+        - $ref: "#/components/schemas/BatchDeleteDocumentsArguments"
+        - $ref: "#/components/schemas/BatchUpdateDocumentsArguments"
+        - $ref: "#/components/schemas/BatchCreateDocumentsArguments"
+    ToolsCallParams:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/ToolName"
+        arguments:
+          $ref: "#/components/schemas/ToolArguments"
+      required:
+        - name
+        - arguments
+      additionalProperties: false
+    ToolsCallRequest:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        method:
+          type: string
+          const: tools/call
+        params:
+          $ref: "#/components/schemas/ToolsCallParams"
+      required:
+        - jsonrpc
+        - id
+        - method
+        - params
+      additionalProperties: false
+    ResourcesListRequest:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        method:
+          type: string
+          const: resources/list
+        params:
+          type: object
+          additionalProperties: false
+      required:
+        - jsonrpc
+        - id
+        - method
+      additionalProperties: false
+    ResourceUri:
+      type: string
+      description: URI returned by `resources/list`.
+      examples:
+        - outline://document/abcd1234
+        - outline://document/abcd1234/backlinks
+        - outline://collection/efgh5678
+        - outline://collection/efgh5678/tree
+        - outline://collection/efgh5678/documents
+    ResourcesReadRequest:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        method:
+          type: string
+          const: resources/read
+        params:
+          type: object
+          properties:
+            uri:
+              $ref: "#/components/schemas/ResourceUri"
+          required:
+            - uri
+          additionalProperties: false
+      required:
+        - jsonrpc
+        - id
+        - method
+        - params
+      additionalProperties: false
+    McpRequest:
+      oneOf:
+        - $ref: "#/components/schemas/InitializeRequest"
+        - $ref: "#/components/schemas/InitializedNotificationRequest"
+        - $ref: "#/components/schemas/ToolsListRequest"
+        - $ref: "#/components/schemas/ToolsCallRequest"
+        - $ref: "#/components/schemas/ResourcesListRequest"
+        - $ref: "#/components/schemas/ResourcesReadRequest"
+    McpRequestEnvelope:
+      type: object
+      description: |
+        Generic MCP JSON-RPC request envelope for Custom GPT actions.
+        Use `method` to select a server operation and shape `params` accordingly.
+      properties:
+        jsonrpc:
+          type: string
+          enum:
+            - "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        method:
+          type: string
+          enum:
+            - initialize
+            - notifications/initialized
+            - tools/list
+            - tools/call
+            - resources/list
+            - resources/read
+        params:
+          type: object
+          additionalProperties: true
+      required:
+        - jsonrpc
+        - method
+      additionalProperties: false
+    ServerInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+      required:
+        - name
+        - version
+    InitializeResult:
+      type: object
+      properties:
+        protocolVersion:
+          type: string
+        capabilities:
+          type: object
+          additionalProperties: true
+        serverInfo:
+          $ref: "#/components/schemas/ServerInfo"
+      required:
+        - protocolVersion
+        - capabilities
+        - serverInfo
+    InitializeResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        result:
+          $ref: "#/components/schemas/InitializeResult"
+      required:
+        - jsonrpc
+        - id
+        - result
+    ToolDescriptor:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        inputSchema:
+          type: object
+          additionalProperties: true
+      required:
+        - name
+        - description
+        - inputSchema
+    ToolsListResult:
+      type: object
+      properties:
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolDescriptor"
+      required:
+        - tools
+    ToolsListResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        result:
+          $ref: "#/components/schemas/ToolsListResult"
+      required:
+        - jsonrpc
+        - id
+        - result
+    TextContent:
+      type: object
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+      required:
+        - type
+        - text
+      additionalProperties: false
+    ToolsCallResult:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/TextContent"
+        isError:
+          type: boolean
+      required:
+        - content
+    ToolsCallResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        result:
+          $ref: "#/components/schemas/ToolsCallResult"
+      required:
+        - jsonrpc
+        - id
+        - result
+    ResourceDescriptor:
+      type: object
+      properties:
+        uri:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        mimeType:
+          type: string
+      required:
+        - uri
+        - name
+      additionalProperties: true
+    ResourcesListResult:
+      type: object
+      properties:
+        resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceDescriptor"
+      required:
+        - resources
+    ResourcesListResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        result:
+          $ref: "#/components/schemas/ResourcesListResult"
+      required:
+        - jsonrpc
+        - id
+        - result
+    ResourceContent:
+      type: object
+      properties:
+        uri:
+          type: string
+        mimeType:
+          type: string
+        text:
+          type: string
+        blob:
+          type: string
+      required:
+        - uri
+      additionalProperties: true
+    ResourcesReadResult:
+      type: object
+      properties:
+        contents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceContent"
+      required:
+        - contents
+    ResourcesReadResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          $ref: "#/components/schemas/RequestId"
+        result:
+          $ref: "#/components/schemas/ResourcesReadResult"
+      required:
+        - jsonrpc
+        - id
+        - result
+    GenericJsonRpcResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          oneOf:
+            - $ref: "#/components/schemas/RequestId"
+            - type: "null"
+        result:
+          type: object
+          additionalProperties: true
+      required:
+        - jsonrpc
+        - id
+    McpResponse:
+      oneOf:
+        - $ref: "#/components/schemas/InitializeResponse"
+        - $ref: "#/components/schemas/ToolsListResponse"
+        - $ref: "#/components/schemas/ToolsCallResponse"
+        - $ref: "#/components/schemas/ResourcesListResponse"
+        - $ref: "#/components/schemas/ResourcesReadResponse"
+        - $ref: "#/components/schemas/JsonRpcErrorResponse"
+        - $ref: "#/components/schemas/GenericJsonRpcResponse"
