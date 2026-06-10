@@ -224,6 +224,46 @@ class TestReadDocument:
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)
     @patch(_PATCH_CLIENT)
+    async def test_read_document_negative_offset(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_reading_tools,
+    ):
+        _mock_api(
+            mock_get_client,
+            mock_api_key,
+            SAMPLE_MULTILINE_DOCUMENT,
+        )
+        result = await register_reading_tools.tools["read_document"](
+            "doc456", offset=-5
+        )
+        assert "Error" in result
+        assert "non-negative" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_read_document_negative_limit(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_reading_tools,
+    ):
+        _mock_api(
+            mock_get_client,
+            mock_api_key,
+            SAMPLE_MULTILINE_DOCUMENT,
+        )
+        result = await register_reading_tools.tools["read_document"](
+            "doc456", limit=-3
+        )
+        assert "Error" in result
+        assert "non-negative" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
     async def test_read_document_uses_cache(
         self,
         mock_get_client,

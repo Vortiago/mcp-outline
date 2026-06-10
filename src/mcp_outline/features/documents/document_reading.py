@@ -126,6 +126,8 @@ def register_tools(mcp) -> None:
             Formatted string containing the document title
             and content
         """
+        if offset < 0 or limit < 0:
+            return "Error: offset and limit must be non-negative."
         try:
             doc = await get_cached_or_fetch(document_id)
             paginating = offset != 0 or limit != 0
