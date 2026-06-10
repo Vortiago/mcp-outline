@@ -101,13 +101,13 @@ def _mock_api(mock_get_client, mock_api_key, document):
 class TestDocumentReadingFormatters:
     """Tests for document reading formatting functions."""
 
-    def testformat_lines_with_numbers(self):
+    def test_format_lines_with_numbers(self):
         lines = ["hello", "world"]
         result = format_lines_with_numbers(lines, 5)
         assert "5\thello" in result
         assert "6\tworld" in result
 
-    def testparse_headings(self):
+    def test_parse_headings(self):
         lines = [
             "# Heading 1",
             "Some text",
@@ -121,7 +121,7 @@ class TestDocumentReadingFormatters:
         assert headings[1] == (2, 2, "Heading 2")
         assert headings[2] == (4, 3, "Heading 3")
 
-    def testparse_headings_skips_code_blocks(self):
+    def test_parse_headings_skips_code_blocks(self):
         lines = [
             "# Real Heading",
             "```python",
@@ -134,7 +134,7 @@ class TestDocumentReadingFormatters:
         assert headings[0] == (0, 1, "Real Heading")
         assert headings[1] == (4, 2, "Another Real")
 
-    def testparse_headings_empty(self):
+    def test_parse_headings_empty(self):
         headings = parse_headings(["no headings here"])
         assert headings == []
 
