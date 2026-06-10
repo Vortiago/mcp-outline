@@ -111,7 +111,9 @@ def register_tools(mcp) -> None:
         try:
             doc = await get_cached_or_fetch(document_id)
 
-            if not edits:
+            # Empty edits with save=True flushes staged
+            # (dirty) changes; otherwise there is no work.
+            if not edits and not (save and doc.dirty):
                 return (
                     "No edits provided and no staged changes"
                     " to save. Nothing to do."

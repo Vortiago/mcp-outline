@@ -187,6 +187,40 @@ class TestEditDocument:
 
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY, return_value="test-key")
+    @patch(_PATCH_CLIENT)
+    @patch(_PATCH_FETCH)
+    async def test_edit_empty_edits_saves_staged_changes(
+        self,
+        mock_fetch,
+        mock_get_client,
+        mock_api_key,
+        register_editing_tools,
+    ):
+        staged = _make_cached_doc("staged text")
+        staged.dirty = True
+        mock_fetch.return_value = staged
+        mock_client = AsyncMock()
+        mock_client.post.return_value = {
+            "data": {
+                "title": "Editable Doc",
+                "text": "staged text",
+            }
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_editing_tools.tools["edit_document"](
+            document_id="doc-edit",
+            edits=[],
+            save=True,
+        )
+        assert "Saved to Outline" in result
+        mock_client.post.assert_called_once_with(
+            "documents.update",
+            {"id": "doc-edit", "text": "staged text"},
+        )
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY, return_value="test-key")
     @patch(_PATCH_FETCH)
     async def test_edit_not_found(
         self,
