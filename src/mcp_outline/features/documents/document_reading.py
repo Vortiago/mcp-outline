@@ -117,10 +117,10 @@ def register_tools(mcp) -> None:
 
         Args:
             document_id: The document ID to retrieve
-            offset: 0-based line number to start from
-                (default: 0)
+            offset: 0-based line number to start from;
+                must be non-negative (default: 0)
             limit: Number of lines to return; 0 means all
-                lines (default: 0)
+                lines; must be non-negative (default: 0)
 
         Returns:
             Formatted string containing the document title
@@ -148,6 +148,13 @@ def register_tools(mcp) -> None:
                     f"{numbered}"
                 )
 
+            if doc.dirty:
+                output += (
+                    "\n\nNote: this document has staged"
+                    " unsaved changes — call edit_document"
+                    " with save=True to push them to"
+                    " Outline."
+                )
             if doc.url:
                 output += f"\n\nURL: {doc.url}"
             return output

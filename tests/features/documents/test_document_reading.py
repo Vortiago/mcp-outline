@@ -277,6 +277,30 @@ class TestReadDocument:
         mock_client.get_document.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_read_document_dirty_shows_unsaved_notice(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_reading_tools,
+    ):
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+        )
+
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_DOCUMENT)
+        cache = get_document_cache()
+        await cache.put("test-key", "doc123", SAMPLE_DOCUMENT)
+        await cache.update_text(
+            "test-key", "doc123", "staged text", dirty=True
+        )
+
+        result = await register_reading_tools.tools["read_document"]("doc123")
+        assert "staged text" in result
+        assert "unsaved changes" in result
+
+    @pytest.mark.asyncio
     @patch(_PATCH_CLIENT)
     async def test_read_document_client_error(
         self, mock_get_client, register_reading_tools
