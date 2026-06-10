@@ -184,3 +184,4 @@ config/*.env          # Configuration files with secrets (keep .example files)
 outline.env
 
 settings.local.json
+outline-skill-workspace/
