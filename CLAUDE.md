@@ -123,12 +123,12 @@ In-memory LRU cache with configurable TTL for document content. Reduces Outline 
 - **Implementation**: `OrderedDict` + `asyncio.Lock`
 - **TTL**: `OUTLINE_CACHE_TTL` env var (default 300s)
 - **Max size**: `OUTLINE_CACHE_MAX_SIZE` env var (default 100)
-- **Dirty tracking**: Staged edits set `dirty=True`; LRU eviction skips dirty entries
+- **Dirty tracking**: Staged edits are stored via `stage_text()` (dirty upsert); LRU eviction, `evict_document()`, and `put()` all preserve dirty entries so staged work is never silently lost
 - **Singleton**: `get_document_cache()` returns module-level instance; `reset_document_cache()` for tests
 
-**Reading tools** (`read_document`, `get_document_toc`, `read_document_section`) cache on read via `get_cached_or_fetch()`.
-**Edit tools** (`edit_document`) operate on cached text; `save=True` (default) pushes to Outline immediately.
-**Update tool** (`update_document`) evicts the cache entry after a successful API call.
+**Reading tools** (`read_document`, `get_document_toc`, `read_document_section`) cache on read via `get_cached_or_fetch()` and append an unsaved-changes notice when serving staged (dirty) text.
+**Edit tools** (`edit_document`) operate on cached text; `save=True` (default) pushes to Outline immediately. `edit_document(edits=[], save=True)` flushes staged changes.
+**Writers** (`update_document`, `batch_update_documents`, `delete_document`) explicitly evict the caller's own entry (`evict()`) plus all clean copies (`evict_document()`) after a successful API call; other users' staged edits survive and surface a conflict at their own save time.
 
 ### Copilot CLI Patch (`patches/copilot_cli.py`)
 
