@@ -12,7 +12,19 @@ from mcp.types import ToolAnnotations
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
+    get_resolved_api_key,
 )
+from mcp_outline.utils.document_cache import get_document_cache
+
+
+async def _evict_cached_copies(document_id: str) -> None:
+    """Drop own entry and other users' clean copies of a
+    deleted document. Other users' staged edits are
+    preserved; flushing them later fails with a clear API
+    error instead of being silently discarded."""
+    cache = get_document_cache()
+    await cache.evict(get_resolved_api_key(), document_id)
+    await cache.evict_document(document_id)
 
 
 def register_tools(mcp) -> None:
@@ -158,6 +170,7 @@ def register_tools(mcp) -> None:
                         document_id
                     )
                     if success:
+                        await _evict_cached_copies(document_id)
                         return "Document permanently deleted."
                     else:
                         return "Failed to permanently delete document."
@@ -173,6 +186,7 @@ def register_tools(mcp) -> None:
 
                     # Check for successful response
                     if response.get("success", False):
+                        await _evict_cached_copies(document_id)
                         return f"Document moved to trash: {doc_title}"
                     else:
                         return "Failed to move document to trash."

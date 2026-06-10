@@ -236,6 +236,79 @@ class TestDeleteDocument:
 
     @pytest.mark.asyncio
     @patch(
+        "mcp_outline.features.documents.document_lifecycle"
+        ".get_resolved_api_key",
+        return_value="key-A",
+    )
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
+    async def test_delete_document_to_trash_evicts_cache(
+        self, mock_get_client, mock_api_key, register_lifecycle_tools
+    ):
+        """A trashed document must not be served from cache."""
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+            reset_document_cache,
+        )
+
+        reset_document_cache()
+        cache = get_document_cache()
+        doc_data = {"title": "Old", "text": "Old text.", "url": ""}
+        await cache.put("key-A", "doc123", doc_data)
+        await cache.put("key-B", "doc123", doc_data)
+
+        mock_client = AsyncMock()
+        mock_client.get_document.return_value = SAMPLE_DOCUMENT
+        mock_client.post.return_value = {"success": True}
+        mock_get_client.return_value = mock_client
+
+        await register_lifecycle_tools.tools["delete_document"]("doc123")
+
+        assert await cache.get("key-A", "doc123") is None
+        assert await cache.get("key-B", "doc123") is None
+        reset_document_cache()
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle"
+        ".get_resolved_api_key",
+        return_value="key-A",
+    )
+    @patch(
+        "mcp_outline.features.documents.document_lifecycle.get_outline_client"
+    )
+    async def test_delete_document_permanent_evicts_cache(
+        self, mock_get_client, mock_api_key, register_lifecycle_tools
+    ):
+        """A permanently deleted document must not be served
+        from cache."""
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+            reset_document_cache,
+        )
+
+        reset_document_cache()
+        cache = get_document_cache()
+        await cache.put(
+            "key-A",
+            "doc123",
+            {"title": "Old", "text": "Old text.", "url": ""},
+        )
+
+        mock_client = AsyncMock()
+        mock_client.permanently_delete_document.return_value = True
+        mock_get_client.return_value = mock_client
+
+        await register_lifecycle_tools.tools["delete_document"](
+            "doc123", permanent=True
+        )
+
+        assert await cache.get("key-A", "doc123") is None
+        reset_document_cache()
+
+    @pytest.mark.asyncio
+    @patch(
         "mcp_outline.features.documents.document_lifecycle.get_outline_client"
     )
     async def test_delete_document_to_trash_failure(
