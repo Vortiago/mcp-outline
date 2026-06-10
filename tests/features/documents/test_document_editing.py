@@ -65,6 +65,12 @@ _PATCH_API_KEY = (
 _PATCH_FETCH = (
     "mcp_outline.features.documents.document_editing.get_cached_or_fetch"
 )
+_PATCH_READ_CLIENT = (
+    "mcp_outline.features.documents.document_reading.get_outline_client"
+)
+_PATCH_READ_API_KEY = (
+    "mcp_outline.features.documents.document_reading.get_resolved_api_key"
+)
 
 
 def _make_cached_doc(
@@ -145,6 +151,53 @@ class TestEditDocument:
         mock_client.post.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY, return_value="key-a")
+    @patch(_PATCH_CLIENT)
+    @patch(_PATCH_FETCH)
+    async def test_edit_save_preserves_other_users_staged_edits(
+        self,
+        mock_fetch,
+        mock_get_client,
+        mock_api_key,
+        register_editing_tools,
+    ):
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+        )
+
+        cache = get_document_cache()
+        await cache.put(
+            "key-b",
+            "doc-edit",
+            {"title": "Editable Doc", "text": "Line one.", "url": ""},
+        )
+        await cache.update_text(
+            "key-b", "doc-edit", "B staged text", dirty=True
+        )
+
+        mock_fetch.return_value = _make_cached_doc()
+        mock_client = AsyncMock()
+        mock_client.post.return_value = {
+            "data": {
+                "title": "Editable Doc",
+                "text": "Line one.\nLine TWO.\nLine three.",
+            }
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_editing_tools.tools["edit_document"](
+            document_id="doc-edit",
+            edits=[_edit("Line two.", "Line TWO.")],
+            save=True,
+        )
+        assert "Saved to Outline" in result
+
+        b_doc = await cache.get("key-b", "doc-edit")
+        assert b_doc is not None
+        assert b_doc.dirty is True
+        assert b_doc.text == "B staged text"
+
+    @pytest.mark.asyncio
     @patch(_PATCH_API_KEY, return_value="test-key")
     @patch(_PATCH_FETCH)
     async def test_edit_stage_only(
@@ -218,6 +271,54 @@ class TestEditDocument:
             "documents.update",
             {"id": "doc-edit", "text": "staged text"},
         )
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_READ_API_KEY, return_value="test-key")
+    @patch(_PATCH_READ_CLIENT)
+    @patch(_PATCH_API_KEY, return_value="test-key")
+    @patch(_PATCH_CLIENT)
+    async def test_edit_stage_then_flush_clears_dirty_state(
+        self,
+        mock_get_client,
+        mock_api_key,
+        mock_read_client,
+        mock_read_api_key,
+        register_editing_tools,
+    ):
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+        )
+
+        read_client = AsyncMock()
+        read_client.get_document.return_value = {
+            "title": "Editable Doc",
+            "text": "Line one.\nLine two.",
+            "url": "/doc/editable",
+        }
+        mock_read_client.return_value = read_client
+        save_client = AsyncMock()
+        save_client.post.return_value = {
+            "data": {
+                "title": "Editable Doc",
+                "text": "Line ONE.\nLine two.",
+            }
+        }
+        mock_get_client.return_value = save_client
+
+        tool = register_editing_tools.tools["edit_document"]
+        staged = await tool(
+            document_id="doc-edit",
+            edits=[_edit("Line one.", "Line ONE.")],
+            save=False,
+        )
+        assert "unsaved changes" in staged
+        flushed = await tool(document_id="doc-edit", edits=[], save=True)
+        assert "Saved to Outline" in flushed
+
+        doc = await get_document_cache().get("test-key", "doc-edit")
+        assert doc is not None
+        assert doc.dirty is False
+        assert doc.text == "Line ONE.\nLine two."
 
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY, return_value="test-key")

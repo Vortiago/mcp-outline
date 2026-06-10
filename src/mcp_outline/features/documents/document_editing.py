@@ -137,8 +137,11 @@ def register_tools(mcp) -> None:
                 result_doc = response.get("data", {})
                 saved_text = result_doc.get("text", new_text)
                 saved_title = result_doc.get("title", doc.title)
-                # Evict all cached copies (other API keys)
-                # then re-cache for the current user
+                # Drop own (possibly staged) entry and other
+                # users' clean copies, then re-cache the
+                # saved document. Other users' staged edits
+                # are preserved by evict_document.
+                await cache.evict(api_key, document_id)
                 await cache.evict_document(document_id)
                 await cache.put(
                     api_key,

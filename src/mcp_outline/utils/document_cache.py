@@ -63,9 +63,19 @@ class DocumentCache:
         document_id: str,
         data: Dict[str, Any],
     ) -> CachedDocument:
-        """Cache a document from an API response dict."""
+        """Cache a document from an API response dict.
+
+        If a dirty (staged) entry already exists it is
+        returned unchanged — a racing API fetch must not
+        destroy staged edits. Use ``evict`` first when the
+        overwrite is intentional (e.g. after a save).
+        """
         async with self._lock:
             key = (api_key, document_id)
+            existing = self._store.get(key)
+            if existing is not None and existing.dirty:
+                self._store.move_to_end(key)
+                return existing
             doc = CachedDocument(
                 title=data.get("title", "Untitled"),
                 text=data.get("text", ""),
@@ -121,10 +131,20 @@ class DocumentCache:
             self._store.pop(key, None)
 
     async def evict_document(self, document_id: str) -> None:
-        """Remove all cache entries for a document ID,
-        regardless of API key."""
+        """Remove clean cache entries for a document ID,
+        regardless of API key.
+
+        Dirty (staged) entries are preserved so one user's
+        save never silently destroys another user's staged
+        edits. Use ``evict`` to drop a specific entry
+        unconditionally.
+        """
         async with self._lock:
-            keys_to_remove = [k for k in self._store if k[1] == document_id]
+            keys_to_remove = [
+                k
+                for k in self._store
+                if k[1] == document_id and not self._store[k].dirty
+            ]
             for key in keys_to_remove:
                 del self._store[key]
 

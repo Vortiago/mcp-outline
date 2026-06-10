@@ -172,6 +172,32 @@ class TestDocumentCache:
         assert await cache.get("key-A", "doc2") is not None
 
     @pytest.mark.asyncio
+    async def test_evict_document_preserves_dirty_entries(self):
+        cache = DocumentCache(ttl=300, max_size=10)
+        await cache.put("key-A", "doc1", SAMPLE_DOC_DATA)
+        await cache.put("key-B", "doc1", SAMPLE_DOC_DATA)
+        await cache.update_text("key-B", "doc1", "staged", dirty=True)
+        await cache.evict_document("doc1")
+        # Clean copy evicted, staged copy preserved
+        assert await cache.get("key-A", "doc1") is None
+        staged = await cache.get("key-B", "doc1")
+        assert staged is not None
+        assert staged.dirty is True
+        assert staged.text == "staged"
+
+    @pytest.mark.asyncio
+    async def test_put_preserves_existing_dirty_entry(self):
+        cache = DocumentCache(ttl=300, max_size=10)
+        await cache.put("k", "doc1", SAMPLE_DOC_DATA)
+        await cache.update_text("k", "doc1", "staged", dirty=True)
+        # A racing API fetch must not destroy staged edits
+        await cache.put("k", "doc1", SAMPLE_DOC_DATA)
+        doc = await cache.get("k", "doc1")
+        assert doc is not None
+        assert doc.dirty is True
+        assert doc.text == "staged"
+
+    @pytest.mark.asyncio
     async def test_clear(self):
         cache = DocumentCache(ttl=300, max_size=10)
         await cache.put("k", "doc1", SAMPLE_DOC_DATA)
