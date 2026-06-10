@@ -114,6 +114,13 @@ def register_tools(mcp) -> None:
             # Empty edits with save=True flushes staged
             # (dirty) changes; otherwise there is no work.
             if not edits and not (save and doc.dirty):
+                if doc.dirty:
+                    return (
+                        "No edits provided. Document has"
+                        " staged unsaved changes — call"
+                        " edit_document with save=True to"
+                        " push them to Outline."
+                    )
                 return (
                     "No edits provided and no staged changes"
                     " to save. Nothing to do."
