@@ -12,6 +12,7 @@ from mcp.types import ToolAnnotations
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
+    get_resolved_api_key,
 )
 from mcp_outline.utils.document_cache import get_document_cache
 
@@ -189,9 +190,11 @@ def register_tools(mcp) -> None:
             if not document:
                 return "Failed to update document."
 
-            # Evict all cached copies of this document
-            # (across all API keys) to prevent stale reads
+            # Drop own (possibly staged) entry and other
+            # users' clean copies to prevent stale reads.
+            # Other users' staged edits are preserved.
             cache = get_document_cache()
+            await cache.evict(get_resolved_api_key(), document_id)
             await cache.evict_document(document_id)
 
             doc_title = document.get("title", "Untitled")

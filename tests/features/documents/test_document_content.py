@@ -433,6 +433,48 @@ class TestDocumentContentTools:
         reset_document_cache()
 
     @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.document_content.get_resolved_api_key",
+        return_value="key-A",
+    )
+    @patch(_PATCH_CLIENT)
+    async def test_update_document_drops_own_staged_entry(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_content_tools,
+    ):
+        """A full update supersedes the caller's own staged
+        edits but preserves other users' staged edits."""
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+            reset_document_cache,
+        )
+
+        reset_document_cache()
+        cache = get_document_cache()
+        doc_data = {"title": "Old", "text": "Old text.", "url": ""}
+        await cache.put("key-A", "doc123", doc_data)
+        await cache.update_text("key-A", "doc123", "A staged", dirty=True)
+        await cache.put("key-B", "doc123", doc_data)
+        await cache.update_text("key-B", "doc123", "B staged", dirty=True)
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
+        mock_get_client.return_value = mock_client
+
+        await register_content_tools.tools["update_document"](
+            document_id="doc123",
+            text="New text.",
+        )
+
+        assert await cache.get("key-A", "doc123") is None
+        b_doc = await cache.get("key-B", "doc123")
+        assert b_doc is not None
+        assert b_doc.dirty is True
+        reset_document_cache()
+
+    @pytest.mark.asyncio
     @patch(_PATCH_CLIENT)
     async def test_add_comment_success(
         self, mock_get_client, register_content_tools
