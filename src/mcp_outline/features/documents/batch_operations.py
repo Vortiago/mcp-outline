@@ -12,11 +12,13 @@ from mcp.types import ToolAnnotations
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     get_outline_client,
+    get_resolved_api_key,
 )
 from mcp_outline.features.documents.models import (
     BatchCreateItem,
     BatchUpdateItem,
 )
+from mcp_outline.utils.document_cache import get_document_cache
 
 
 def _create_result_entry(
@@ -527,6 +529,13 @@ def register_tools(mcp) -> None:
                     document = response.get("data", {})
 
                     if document:
+                        # Drop own (possibly staged) entry
+                        # and other users' clean copies to
+                        # prevent stale reads. Other users'
+                        # staged edits are preserved.
+                        cache = get_document_cache()
+                        await cache.evict(get_resolved_api_key(), doc_id)
+                        await cache.evict_document(doc_id)
                         results.append(
                             _create_result_entry(
                                 doc_id,

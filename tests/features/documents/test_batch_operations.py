@@ -422,6 +422,48 @@ class TestBatchUpdateDocuments:
 
     @pytest.mark.asyncio
     @patch(
+        "mcp_outline.features.documents.batch_operations.get_resolved_api_key",
+        return_value="key-A",
+    )
+    @patch(
+        "mcp_outline.features.documents.batch_operations.get_outline_client"
+    )
+    async def test_batch_update_evicts_cache(
+        self, mock_get_client, mock_api_key, register_batch_tools
+    ):
+        """Updated documents must not be served stale from
+        the cache; own staged edits are superseded."""
+        from mcp_outline.features.documents.models import (
+            BatchUpdateItem,
+        )
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+            reset_document_cache,
+        )
+
+        reset_document_cache()
+        cache = get_document_cache()
+        doc_data = {"title": "Old", "text": "Old text.", "url": ""}
+        await cache.put("key-A", "doc1", doc_data)
+        await cache.update_text("key-A", "doc1", "A staged", dirty=True)
+        await cache.put("key-B", "doc1", doc_data)
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = {
+            "data": {"id": "doc1", "title": "Updated"}
+        }
+        mock_get_client.return_value = mock_client
+
+        await register_batch_tools.tools["batch_update_documents"](
+            [BatchUpdateItem(id="doc1", text="New content")]
+        )
+
+        assert await cache.get("key-A", "doc1") is None
+        assert await cache.get("key-B", "doc1") is None
+        reset_document_cache()
+
+    @pytest.mark.asyncio
+    @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
     async def test_batch_update_with_append(
