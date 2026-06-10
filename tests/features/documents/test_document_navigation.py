@@ -167,6 +167,26 @@ class TestReadDocumentSection:
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)
     @patch(_PATCH_CLIENT)
+    async def test_section_accepts_toc_heading_format(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        _mock_api(
+            mock_get_client,
+            mock_api_key,
+            SAMPLE_HEADED_DOCUMENT,
+        )
+        result = await register_nav_tools.tools["read_document_section"](
+            "doc789", heading="## Background"
+        )
+        assert "Section: ## Background" in result
+        assert "Background text." in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
     async def test_section_case_insensitive(
         self,
         mock_get_client,

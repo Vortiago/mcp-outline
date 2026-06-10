@@ -122,7 +122,10 @@ def register_tools(mcp) -> None:
                     "full content."
                 )
 
-            needle = heading.lower()
+            # Accept headings as the TOC displays them
+            # (e.g. "## Background"): strip the markdown
+            # prefix before matching against heading text.
+            needle = heading.strip().lstrip("#").strip().lower()
             matches = [
                 (ln, lvl, txt)
                 for ln, lvl, txt in headings
