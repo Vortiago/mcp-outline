@@ -8,7 +8,7 @@ pooling and rate limiting.
 import asyncio
 import os
 from datetime import datetime
-from typing import Any, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, ClassVar, Dict, List, Literal, Optional, Tuple
 
 import httpx
 
@@ -371,6 +371,9 @@ class OutlineClient:
         collection_id: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
+        status_filter: Optional[
+            List[Literal["draft", "archived", "published"]]
+        ] = None,
     ) -> Dict[str, Any]:
         """
         Search for documents using keywords.
@@ -380,6 +383,9 @@ class OutlineClient:
             collection_id: Optional collection to search within
             limit: Maximum number of results to return (default: 25)
             offset: Number of results to skip for pagination (default: 0)
+            status_filter: Document statuses to include in results. Allowed
+                values are "draft", "archived", and "published". Defaults to
+                ["published"].
 
         Returns:
             Dict containing 'data' (list of results) and 'pagination' metadata
@@ -388,6 +394,9 @@ class OutlineClient:
             "query": query,
             "limit": limit,
             "offset": offset,
+            "statusFilter": (
+                status_filter if status_filter is not None else ["published"]
+            ),
         }
         if collection_id:
             data["collectionId"] = collection_id

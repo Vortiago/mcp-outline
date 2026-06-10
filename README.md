@@ -158,7 +158,7 @@ Read-only mode takes precedence over disable-delete. See [Configuration Guide](d
 > **Note**: Tool availability depends on your [access control](#access-control) settings.
 
 ### Search & Discovery
-- `search_documents(query, collection_id?, limit?, offset?)` - Search documents by keywords with pagination
+- `search_documents(query, collection_id?, limit?, offset?, statusFilter?)` - Search documents by keywords with pagination. Defaults to published documents; pass `statusFilter` with `draft`, `archived`, and/or `published` to include other states
 - `list_collections()` - List all collections
 - `get_collection_structure(collection_id)` - Get document hierarchy within a collection
 - `get_document_id_from_title(query, collection_id?)` - Find document ID by title search
