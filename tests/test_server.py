@@ -32,6 +32,27 @@ async def test_server_initialization():
     assert len(await mcp.list_tools()) > 0  # Ensure functions are registered
 
 
+def test_instructions_mention_editing_by_default():
+    """Default instructions guide the LLM to edit tools."""
+    from mcp_outline.server import _build_instructions
+
+    text = _build_instructions(read_only=False)
+    assert "edit_document" in text
+    assert "update_document" in text
+    assert "get_document_toc" in text
+
+
+def test_instructions_omit_editing_in_read_only_mode():
+    """Read-only deployments must not advertise tools that
+    are not registered."""
+    from mcp_outline.server import _build_instructions
+
+    text = _build_instructions(read_only=True)
+    assert "edit_document" not in text
+    assert "update_document" not in text
+    assert "get_document_toc" in text
+
+
 @pytest.mark.anyio
 async def test_ai_tools_disabled_via_env_var(fresh_mcp_server):
     """Test that AI tools are not registered when disabled via env var."""

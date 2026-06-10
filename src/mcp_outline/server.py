@@ -47,29 +47,49 @@ host = os.getenv("MCP_HOST", "127.0.0.1")
 # Get port from environment variable, default to 3000
 port = int(os.getenv("MCP_PORT", "3000"))
 
+
 # Server instructions — injected into the LLM's system prompt
 # by MCP clients. Keep under 2KB (Claude Code truncates at 2KB).
-_INSTRUCTIONS = (
-    "Manages documents in Outline, a wiki and knowledge "
-    "base. Use for searching, reading, navigating, editing,"
-    " and organizing documents and collections.\n\n"
-    "Finding content: search_documents or "
-    "get_document_id_from_title to get document IDs, "
-    "list_collections to discover collections.\n\n"
-    "Large documents: start with get_document_toc to see "
-    "heading structure, then read_document_section to read "
-    "by heading, or read_document with offset/limit for "
-    "line ranges.\n\n"
-    "Editing: use edit_document for targeted changes. "
-    "Batch all changes into one call when possible. "
-    "Use update_document only for full content replacement,"
-    " title changes, or appending.\n\n"
-    "Large rewrites: call edit_document with save=False "
-    "to stage changes across multiple calls, then "
-    "pass save=True on the final call.\n\n"
-    "Markdown: Outline uses standard markdown. For Mermaid "
-    "diagrams use mermaidjs (not mermaid) as the code "
-    "fence language."
+def _build_instructions(read_only: bool) -> str:
+    """Build MCP instructions matching the registered tools.
+
+    Editing guidance is omitted in read-only mode so the
+    LLM is never directed to unregistered tools.
+    """
+    parts = [
+        "Manages documents in Outline, a wiki and knowledge "
+        "base. Use for searching, reading, navigating, "
+        "editing, and organizing documents and collections.",
+        "Finding content: search_documents or "
+        "get_document_id_from_title to get document IDs, "
+        "list_collections to discover collections.",
+        "Large documents: start with get_document_toc to "
+        "see heading structure, then read_document_section "
+        "to read by heading, or read_document with "
+        "offset/limit for line ranges.",
+    ]
+    if not read_only:
+        parts += [
+            "Editing: use edit_document for targeted "
+            "changes. Batch all changes into one call when "
+            "possible. Use update_document only for full "
+            "content replacement, title changes, or "
+            "appending.",
+            "Large rewrites: call edit_document with "
+            "save=False to stage changes across multiple "
+            "calls, then pass save=True on the final call.",
+        ]
+    parts.append(
+        "Markdown: Outline uses standard markdown. For "
+        "Mermaid diagrams use mermaidjs (not mermaid) as "
+        "the code fence language."
+    )
+    return "\n\n".join(parts)
+
+
+_INSTRUCTIONS = _build_instructions(
+    read_only=os.getenv("OUTLINE_READ_ONLY", "").lower()
+    in ("true", "1", "yes")
 )
 
 # Create a FastMCP server instance with a name and port configuration
