@@ -106,23 +106,30 @@ class DocumentCache:
             doc.cached_at = time.monotonic()
             self._store.move_to_end(key)
 
-    async def mark_clean(
+    async def stage_text(
         self,
         api_key: str,
         document_id: str,
+        base: CachedDocument,
         text: str,
-        title: str,
     ) -> None:
-        """Clear dirty flag after a successful save."""
+        """Stage edited text as a dirty entry (upsert).
+
+        Unlike ``update_text`` this never silently no-ops:
+        if the entry vanished (e.g. evicted by a concurrent
+        save), it is recreated from ``base``.
+        """
         async with self._lock:
             key = (api_key, document_id)
-            doc = self._store.get(key)
-            if doc is None:
-                return
-            doc.text = text
-            doc.title = title
-            doc.dirty = False
-            doc.cached_at = time.monotonic()
+            self._store[key] = CachedDocument(
+                title=base.title,
+                text=text,
+                url=base.url,
+                cached_at=time.monotonic(),
+                dirty=True,
+            )
+            self._store.move_to_end(key)
+            self._evict_if_needed()
 
     async def evict(self, api_key: str, document_id: str) -> None:
         """Remove a specific cache entry."""

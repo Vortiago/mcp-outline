@@ -135,16 +135,32 @@ class TestDocumentCache:
         await cache.update_text("k", "nope", "text", dirty=True)
 
     @pytest.mark.asyncio
-    async def test_mark_clean(self):
+    async def test_stage_text_marks_dirty(self):
         cache = DocumentCache(ttl=300, max_size=10)
         await cache.put("k", "doc1", SAMPLE_DOC_DATA)
-        await cache.update_text("k", "doc1", "staged", dirty=True)
-        await cache.mark_clean("k", "doc1", "saved text", "New Title")
+        base = await cache.get("k", "doc1")
+        assert base is not None
+        await cache.stage_text("k", "doc1", base, "staged text")
         doc = await cache.get("k", "doc1")
         assert doc is not None
-        assert doc.text == "saved text"
-        assert doc.title == "New Title"
-        assert doc.dirty is False
+        assert doc.dirty is True
+        assert doc.text == "staged text"
+
+    @pytest.mark.asyncio
+    async def test_stage_text_upserts_missing_entry(self):
+        cache = DocumentCache(ttl=300, max_size=10)
+        await cache.put("k", "doc1", SAMPLE_DOC_DATA)
+        base = await cache.get("k", "doc1")
+        assert base is not None
+        # Entry evicted between fetch and staging (e.g. a
+        # concurrent save) — staging must still persist
+        await cache.evict("k", "doc1")
+        await cache.stage_text("k", "doc1", base, "staged text")
+        doc = await cache.get("k", "doc1")
+        assert doc is not None
+        assert doc.dirty is True
+        assert doc.text == "staged text"
+        assert doc.title == base.title
 
     @pytest.mark.asyncio
     async def test_evict(self):

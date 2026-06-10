@@ -156,11 +156,11 @@ def register_tools(mcp) -> None:
                     f"Applied {n} edit(s) to '{doc.title}'. Saved to Outline."
                 )
             else:
-                await cache.update_text(
+                await cache.stage_text(
                     api_key,
                     document_id,
+                    doc,
                     new_text,
-                    dirty=True,
                 )
                 return (
                     f"Applied {n} edit(s) to "
