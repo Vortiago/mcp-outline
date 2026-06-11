@@ -429,7 +429,7 @@ class TestBatchUpdateDocuments:
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
     async def test_batch_update_evicts_cache(
-        self, mock_get_client, mock_api_key, register_batch_tools
+        self, mock_get_client, mock_api_key, register_batch_tools, monkeypatch
     ):
         """Updated documents must not be served stale from
         the cache; own staged edits are superseded."""
@@ -441,6 +441,7 @@ class TestBatchUpdateDocuments:
             reset_document_cache,
         )
 
+        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
         reset_document_cache()
         cache = get_document_cache()
         doc_data = {"title": "Old", "text": "Old text.", "url": ""}

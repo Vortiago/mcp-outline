@@ -314,8 +314,26 @@ class TestEditDocument:
     ):
         from mcp_outline.utils.document_cache import (
             get_document_cache,
+            reset_document_cache,
         )
 
+        # Asserts post-flush re-caching, so enable caching
+        with patch.dict("os.environ", {"OUTLINE_CACHE_TTL": "300"}):
+            reset_document_cache()
+            await self._run_stage_then_flush(
+                mock_get_client,
+                mock_read_client,
+                register_editing_tools,
+                get_document_cache,
+            )
+
+    async def _run_stage_then_flush(
+        self,
+        mock_get_client,
+        mock_read_client,
+        register_editing_tools,
+        get_document_cache,
+    ):
         read_client = AsyncMock()
         read_client.get_document.return_value = {
             "title": "Editable Doc",

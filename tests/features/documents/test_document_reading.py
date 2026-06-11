@@ -270,11 +270,32 @@ class TestReadDocument:
         mock_api_key,
         register_reading_tools,
     ):
+        """With OUTLINE_CACHE_TTL set (opt-in), repeated
+        reads hit the cache instead of the API."""
+        mock_client = _mock_api(mock_get_client, mock_api_key, SAMPLE_DOCUMENT)
+        with patch.dict("os.environ", {"OUTLINE_CACHE_TTL": "300"}):
+            reset_document_cache()
+            tool = register_reading_tools.tools["read_document"]
+            await tool("doc123")
+            await tool("doc123")
+            mock_client.get_document.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_read_document_fetches_fresh_by_default(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_reading_tools,
+    ):
+        """Without OUTLINE_CACHE_TTL, every read fetches
+        fresh from the API (caching off by default)."""
         mock_client = _mock_api(mock_get_client, mock_api_key, SAMPLE_DOCUMENT)
         tool = register_reading_tools.tools["read_document"]
         await tool("doc123")
         await tool("doc123")
-        mock_client.get_document.assert_called_once()
+        assert mock_client.get_document.call_count == 2
 
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)

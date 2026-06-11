@@ -138,7 +138,7 @@ Setup guides for more clients: [Docker (HTTP), Cline, Codex, Windsurf, and other
 | `OUTLINE_TIMEOUT` | No | `30.0` | Read timeout in seconds |
 | `OUTLINE_CONNECT_TIMEOUT` | No | `5.0` | Connection timeout in seconds |
 | `OUTLINE_WRITE_TIMEOUT` | No | `30.0` | Write timeout in seconds |
-| `OUTLINE_CACHE_TTL` | No | `300` | Document cache TTL in seconds |
+| `OUTLINE_CACHE_TTL` | No | `0` | Document cache TTL in seconds. `0` (default) disables caching so reads are always fresh; set e.g. `300` to reduce API calls. Staged edits work either way |
 | `OUTLINE_CACHE_MAX_SIZE` | No | `100` | Max cached documents |
 | `MCP_TRANSPORT` | No | `stdio` | Transport mode: `stdio` (local), `sse` or `streamable-http` (remote) |
 | `MCP_HOST` | No | `127.0.0.1` | Server host. Use `0.0.0.0` in Docker for external connections |

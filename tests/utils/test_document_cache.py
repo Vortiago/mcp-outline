@@ -296,5 +296,26 @@ class TestGetDocumentCache:
 
     def test_defaults(self):
         cache = get_document_cache()
-        assert cache._ttl == 300.0
+        assert cache._ttl == 0.0
         assert cache._max_size == 100
+
+    @pytest.mark.asyncio
+    async def test_caching_disabled_by_default(self):
+        """Without OUTLINE_CACHE_TTL, clean reads are never
+        served from cache — every read fetches fresh."""
+        with patch.dict("os.environ", {}, clear=False):
+            import os
+
+            os.environ.pop("OUTLINE_CACHE_TTL", None)
+            reset_document_cache()
+            cache = get_document_cache()
+            doc = await cache.put(
+                "k", "doc1", {"title": "T", "text": "x", "url": ""}
+            )
+            assert await cache.get("k", "doc1") is None
+            # Staging still works: dirty entries are exempt
+            await cache.stage_text("k", "doc1", doc, "staged")
+            staged = await cache.get("k", "doc1")
+            assert staged is not None
+            assert staged.dirty is True
+            assert staged.text == "staged"

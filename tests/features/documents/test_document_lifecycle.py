@@ -244,7 +244,11 @@ class TestDeleteDocument:
         "mcp_outline.features.documents.document_lifecycle.get_outline_client"
     )
     async def test_delete_document_to_trash_evicts_cache(
-        self, mock_get_client, mock_api_key, register_lifecycle_tools
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_lifecycle_tools,
+        monkeypatch,
     ):
         """A trashed document must not be served from cache."""
         from mcp_outline.utils.document_cache import (
@@ -252,6 +256,7 @@ class TestDeleteDocument:
             reset_document_cache,
         )
 
+        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
         reset_document_cache()
         cache = get_document_cache()
         doc_data = {"title": "Old", "text": "Old text.", "url": ""}
@@ -279,7 +284,11 @@ class TestDeleteDocument:
         "mcp_outline.features.documents.document_lifecycle.get_outline_client"
     )
     async def test_delete_document_permanent_evicts_cache(
-        self, mock_get_client, mock_api_key, register_lifecycle_tools
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_lifecycle_tools,
+        monkeypatch,
     ):
         """A permanently deleted document must not be served
         from cache."""
@@ -288,6 +297,7 @@ class TestDeleteDocument:
             reset_document_cache,
         )
 
+        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
         reset_document_cache()
         cache = get_document_cache()
         await cache.put(

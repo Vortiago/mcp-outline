@@ -135,9 +135,7 @@ class TestGetDocumentToc:
 
         _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
         cache = get_document_cache()
-        await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
-        base = await cache.get("test-key", "doc789")
-        assert base is not None
+        base = await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
         await cache.stage_text(
             "test-key", "doc789", base, "# Staged\nStaged text."
         )
@@ -225,9 +223,7 @@ class TestReadDocumentSection:
 
         _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
         cache = get_document_cache()
-        await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
-        base = await cache.get("test-key", "doc789")
-        assert base is not None
+        base = await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
         await cache.stage_text(
             "test-key",
             "doc789",

@@ -401,6 +401,7 @@ class TestDocumentContentTools:
         self,
         mock_get_client,
         register_content_tools,
+        monkeypatch,
     ):
         """Verify update_document evicts all cached copies
         of the document regardless of API key."""
@@ -409,6 +410,7 @@ class TestDocumentContentTools:
             reset_document_cache,
         )
 
+        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
         reset_document_cache()
         cache = get_document_cache()
         doc_data = {

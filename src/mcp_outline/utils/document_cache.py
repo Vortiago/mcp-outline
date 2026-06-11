@@ -161,6 +161,11 @@ class DocumentCache:
             self._store.clear()
 
     def _is_expired(self, doc: CachedDocument) -> bool:
+        if self._ttl <= 0:
+            # Caching disabled: clean entries are never
+            # served. Dirty (staged) entries are exempt at
+            # the call sites.
+            return True
         return (time.monotonic() - doc.cached_at) > self._ttl
 
     def _evict_if_needed(self) -> None:
@@ -186,11 +191,14 @@ def get_document_cache() -> DocumentCache:
     """Return the module-level cache singleton.
 
     Reads ``OUTLINE_CACHE_TTL`` and ``OUTLINE_CACHE_MAX_SIZE``
-    from the environment on first call.
+    from the environment on first call. Caching of clean
+    reads is OFF by default (TTL 0) so reads are always
+    fresh; set ``OUTLINE_CACHE_TTL`` to e.g. ``300`` to
+    enable. Staged edits (dirty entries) work regardless.
     """
     global _cache
     if _cache is None:
-        ttl = float(os.getenv("OUTLINE_CACHE_TTL", "300"))
+        ttl = float(os.getenv("OUTLINE_CACHE_TTL", "0"))
         max_size = int(os.getenv("OUTLINE_CACHE_MAX_SIZE", "100"))
         _cache = DocumentCache(ttl=ttl, max_size=max_size)
     return _cache
