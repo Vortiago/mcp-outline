@@ -53,6 +53,15 @@ install_dynamic_tool_list(mcp)                   # If OUTLINE_DYNAMIC_TOOL_LIST=
 For dynamic tool list architecture and scope matching details, see
 [docs/dynamic-tool-list.md](docs/dynamic-tool-list.md).
 
+### Plugin Components (Claude Code)
+
+- `agents/outline-explorer.md` — fast read-only exploration agent (search, TOC-first reading, synthesis)
+- `skills/outline/SKILL.md` — Outline conventions skill (mermaidjs fences, structure, editing/staging workflows, search status filters)
+
+Both reference MCP tools by name. When renaming tools or changing
+parameters, update the agent, the skill, and the server instructions
+(`_build_instructions` in `server.py`) together.
+
 ### MCP Resources (`outline://` URI scheme)
 
 - `outline://document/{document_id}` - Full markdown content

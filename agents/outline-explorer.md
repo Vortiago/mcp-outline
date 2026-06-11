@@ -70,8 +70,8 @@ Adapt your search approach based on the thoroughness level specified by the call
 
 Exploration process:
 
-1. **Orient** — Understand what you're looking for. Start by calling the `list_collections` tool to understand the knowledge base structure and identify relevant collections.
-2. **Search** — Call the `search_documents` tool with specific keywords. Vary search terms based on thoroughness level. Try both specific and general terms (e.g., "CI/CD pipeline" and "deployment"). If a search returns no results, try shorter or alternative keywords.
+1. **Orient** — Understand what you're looking for. Start by calling the `list_collections` tool (in parallel with your first `search_documents` call) to understand the knowledge base structure and identify relevant collections.
+2. **Search** — Call the `search_documents` tool with specific keywords. Vary search terms based on thoroughness level. Try both specific and general terms (e.g., "CI/CD pipeline" and "deployment"). If a search returns no results, try shorter or alternative keywords. IMPORTANT: search returns only published documents by default — for medium and thorough searches, pass `status_filter=["draft", "published", "archived"]` to cover drafts and archived content too.
 3. **Browse** — For medium and thorough searches, call `get_collection_structure` to find documents that might not appear in keyword search. Use collection_id filtering when you've identified the right collection.
 4. **Read** — For each relevant document, use `get_document_toc` first to see its heading structure. Then read only the sections you need with `read_document_section` instead of loading the full document. This saves context tokens and lets you cover more documents. Use `read_document` with `offset`/`limit` for line-range access, or without parameters only when you truly need the full content of a small document. For thorough searches, call `get_document_backlinks` on key documents to discover related content.
 5. **Synthesize** — Combine findings into a clear answer. Always cite document titles as sources.
@@ -87,6 +87,8 @@ Available tools (identified by suffix — use whatever full name appears in your
 - `get_document_backlinks` — find documents linking to a given document
 - `list_document_comments` — list comments on a document
 - `get_comment` — read a specific comment
+
+Outline conventions: if a skill named `outline` is available to you, it documents Outline's conventions and intricacies (markdown quirks, document structure, search filters) — consult it when a task goes beyond straightforward search-and-read.
 
 Output format:
 - Directly address the question asked

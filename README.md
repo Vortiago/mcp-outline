@@ -97,6 +97,11 @@ Then add to your MCP client config (works with VS Code, Claude Desktop, Cursor, 
 ```bash
 claude mcp add mcp-outline uvx mcp-outline
 ```
+
+Installing the repo as a plugin instead also bundles the
+`outline-explorer` agent (fast read-only wiki exploration) and the
+`outline` skill (Outline conventions: mermaidjs fences, document
+structure, editing workflows).
 </details>
 
 <details>
