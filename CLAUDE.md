@@ -17,7 +17,8 @@ This MCP server bridges AI assistants with Outline's document management platfor
 ### Tool Categories
 
 - **Search**: Find documents, collections, hierarchies
-- **Reading**: Read content, export markdown
+- **Reading**: Read content (with pagination), TOC, section reading, in-document search (grep-style), export markdown
+- **Editing**: String-match editing with optional staging
 - **Attachments**: Resolve URLs, fetch content, list attachments
 - **Content**: Create, update, comment (supports templates)
 - **Organization**: Move documents between collections
@@ -35,11 +36,13 @@ register_all(mcp)
   |- documents.register(mcp)
   |   |- document_search.register_tools()      # Always
   |   |- document_reading.register_tools()     # Always
+  |   |- document_navigation.register_tools()  # Always
   |   |- document_attachments.register_tools() # Always
   |   |- document_collaboration.register_tools() # Always
   |   |- collection_tools.register_tools()     # Always (exports always, writes conditional)
   |   |- ai_tools.register_tools()             # If not OUTLINE_DISABLE_AI_TOOLS
   |   |- document_content.register_tools()     # If not OUTLINE_READ_ONLY
+  |   |- document_editing.register_tools()     # If not OUTLINE_READ_ONLY
   |   |- document_lifecycle.register_tools()   # If not OUTLINE_READ_ONLY
   |   |- document_organization.register_tools() # If not OUTLINE_READ_ONLY
   |   |- batch_operations.register_tools()     # If not OUTLINE_READ_ONLY
@@ -49,6 +52,15 @@ install_dynamic_tool_list(mcp)                   # If OUTLINE_DYNAMIC_TOOL_LIST=
 
 For dynamic tool list architecture and scope matching details, see
 [docs/dynamic-tool-list.md](docs/dynamic-tool-list.md).
+
+### Plugin Components (Claude Code)
+
+- `agents/outline-explorer.md` — fast read-only exploration agent (search, TOC-first reading, synthesis)
+- `skills/outline/SKILL.md` — Outline conventions skill (mermaidjs fences, structure, editing/staging workflows, search status filters)
+
+Both reference MCP tools by name. When renaming tools or changing
+parameters, update the agent, the skill, and the server instructions
+(`_build_instructions` in `server.py`) together.
 
 ### MCP Resources (`outline://` URI scheme)
 
@@ -108,8 +120,24 @@ For dynamic tool list architecture and scope matching details, see
 ### Common Utilities (`features/documents/common.py`)
 
 - `get_outline_client()` - Async function that creates an OutlineClient. Checks for a per-user Outline API key from the `x-outline-api-key` HTTP header first (SSE/streamable-http), then falls back to `OUTLINE_API_KEY` env var.
+- `get_resolved_api_key()` - Returns the resolved API key (header > env var) as a string. Used by both the client factory and the document cache for keying.
 - `_get_header_api_key()` - Reads the `x-outline-api-key` header from the MCP SDK's `request_ctx` ContextVar. Returns `None` for stdio or when header is absent.
 - `OutlineClientError` - Exception class for client-related errors
+
+### Document Cache (`utils/document_cache.py`)
+
+In-memory LRU cache with configurable TTL for document content. Reduces Outline API calls and enables staged edits.
+
+- **Key**: `(api_key, document_id)` tuple for multi-tenant isolation
+- **Implementation**: `OrderedDict` + `asyncio.Lock`
+- **TTL**: `OUTLINE_CACHE_TTL` env var (default `30` — absorbs same-task read bursts; `0` disables caching, higher values save more API calls)
+- **Max size**: `OUTLINE_CACHE_MAX_SIZE` env var (default 100)
+- **Dirty tracking**: Staged edits are stored via `stage_text()` (dirty upsert); LRU eviction, `evict_document()`, and `put()` all preserve dirty entries so staged work is never silently lost
+- **Singleton**: `get_document_cache()` returns module-level instance; `reset_document_cache()` for tests
+
+**Reading tools** (`read_document`, `get_document_toc`, `read_document_section`) cache on read via `get_cached_or_fetch()` and append an unsaved-changes notice when serving staged (dirty) text.
+**Edit tools** (`edit_document`) operate on cached text; `save=True` (default) pushes to Outline immediately. `edit_document(edits=[], save=True)` flushes staged changes.
+**Writers** (`update_document`, `batch_update_documents`, `delete_document`) explicitly evict the caller's own entry (`evict()`) plus all clean copies (`evict_document()`) after a successful API call; other users' staged edits survive and surface a conflict at their own save time.
 
 ### Copilot CLI Patch (`patches/copilot_cli.py`)
 
@@ -328,6 +356,10 @@ OUTLINE_MAX_KEEPALIVE=20                   # Max idle connections in pool
 OUTLINE_TIMEOUT=30.0                       # Read timeout in seconds
 OUTLINE_CONNECT_TIMEOUT=5.0               # Connection timeout in seconds
 OUTLINE_WRITE_TIMEOUT=30.0                # Write timeout in seconds
+
+# Document cache (optional)
+OUTLINE_CACHE_TTL=30                       # Cache TTL in seconds (default: 30; 0 disables)
+OUTLINE_CACHE_MAX_SIZE=100                 # Max cached documents (default: 100)
 
 # Feature flags (optional)
 OUTLINE_DISABLE_AI_TOOLS=true              # Disable AI tools

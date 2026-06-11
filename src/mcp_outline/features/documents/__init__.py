@@ -9,7 +9,9 @@ from mcp_outline.features.documents import (
     document_attachments,
     document_collaboration,
     document_content,
+    document_editing,
     document_lifecycle,
+    document_navigation,
     document_organization,
     document_reading,
     document_search,
@@ -30,6 +32,7 @@ def register(
     # Always register read-only tools
     document_search.register_tools(mcp)
     document_reading.register_tools(mcp)
+    document_navigation.register_tools(mcp)
     document_attachments.register_tools(mcp)
     document_collaboration.register_tools(mcp)
     collection_tools.register_tools(mcp)
@@ -49,6 +52,7 @@ def register(
         "yes",
     ):
         document_content.register_tools(mcp)
+        document_editing.register_tools(mcp)
         document_lifecycle.register_tools(mcp)
         document_organization.register_tools(mcp)
         batch_operations.register_tools(mcp)
