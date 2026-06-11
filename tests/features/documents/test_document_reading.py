@@ -282,14 +282,17 @@ class TestReadDocument:
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)
     @patch(_PATCH_CLIENT)
-    async def test_read_document_fetches_fresh_by_default(
+    async def test_read_document_fetches_fresh_when_cache_disabled(
         self,
         mock_get_client,
         mock_api_key,
         register_reading_tools,
+        monkeypatch,
     ):
-        """Without OUTLINE_CACHE_TTL, every read fetches
-        fresh from the API (caching off by default)."""
+        """With OUTLINE_CACHE_TTL=0, every read fetches
+        fresh from the API."""
+        monkeypatch.setenv("OUTLINE_CACHE_TTL", "0")
+        reset_document_cache()
         mock_client = _mock_api(mock_get_client, mock_api_key, SAMPLE_DOCUMENT)
         tool = register_reading_tools.tools["read_document"]
         await tool("doc123")

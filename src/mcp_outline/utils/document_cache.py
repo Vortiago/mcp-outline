@@ -187,14 +187,17 @@ def get_document_cache() -> DocumentCache:
     """Return the module-level cache singleton.
 
     Reads ``OUTLINE_CACHE_TTL`` and ``OUTLINE_CACHE_MAX_SIZE``
-    from the environment on first call. Caching of clean
-    reads is OFF by default (TTL 0) so reads are always
-    fresh; set ``OUTLINE_CACHE_TTL`` to e.g. ``300`` to
-    enable. Staged edits (dirty entries) work regardless.
+    from the environment on first call. The default TTL of
+    30 seconds absorbs same-task read bursts (TOC, search,
+    sections of one document) without hammering the Outline
+    API, while keeping staleness short. Set
+    ``OUTLINE_CACHE_TTL=0`` to disable caching entirely or
+    a higher value for more API savings. Staged edits
+    (dirty entries) work regardless.
     """
     global _cache
     if _cache is None:
-        ttl = float(os.getenv("OUTLINE_CACHE_TTL", "0"))
+        ttl = float(os.getenv("OUTLINE_CACHE_TTL", "30"))
         max_size = int(os.getenv("OUTLINE_CACHE_MAX_SIZE", "100"))
         _cache = DocumentCache(ttl=ttl, max_size=max_size)
     return _cache

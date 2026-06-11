@@ -130,7 +130,7 @@ In-memory LRU cache with configurable TTL for document content. Reduces Outline 
 
 - **Key**: `(api_key, document_id)` tuple for multi-tenant isolation
 - **Implementation**: `OrderedDict` + `asyncio.Lock`
-- **TTL**: `OUTLINE_CACHE_TTL` env var (default `0` = caching disabled, reads always fresh; set e.g. `300` to enable)
+- **TTL**: `OUTLINE_CACHE_TTL` env var (default `30` — absorbs same-task read bursts; `0` disables caching, higher values save more API calls)
 - **Max size**: `OUTLINE_CACHE_MAX_SIZE` env var (default 100)
 - **Dirty tracking**: Staged edits are stored via `stage_text()` (dirty upsert); LRU eviction, `evict_document()`, and `put()` all preserve dirty entries so staged work is never silently lost
 - **Singleton**: `get_document_cache()` returns module-level instance; `reset_document_cache()` for tests
@@ -357,8 +357,8 @@ OUTLINE_TIMEOUT=30.0                       # Read timeout in seconds
 OUTLINE_CONNECT_TIMEOUT=5.0               # Connection timeout in seconds
 OUTLINE_WRITE_TIMEOUT=30.0                # Write timeout in seconds
 
-# Document cache (optional, off by default)
-OUTLINE_CACHE_TTL=300                      # Cache TTL in seconds (default: 0 = disabled)
+# Document cache (optional)
+OUTLINE_CACHE_TTL=30                       # Cache TTL in seconds (default: 30; 0 disables)
 OUTLINE_CACHE_MAX_SIZE=100                 # Max cached documents (default: 100)
 
 # Feature flags (optional)
