@@ -493,8 +493,8 @@ class TestSearchDocumentContent:
         with patch.dict("os.environ", {"OUTLINE_CACHE_TTL": "300"}):
             reset_document_cache()
             await register_nav_tools.tools["get_document_toc"]("doc789")
-            result = await register_nav_tools.tools[
-                "search_document_content"
-            ]("doc789", query="background text")
+            result = await register_nav_tools.tools["search_document_content"](
+                "doc789", query="background text"
+            )
             assert "1 match" in result
             mock_client.get_document.assert_called_once()
