@@ -353,3 +353,122 @@ class TestReadDocumentSection:
             "doc-plain", heading="anything"
         )
         assert "No headings found" in result
+
+
+class TestSearchDocumentContent:
+    """Tests for search_document_content tool."""
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_match_with_context(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc789", query="background text"
+        )
+        assert "1 match" in result
+        assert "4\tBackground text." in result
+        # context lines around the match (default 2)
+        assert "## Background" in result
+        assert "## Goals" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_no_match(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc789", query="nonexistent phrase"
+        )
+        assert "No lines matching" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_caps_matches(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        big = {
+            "id": "doc-big",
+            "title": "Big Doc",
+            "text": "\n".join(f"item {i}" for i in range(80)),
+            "url": "",
+        }
+        _mock_api(mock_get_client, mock_api_key, big)
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc-big", query="item", context_lines=0
+        )
+        assert "80 match(es)" in result
+        assert "showing first 50" in result
+        assert "55\titem 55" not in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_merges_adjacent_blocks(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc789", query="text."
+        )
+        # matches on lines 1, 4, 7, 13 — first three merge
+        # into one block with context 2; line 13 separate
+        assert result.count("--") == 1
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_negative_context(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc789", query="text", context_lines=-1
+        )
+        assert "non-negative" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_dirty_shows_unsaved_notice(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        from mcp_outline.utils.document_cache import (
+            get_document_cache,
+        )
+
+        _mock_api(mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT)
+        cache = get_document_cache()
+        base = await cache.put("test-key", "doc789", SAMPLE_HEADED_DOCUMENT)
+        await cache.stage_text(
+            "test-key", "doc789", base, "only staged words here"
+        )
+
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc789", query="staged words"
+        )
+        assert "0\tonly staged words here" in result
+        assert "unsaved changes" in result

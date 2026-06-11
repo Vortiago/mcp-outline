@@ -36,8 +36,11 @@ widened: `status_filter=["draft", "published", "archived"]`.
 1. `get_document_toc` — headings with 0-based line numbers.
 2. `read_document_section(heading=...)` — case-insensitive substring;
    accepts headings as the TOC prints them (e.g. `"## Background"`).
-3. `read_document(offset=N, limit=M)` — TOC line numbers are valid
-   offsets.
+3. `search_document_content(query=...)` — grep within the document:
+   matching lines with line numbers and context. Use it to locate
+   text for `edit_document` old_strings or `read_document` offsets.
+4. `read_document(offset=N, limit=M)` — TOC/grep line numbers are
+   valid offsets.
 
 Full `read_document` only for small documents.
 

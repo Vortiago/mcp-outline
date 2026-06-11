@@ -65,8 +65,9 @@ def _build_instructions(read_only: bool) -> str:
         "list_collections to discover collections.",
         "Large documents: start with get_document_toc to "
         "see heading structure, then read_document_section "
-        "to read by heading, or read_document with "
-        "offset/limit for line ranges.",
+        "to read by heading, search_document_content to "
+        "grep for text, or read_document with offset/limit "
+        "for line ranges.",
     ]
     if not read_only:
         parts += [

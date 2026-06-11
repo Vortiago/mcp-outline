@@ -17,7 +17,7 @@ This MCP server bridges AI assistants with Outline's document management platfor
 ### Tool Categories
 
 - **Search**: Find documents, collections, hierarchies
-- **Reading**: Read content (with pagination), TOC, section reading, export markdown
+- **Reading**: Read content (with pagination), TOC, section reading, in-document search (grep-style), export markdown
 - **Editing**: String-match editing with optional staging
 - **Attachments**: Resolve URLs, fetch content, list attachments
 - **Content**: Create, update, comment (supports templates)

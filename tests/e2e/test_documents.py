@@ -291,6 +291,34 @@ async def test_read_document_section(mcp_session):
         assert "Goal 1." not in text
 
 
+async def test_search_document_content(mcp_session):
+    """Grep within a document for a snippet.
+
+    Guards against: line-number drift between search output
+    and read_document offsets on real Outline content.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Grep Coll")
+        doc_id = await _create_document(
+            session,
+            coll_id,
+            "Grep Doc",
+            _MULTILINE_BODY,
+        )
+
+        result = await session.call_tool(
+            "search_document_content",
+            arguments={
+                "document_id": doc_id,
+                "query": "background details",
+            },
+        )
+        text = _text(result)
+        assert "match(es) for 'background details'" in text
+        assert "Background details." in text
+        assert "Goal 1." not in text
+
+
 async def test_read_document_section_not_found(mcp_session):
     """Verify a helpful error when no section matches.
 

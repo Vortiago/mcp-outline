@@ -5,6 +5,8 @@ This module provides tools for navigating large documents
 by heading structure: table of contents and section reading.
 """
 
+from typing import List, Tuple
+
 from mcp.types import ToolAnnotations
 
 from mcp_outline.features.documents.common import (
@@ -16,6 +18,9 @@ from mcp_outline.features.documents.document_reading import (
     parse_headings,
     staged_changes_notice,
 )
+
+# Cap grep-style output so broad queries stay token-safe
+_MAX_CONTENT_MATCHES = 50
 
 
 def register_tools(mcp) -> None:
@@ -173,6 +178,91 @@ def register_tools(mcp) -> None:
                 f" of {total} total)\n\n"
                 f"{numbered}"
             )
+            return output + staged_changes_notice(doc)
+        except OutlineClientError as e:
+            return f"Error reading document: {str(e)}"
+        except Exception as e:
+            return f"Unexpected error: {str(e)}"
+
+    @mcp.tool(
+        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        meta={
+            "endpoint": "documents.info",
+            "min_role": "viewer",
+        },
+    )
+    async def search_document_content(
+        document_id: str,
+        query: str,
+        context_lines: int = 2,
+    ) -> str:
+        """
+        Searches within a document for lines containing a
+        text snippet (grep-style), returning matches with
+        line numbers and surrounding context.
+
+        Use this tool when you need to:
+        - Locate specific text in a large document without
+          reading it in full
+        - Find the exact text and line number to build
+          edit_document old_string values or
+          read_document offsets
+
+        Matching is case-insensitive per line. Line numbers
+        are 0-based and valid as read_document offsets.
+
+        Args:
+            document_id: The document ID to search
+            query: Text snippet to find (case-insensitive)
+            context_lines: Lines of context around each
+                match (default: 2, must be non-negative)
+
+        Returns:
+            Matching lines with line numbers and context
+        """
+        if context_lines < 0:
+            return "Error: context_lines must be non-negative."
+        if not query:
+            return "Error: query must not be empty."
+        try:
+            doc = await get_cached_or_fetch(document_id)
+            lines = doc.text.split("\n")
+            needle = query.lower()
+            matches = [
+                i for i, line in enumerate(lines) if needle in line.lower()
+            ]
+
+            if not matches:
+                return (
+                    f"No lines matching '{query}' in"
+                    f" '{doc.title}'. Try a shorter or"
+                    " different snippet, or"
+                    " get_document_toc to browse structure."
+                )
+
+            shown = matches[:_MAX_CONTENT_MATCHES]
+            last = len(lines) - 1
+            blocks: List[Tuple[int, int]] = []
+            block_start = max(0, shown[0] - context_lines)
+            block_end = min(last, shown[0] + context_lines)
+            for m in shown[1:]:
+                start = max(0, m - context_lines)
+                end = min(last, m + context_lines)
+                if start <= block_end + 1:
+                    block_end = max(block_end, end)
+                else:
+                    blocks.append((block_start, block_end))
+                    block_start, block_end = start, end
+            blocks.append((block_start, block_end))
+
+            rendered = "\n--\n".join(
+                format_lines_with_numbers(lines[s : e + 1], s)
+                for s, e in blocks
+            )
+            header = f"# {doc.title}\n{len(matches)} match(es) for '{query}'"
+            if len(matches) > len(shown):
+                header += f" (showing first {len(shown)})"
+            output = f"{header}\n\n{rendered}"
             return output + staged_changes_notice(doc)
         except OutlineClientError as e:
             return f"Error reading document: {str(e)}"

@@ -280,6 +280,7 @@ async def test_route_scoped_read_only(
         "read_document",
         "get_document_toc",
         "read_document_section",
+        "search_document_content",
         "export_document",
         "search_documents",
         "get_document_id_from_title",
@@ -337,6 +338,7 @@ async def test_namespace_read_scope(
         "read_document",  # documents.info
         "get_document_toc",  # documents.info
         "read_document_section",  # documents.info
+        "search_document_content",  # documents.info
         "export_document",  # documents.export
         "search_documents",  # documents.search
         "get_document_id_from_title",  # documents.search
@@ -378,6 +380,7 @@ async def test_namespace_write_documents_only(
         "read_document",
         "get_document_toc",
         "read_document_section",
+        "search_document_content",
         "export_document",
         "search_documents",
         "get_document_id_from_title",
@@ -436,6 +439,7 @@ async def test_mixed_namespace_and_route_scope(
         "read_document",
         "get_document_toc",
         "read_document_section",
+        "search_document_content",
         "export_document",
         "search_documents",
         "get_document_id_from_title",
