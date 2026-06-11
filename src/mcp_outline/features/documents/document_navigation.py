@@ -23,6 +23,28 @@ from mcp_outline.features.documents.document_reading import (
 _MAX_CONTENT_MATCHES = 50
 
 
+def _merge_context_blocks(
+    matches: List[int],
+    context_lines: int,
+    last_line: int,
+) -> List[Tuple[int, int]]:
+    """Expand match line numbers by context and merge
+    overlapping/adjacent ranges into (start, end) blocks."""
+    block_start = max(0, matches[0] - context_lines)
+    block_end = min(last_line, matches[0] + context_lines)
+    blocks: List[Tuple[int, int]] = []
+    for m in matches[1:]:
+        start = max(0, m - context_lines)
+        end = min(last_line, m + context_lines)
+        if start <= block_end + 1:
+            block_end = max(block_end, end)
+        else:
+            blocks.append((block_start, block_end))
+            block_start, block_end = start, end
+    blocks.append((block_start, block_end))
+    return blocks
+
+
 def register_tools(mcp) -> None:
     """
     Register document navigation tools with the MCP server.
@@ -241,19 +263,9 @@ def register_tools(mcp) -> None:
                 )
 
             shown = matches[:_MAX_CONTENT_MATCHES]
-            last = len(lines) - 1
-            blocks: List[Tuple[int, int]] = []
-            block_start = max(0, shown[0] - context_lines)
-            block_end = min(last, shown[0] + context_lines)
-            for m in shown[1:]:
-                start = max(0, m - context_lines)
-                end = min(last, m + context_lines)
-                if start <= block_end + 1:
-                    block_end = max(block_end, end)
-                else:
-                    blocks.append((block_start, block_end))
-                    block_start, block_end = start, end
-            blocks.append((block_start, block_end))
+            blocks = _merge_context_blocks(
+                shown, context_lines, len(lines) - 1
+            )
 
             rendered = "\n--\n".join(
                 format_lines_with_numbers(lines[s : e + 1], s)

@@ -481,20 +481,15 @@ class TestSearchDocumentContent:
         mock_get_client,
         mock_api_key,
         register_nav_tools,
+        enable_doc_cache,
     ):
         """With caching enabled, TOC + search cost one fetch."""
-        from mcp_outline.utils.document_cache import (
-            reset_document_cache,
-        )
-
         mock_client = _mock_api(
             mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT
         )
-        with patch.dict("os.environ", {"OUTLINE_CACHE_TTL": "300"}):
-            reset_document_cache()
-            await register_nav_tools.tools["get_document_toc"]("doc789")
-            result = await register_nav_tools.tools["search_document_content"](
-                "doc789", query="background text"
-            )
-            assert "1 match" in result
-            mock_client.get_document.assert_called_once()
+        await register_nav_tools.tools["get_document_toc"]("doc789")
+        result = await register_nav_tools.tools["search_document_content"](
+            "doc789", query="background text"
+        )
+        assert "1 match" in result
+        mock_client.get_document.assert_called_once()

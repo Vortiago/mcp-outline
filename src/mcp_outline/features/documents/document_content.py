@@ -190,12 +190,10 @@ def register_tools(mcp) -> None:
             if not document:
                 return "Failed to update document."
 
-            # Drop own (possibly staged) entry and other
-            # users' clean copies to prevent stale reads.
-            # Other users' staged edits are preserved.
             cache = get_document_cache()
-            await cache.evict(get_resolved_api_key(), document_id)
-            await cache.evict_document(document_id)
+            await cache.invalidate_for_write(
+                get_resolved_api_key(), document_id
+            )
 
             doc_title = document.get("title", "Untitled")
             return f"Document updated successfully: {doc_title}"

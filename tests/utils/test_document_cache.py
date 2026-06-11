@@ -75,8 +75,8 @@ class TestDocumentCache:
     @pytest.mark.asyncio
     async def test_dirty_entries_survive_ttl(self):
         cache = DocumentCache(ttl=1, max_size=10)
-        await cache.put("key1", "doc1", SAMPLE_DOC_DATA)
-        await cache.update_text("key1", "doc1", "modified", dirty=True)
+        base = await cache.put("key1", "doc1", SAMPLE_DOC_DATA)
+        await cache.stage_text("key1", "doc1", base, "modified")
 
         with patch(
             "mcp_outline.utils.document_cache.time.monotonic",
@@ -105,8 +105,8 @@ class TestDocumentCache:
     @pytest.mark.asyncio
     async def test_lru_eviction_skips_dirty(self):
         cache = DocumentCache(ttl=300, max_size=2)
-        await cache.put("k", "doc1", SAMPLE_DOC_DATA)
-        await cache.update_text("k", "doc1", "dirty text", dirty=True)
+        base = await cache.put("k", "doc1", SAMPLE_DOC_DATA)
+        await cache.stage_text("k", "doc1", base, "dirty text")
         await cache.put("k", "doc2", SAMPLE_DOC_DATA_2)
         # Adding a third should skip dirty doc1, evict doc2
         await cache.put(
@@ -117,22 +117,6 @@ class TestDocumentCache:
         assert await cache.get("k", "doc1") is not None
         assert await cache.get("k", "doc2") is None
         assert await cache.get("k", "doc3") is not None
-
-    @pytest.mark.asyncio
-    async def test_update_text(self):
-        cache = DocumentCache(ttl=300, max_size=10)
-        await cache.put("k", "doc1", SAMPLE_DOC_DATA)
-        await cache.update_text("k", "doc1", "new content", dirty=True)
-        doc = await cache.get("k", "doc1")
-        assert doc is not None
-        assert doc.text == "new content"
-        assert doc.dirty is True
-
-    @pytest.mark.asyncio
-    async def test_update_text_nonexistent(self):
-        cache = DocumentCache(ttl=300, max_size=10)
-        # Should not raise
-        await cache.update_text("k", "nope", "text", dirty=True)
 
     @pytest.mark.asyncio
     async def test_stage_text_marks_dirty(self):
@@ -191,8 +175,8 @@ class TestDocumentCache:
     async def test_evict_document_preserves_dirty_entries(self):
         cache = DocumentCache(ttl=300, max_size=10)
         await cache.put("key-A", "doc1", SAMPLE_DOC_DATA)
-        await cache.put("key-B", "doc1", SAMPLE_DOC_DATA)
-        await cache.update_text("key-B", "doc1", "staged", dirty=True)
+        base = await cache.put("key-B", "doc1", SAMPLE_DOC_DATA)
+        await cache.stage_text("key-B", "doc1", base, "staged")
         await cache.evict_document("doc1")
         # Clean copy evicted, staged copy preserved
         assert await cache.get("key-A", "doc1") is None
@@ -204,14 +188,33 @@ class TestDocumentCache:
     @pytest.mark.asyncio
     async def test_put_preserves_existing_dirty_entry(self):
         cache = DocumentCache(ttl=300, max_size=10)
-        await cache.put("k", "doc1", SAMPLE_DOC_DATA)
-        await cache.update_text("k", "doc1", "staged", dirty=True)
+        base = await cache.put("k", "doc1", SAMPLE_DOC_DATA)
+        await cache.stage_text("k", "doc1", base, "staged")
         # A racing API fetch must not destroy staged edits
         await cache.put("k", "doc1", SAMPLE_DOC_DATA)
         doc = await cache.get("k", "doc1")
         assert doc is not None
         assert doc.dirty is True
         assert doc.text == "staged"
+
+    @pytest.mark.asyncio
+    async def test_invalidate_for_write(self):
+        cache = DocumentCache(ttl=300, max_size=10)
+        base_a = await cache.put("key-A", "doc1", SAMPLE_DOC_DATA)
+        await cache.stage_text("key-A", "doc1", base_a, "A staged")
+        await cache.put("key-B", "doc1", SAMPLE_DOC_DATA)
+        base_c = await cache.put("key-C", "doc1", SAMPLE_DOC_DATA)
+        await cache.stage_text("key-C", "doc1", base_c, "C staged")
+
+        await cache.invalidate_for_write("key-A", "doc1")
+
+        # Writer's own staged entry dropped; B's clean copy
+        # dropped; C's staged edits preserved
+        assert await cache.get("key-A", "doc1") is None
+        assert await cache.get("key-B", "doc1") is None
+        c_doc = await cache.get("key-C", "doc1")
+        assert c_doc is not None
+        assert c_doc.dirty is True
 
     @pytest.mark.asyncio
     async def test_clear(self):

@@ -248,16 +248,13 @@ class TestDeleteDocument:
         mock_get_client,
         mock_api_key,
         register_lifecycle_tools,
-        monkeypatch,
+        enable_doc_cache,
     ):
         """A trashed document must not be served from cache."""
         from mcp_outline.utils.document_cache import (
             get_document_cache,
-            reset_document_cache,
         )
 
-        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
-        reset_document_cache()
         cache = get_document_cache()
         doc_data = {"title": "Old", "text": "Old text.", "url": ""}
         await cache.put("key-A", "doc123", doc_data)
@@ -272,7 +269,6 @@ class TestDeleteDocument:
 
         assert await cache.get("key-A", "doc123") is None
         assert await cache.get("key-B", "doc123") is None
-        reset_document_cache()
 
     @pytest.mark.asyncio
     @patch(
@@ -288,17 +284,14 @@ class TestDeleteDocument:
         mock_get_client,
         mock_api_key,
         register_lifecycle_tools,
-        monkeypatch,
+        enable_doc_cache,
     ):
         """A permanently deleted document must not be served
         from cache."""
         from mcp_outline.utils.document_cache import (
             get_document_cache,
-            reset_document_cache,
         )
 
-        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
-        reset_document_cache()
         cache = get_document_cache()
         await cache.put(
             "key-A",
@@ -315,7 +308,6 @@ class TestDeleteDocument:
         )
 
         assert await cache.get("key-A", "doc123") is None
-        reset_document_cache()
 
     @pytest.mark.asyncio
     @patch(

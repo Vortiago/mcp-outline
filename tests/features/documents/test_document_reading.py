@@ -269,16 +269,15 @@ class TestReadDocument:
         mock_get_client,
         mock_api_key,
         register_reading_tools,
+        enable_doc_cache,
     ):
         """With OUTLINE_CACHE_TTL set (opt-in), repeated
         reads hit the cache instead of the API."""
         mock_client = _mock_api(mock_get_client, mock_api_key, SAMPLE_DOCUMENT)
-        with patch.dict("os.environ", {"OUTLINE_CACHE_TTL": "300"}):
-            reset_document_cache()
-            tool = register_reading_tools.tools["read_document"]
-            await tool("doc123")
-            await tool("doc123")
-            mock_client.get_document.assert_called_once()
+        tool = register_reading_tools.tools["read_document"]
+        await tool("doc123")
+        await tool("doc123")
+        mock_client.get_document.assert_called_once()
 
     @pytest.mark.asyncio
     @patch(_PATCH_API_KEY)
@@ -312,10 +311,8 @@ class TestReadDocument:
 
         _mock_api(mock_get_client, mock_api_key, SAMPLE_DOCUMENT)
         cache = get_document_cache()
-        await cache.put("test-key", "doc123", SAMPLE_DOCUMENT)
-        await cache.update_text(
-            "test-key", "doc123", "staged text", dirty=True
-        )
+        base = await cache.put("test-key", "doc123", SAMPLE_DOCUMENT)
+        await cache.stage_text("test-key", "doc123", base, "staged text")
 
         result = await register_reading_tools.tools["read_document"]("doc123")
         assert "staged text" in result

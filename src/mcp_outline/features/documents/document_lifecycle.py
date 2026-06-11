@@ -18,13 +18,12 @@ from mcp_outline.utils.document_cache import get_document_cache
 
 
 async def _evict_cached_copies(document_id: str) -> None:
-    """Drop own entry and other users' clean copies of a
-    deleted document. Other users' staged edits are
-    preserved; flushing them later fails with a clear API
-    error instead of being silently discarded."""
+    """Invalidate cached copies of a deleted document.
+    Other users' staged edits are preserved; flushing them
+    later fails with a clear API error instead of being
+    silently discarded."""
     cache = get_document_cache()
-    await cache.evict(get_resolved_api_key(), document_id)
-    await cache.evict_document(document_id)
+    await cache.invalidate_for_write(get_resolved_api_key(), document_id)
 
 
 def register_tools(mcp) -> None:

@@ -429,7 +429,11 @@ class TestBatchUpdateDocuments:
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
     async def test_batch_update_evicts_cache(
-        self, mock_get_client, mock_api_key, register_batch_tools, monkeypatch
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_batch_tools,
+        enable_doc_cache,
     ):
         """Updated documents must not be served stale from
         the cache; own staged edits are superseded."""
@@ -438,15 +442,12 @@ class TestBatchUpdateDocuments:
         )
         from mcp_outline.utils.document_cache import (
             get_document_cache,
-            reset_document_cache,
         )
 
-        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
-        reset_document_cache()
         cache = get_document_cache()
         doc_data = {"title": "Old", "text": "Old text.", "url": ""}
-        await cache.put("key-A", "doc1", doc_data)
-        await cache.update_text("key-A", "doc1", "A staged", dirty=True)
+        base = await cache.put("key-A", "doc1", doc_data)
+        await cache.stage_text("key-A", "doc1", base, "A staged")
         await cache.put("key-B", "doc1", doc_data)
 
         mock_client = AsyncMock()
@@ -461,7 +462,6 @@ class TestBatchUpdateDocuments:
 
         assert await cache.get("key-A", "doc1") is None
         assert await cache.get("key-B", "doc1") is None
-        reset_document_cache()
 
     @pytest.mark.asyncio
     @patch(

@@ -529,13 +529,10 @@ def register_tools(mcp) -> None:
                     document = response.get("data", {})
 
                     if document:
-                        # Drop own (possibly staged) entry
-                        # and other users' clean copies to
-                        # prevent stale reads. Other users'
-                        # staged edits are preserved.
                         cache = get_document_cache()
-                        await cache.evict(get_resolved_api_key(), doc_id)
-                        await cache.evict_document(doc_id)
+                        await cache.invalidate_for_write(
+                            get_resolved_api_key(), doc_id
+                        )
                         results.append(
                             _create_result_entry(
                                 doc_id,

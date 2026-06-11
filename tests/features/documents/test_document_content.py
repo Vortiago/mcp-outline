@@ -401,17 +401,14 @@ class TestDocumentContentTools:
         self,
         mock_get_client,
         register_content_tools,
-        monkeypatch,
+        enable_doc_cache,
     ):
         """Verify update_document evicts all cached copies
         of the document regardless of API key."""
         from mcp_outline.utils.document_cache import (
             get_document_cache,
-            reset_document_cache,
         )
 
-        monkeypatch.setenv("OUTLINE_CACHE_TTL", "300")
-        reset_document_cache()
         cache = get_document_cache()
         doc_data = {
             "title": "Old",
@@ -432,7 +429,6 @@ class TestDocumentContentTools:
 
         assert await cache.get("key-A", "doc123") is None
         assert await cache.get("key-B", "doc123") is None
-        reset_document_cache()
 
     @pytest.mark.asyncio
     @patch(
@@ -445,21 +441,20 @@ class TestDocumentContentTools:
         mock_get_client,
         mock_api_key,
         register_content_tools,
+        enable_doc_cache,
     ):
         """A full update supersedes the caller's own staged
         edits but preserves other users' staged edits."""
         from mcp_outline.utils.document_cache import (
             get_document_cache,
-            reset_document_cache,
         )
 
-        reset_document_cache()
         cache = get_document_cache()
         doc_data = {"title": "Old", "text": "Old text.", "url": ""}
-        await cache.put("key-A", "doc123", doc_data)
-        await cache.update_text("key-A", "doc123", "A staged", dirty=True)
-        await cache.put("key-B", "doc123", doc_data)
-        await cache.update_text("key-B", "doc123", "B staged", dirty=True)
+        base_a = await cache.put("key-A", "doc123", doc_data)
+        await cache.stage_text("key-A", "doc123", base_a, "A staged")
+        base_b = await cache.put("key-B", "doc123", doc_data)
+        await cache.stage_text("key-B", "doc123", base_b, "B staged")
 
         mock_client = AsyncMock()
         mock_client.post.return_value = SAMPLE_UPDATE_DOCUMENT_RESPONSE
@@ -474,7 +469,6 @@ class TestDocumentContentTools:
         b_doc = await cache.get("key-B", "doc123")
         assert b_doc is not None
         assert b_doc.dirty is True
-        reset_document_cache()
 
     @pytest.mark.asyncio
     @patch(_PATCH_CLIENT)

@@ -88,24 +88,6 @@ class DocumentCache:
             self._evict_if_needed()
             return doc
 
-    async def update_text(
-        self,
-        api_key: str,
-        document_id: str,
-        text: str,
-        dirty: bool,
-    ) -> None:
-        """Update cached text and dirty flag."""
-        async with self._lock:
-            key = (api_key, document_id)
-            doc = self._store.get(key)
-            if doc is None:
-                return
-            doc.text = text
-            doc.dirty = dirty
-            doc.cached_at = time.monotonic()
-            self._store.move_to_end(key)
-
     async def stage_text(
         self,
         api_key: str,
@@ -115,9 +97,9 @@ class DocumentCache:
     ) -> None:
         """Stage edited text as a dirty entry (upsert).
 
-        Unlike ``update_text`` this never silently no-ops:
-        if the entry vanished (e.g. evicted by a concurrent
-        save), it is recreated from ``base``.
+        Never silently no-ops: if the entry vanished (e.g.
+        evicted by a concurrent save), it is recreated from
+        ``base``.
         """
         async with self._lock:
             key = (api_key, document_id)
@@ -147,13 +129,27 @@ class DocumentCache:
         unconditionally.
         """
         async with self._lock:
-            keys_to_remove = [
-                k
-                for k in self._store
-                if k[1] == document_id and not self._store[k].dirty
-            ]
-            for key in keys_to_remove:
-                del self._store[key]
+            self._evict_clean_locked(document_id)
+
+    async def invalidate_for_write(
+        self, api_key: str, document_id: str
+    ) -> None:
+        """Invalidate after a successful write: drop the
+        writer's own entry (staged or not — it is superseded
+        by the write) and all clean copies of the document.
+        Other users' staged edits are preserved."""
+        async with self._lock:
+            self._store.pop((api_key, document_id), None)
+            self._evict_clean_locked(document_id)
+
+    def _evict_clean_locked(self, document_id: str) -> None:
+        keys_to_remove = [
+            k
+            for k in self._store
+            if k[1] == document_id and not self._store[k].dirty
+        ]
+        for key in keys_to_remove:
+            del self._store[key]
 
     async def clear(self) -> None:
         """Remove all entries."""
