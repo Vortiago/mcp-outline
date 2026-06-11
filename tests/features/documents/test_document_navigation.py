@@ -472,3 +472,29 @@ class TestSearchDocumentContent:
         )
         assert "0\tonly staged words here" in result
         assert "unsaved changes" in result
+
+    @pytest.mark.asyncio
+    @patch(_PATCH_API_KEY)
+    @patch(_PATCH_CLIENT)
+    async def test_search_content_shares_cache_with_toc(
+        self,
+        mock_get_client,
+        mock_api_key,
+        register_nav_tools,
+    ):
+        """With caching enabled, TOC + search cost one fetch."""
+        from mcp_outline.utils.document_cache import (
+            reset_document_cache,
+        )
+
+        mock_client = _mock_api(
+            mock_get_client, mock_api_key, SAMPLE_HEADED_DOCUMENT
+        )
+        with patch.dict("os.environ", {"OUTLINE_CACHE_TTL": "300"}):
+            reset_document_cache()
+            await register_nav_tools.tools["get_document_toc"]("doc789")
+            result = await register_nav_tools.tools[
+                "search_document_content"
+            ]("doc789", query="background text")
+            assert "1 match" in result
+            mock_client.get_document.assert_called_once()
