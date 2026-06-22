@@ -4,6 +4,7 @@ Document search tools for the MCP Outline server.
 This module provides MCP tools for searching and listing documents.
 """
 
+import os
 from typing import Any, Dict, List, Literal, Optional
 
 from mcp.types import ToolAnnotations
@@ -138,6 +139,9 @@ def register_tools(mcp) -> None:
     Args:
         mcp: The FastMCP server instance
     """
+    disable_recent = os.getenv(
+        "OUTLINE_DISABLE_RECENT_DOCUMENTS", ""
+    ).lower() in ("true", "1", "yes")
 
     @mcp.tool(
         annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
@@ -356,3 +360,86 @@ def register_tools(mcp) -> None:
             return f"Error searching for document: {str(e)}"
         except Exception as e:
             return f"Unexpected error: {str(e)}"
+
+    if not disable_recent:
+
+        @mcp.tool(
+            annotations=ToolAnnotations(
+                readOnlyHint=True, idempotentHint=True
+            ),
+            meta={
+                "endpoint": "documents.search",
+                "min_role": "viewer",
+            },
+        )
+        async def list_recently_updated_documents(
+            date_filter: Optional[
+                Literal["day", "week", "month", "year"]
+            ] = "week",
+            collection_id: Optional[str] = None,
+            status_filter: Optional[
+                List[Literal["draft", "archived", "published"]]
+            ] = None,
+            limit: int = 25,
+            offset: int = 0,
+        ) -> str:
+            """
+            Lists documents ordered by most recent change (newest first).
+
+            Answers questions like "what changed this week" without needing
+            search keywords. Backed by Outline's search endpoint with an empty
+            query, sorted by last-modified time.
+
+            IMPORTANT: date_filter is a coarse server-side window on each
+            document's last-modified time. It accepts only "day", "week",
+            "month", or "year" (no arbitrary timestamps) and defaults to
+            "week". Results are ordered newest-changed first.
+
+            STATUS FILTER: By default this lists published documents only.
+            Pass status_filter to include other states. Allowed values are
+            "draft", "archived", and "published". Drafts only ever include
+            those you are allowed to see.
+
+            PAGINATION: Returns up to limit documents (default 25). Use offset
+            to page through older changes.
+
+            Use this tool when you need to:
+            - Answer "what documents changed recently / this week"
+            - Review recent activity, optionally within one collection
+            - Catch up on edits since you last looked
+
+            Args:
+                date_filter: Time window on last-modified time. One of "day",
+                    "week", "month", "year". Defaults to "week".
+                collection_id: Optional collection to limit results to
+                status_filter: Optional list of statuses to include. Allowed
+                    values are "draft", "archived", and "published". Defaults
+                    to published only.
+                limit: Maximum number of documents to return (default: 25)
+                offset: Number of documents to skip for pagination (default: 0)
+
+            Returns:
+                Formatted string listing documents with their IDs and
+                last-updated timestamps, newest first
+            """
+            try:
+                client = await get_outline_client()
+                response = await client.search_documents(
+                    query="",
+                    collection_id=collection_id,
+                    limit=limit,
+                    offset=offset,
+                    status_filter=status_filter,
+                    sort="updatedAt",
+                    direction="DESC",
+                    date_filter=date_filter,
+                )
+                results = response.get("data", [])
+                documents = [result.get("document", {}) for result in results]
+                return _format_documents_list(
+                    documents, "Recently Updated Documents"
+                )
+            except OutlineClientError as e:
+                return f"Error listing recently updated documents: {str(e)}"
+            except Exception as e:
+                return f"Unexpected error: {str(e)}"

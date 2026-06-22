@@ -53,6 +53,24 @@ def test_instructions_omit_editing_in_read_only_mode():
     assert "get_document_toc" in text
 
 
+def test_instructions_mention_recent_documents_by_default():
+    """Default instructions point the LLM at the recent-changes tool."""
+    from mcp_outline.server import _build_instructions
+
+    text = _build_instructions(read_only=False)
+    assert "list_recently_updated_documents" in text
+
+
+def test_instructions_omit_recent_documents_when_disabled():
+    """Disabling the recent-changes tool drops it from the guidance."""
+    from mcp_outline.server import _build_instructions
+
+    text = _build_instructions(read_only=False, recent_documents=False)
+    assert "list_recently_updated_documents" not in text
+    # Other finding-content tools are still advertised
+    assert "search_documents" in text
+
+
 @pytest.mark.anyio
 async def test_ai_tools_disabled_via_env_var(fresh_mcp_server):
     """Test that AI tools are not registered when disabled via env var."""
@@ -139,6 +157,36 @@ async def test_disable_delete_blocks_deletes_only(fresh_mcp_server):
         assert "archive_document" in tool_names
         assert "create_collection" in tool_names
         assert "update_collection" in tool_names
+
+
+@pytest.mark.anyio
+async def test_disable_recent_documents_blocks_only_that_tool(
+    fresh_mcp_server,
+):
+    """OUTLINE_DISABLE_RECENT_DOCUMENTS hides only the recent-changes tool."""
+    with patch.dict(os.environ, {"OUTLINE_DISABLE_RECENT_DOCUMENTS": "true"}):
+        register_all(fresh_mcp_server)
+        tools = await fresh_mcp_server.list_tools()
+        tool_names = [tool.name for tool in tools]
+
+        # The recent-changes tool is NOT registered
+        assert "list_recently_updated_documents" not in tool_names
+
+        # Other read tools in the same module ARE still registered
+        assert "search_documents" in tool_names
+        assert "list_collections" in tool_names
+
+
+@pytest.mark.anyio
+async def test_recent_documents_tool_registered_by_default(fresh_mcp_server):
+    """The recent-changes tool is registered when the flag is unset."""
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("OUTLINE_DISABLE_RECENT_DOCUMENTS", None)
+        register_all(fresh_mcp_server)
+        tools = await fresh_mcp_server.list_tools()
+        tool_names = [tool.name for tool in tools]
+
+        assert "list_recently_updated_documents" in tool_names
 
 
 @pytest.mark.anyio

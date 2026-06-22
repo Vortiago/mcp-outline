@@ -34,6 +34,17 @@ Set `OUTLINE_DISABLE_DELETE=true` to allow create and update workflows while pre
 
 **Important:** `OUTLINE_READ_ONLY=true` takes precedence over `OUTLINE_DISABLE_DELETE`. If both are set, the server operates in read-only mode.
 
+## Disable Recent-Changes Tool
+
+Set `OUTLINE_DISABLE_RECENT_DOCUMENTS=true` to hide the `list_recently_updated_documents` tool. Only this tool is disabled.
+
+**Use cases:**
+- Trimming the tool list when a recent-changes view isn't needed
+- Deployments that prefer `search_documents` as the only discovery path
+
+**Disabled tools:**
+- `list_recently_updated_documents`
+
 ## Multi-User Setup (HTTP)
 
 When running in HTTP mode (`sse` or `streamable-http`), multiple users can share a single MCP server, each authenticating with their own Outline API key.

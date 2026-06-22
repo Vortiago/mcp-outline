@@ -158,3 +158,37 @@ async def test_search_documents(mcp_session):
             pytest.fail("Document not found in search")
 
         assert "# Search Results" in text
+
+
+async def test_list_recently_updated_documents(mcp_session):
+    """A freshly created document appears in the recent-changes listing.
+
+    Uses a retry loop because Outline's search index (which backs the
+    empty-query + dateFilter listing) is updated asynchronously.
+    Guards against: list_recently_updated_documents ignoring the time
+    window, failing on an empty query, or omitting recently changed docs.
+    """
+    async with mcp_session() as session:
+        coll_id = await _create_collection(session, "E2E Recent Changes")
+
+        unique = f"recent{uuid.uuid4().hex[:8]}"
+        await _create_document(
+            session,
+            coll_id,
+            f"Recently {unique}",
+            "Fresh content.",
+        )
+
+        for _ in range(10):
+            result = await session.call_tool(
+                "list_recently_updated_documents",
+                arguments={"date_filter": "week"},
+            )
+            text = _text(result)
+            if unique in text:
+                break
+            await anyio.sleep(2)
+        else:
+            pytest.fail("New document not found in recent changes")
+
+        assert "# Recently Updated Documents" in text

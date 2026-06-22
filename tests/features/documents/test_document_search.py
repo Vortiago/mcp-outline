@@ -258,6 +258,131 @@ class TestDocumentSearchTools:
 
     @pytest.mark.asyncio
     @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_recently_updated_documents_success(
+        self, mock_get_client, register_search_tools
+    ):
+        """Tool returns recent docs with titles, IDs, and timestamps."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": [
+                {
+                    "document": {
+                        "id": "doc1",
+                        "title": "Test Document 1",
+                        "updatedAt": "2026-06-20T12:00:00Z",
+                    }
+                }
+            ],
+            "pagination": {"limit": 25, "offset": 0},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "list_recently_updated_documents"
+        ]()
+
+        assert "Test Document 1" in result
+        assert "doc1" in result
+        assert "2026-06-20T12:00:00Z" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_recently_updated_documents_defaults(
+        self, mock_get_client, register_search_tools
+    ):
+        """Defaults to an empty query, week window, updatedAt DESC."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": [],
+            "pagination": {},
+        }
+        mock_get_client.return_value = mock_client
+
+        await register_search_tools.tools["list_recently_updated_documents"]()
+
+        mock_client.search_documents.assert_called_once_with(
+            query="",
+            collection_id=None,
+            limit=25,
+            offset=0,
+            status_filter=None,
+            sort="updatedAt",
+            direction="DESC",
+            date_filter="week",
+        )
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_recently_updated_documents_forwards_params(
+        self, mock_get_client, register_search_tools
+    ):
+        """date_filter, collection_id, status_filter, paging are forwarded."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": [],
+            "pagination": {},
+        }
+        mock_get_client.return_value = mock_client
+
+        await register_search_tools.tools["list_recently_updated_documents"](
+            date_filter="day",
+            collection_id="coll1",
+            status_filter=["published", "draft"],
+            limit=50,
+            offset=10,
+        )
+
+        mock_client.search_documents.assert_called_once_with(
+            query="",
+            collection_id="coll1",
+            limit=50,
+            offset=10,
+            status_filter=["published", "draft"],
+            sort="updatedAt",
+            direction="DESC",
+            date_filter="day",
+        )
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_recently_updated_documents_empty(
+        self, mock_get_client, register_search_tools
+    ):
+        """No recent changes yields a friendly empty message."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.return_value = {
+            "data": [],
+            "pagination": {},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "list_recently_updated_documents"
+        ]()
+
+        assert "No recently updated documents" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
+    async def test_list_recently_updated_documents_client_error(
+        self, mock_get_client, register_search_tools
+    ):
+        """Client errors are caught and returned as a string."""
+        mock_client = AsyncMock()
+        mock_client.search_documents.side_effect = OutlineClientError(
+            "API error"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await register_search_tools.tools[
+            "list_recently_updated_documents"
+        ]()
+
+        assert "Error" in result
+        assert "API error" in result
+
+    @pytest.mark.asyncio
+    @patch("mcp_outline.features.documents.document_search.get_outline_client")
     async def test_list_collections_success(
         self, mock_get_client, register_search_tools
     ):

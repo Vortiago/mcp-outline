@@ -283,6 +283,7 @@ async def test_route_scoped_read_only(
         "search_document_content",
         "export_document",
         "search_documents",
+        "list_recently_updated_documents",
         "get_document_id_from_title",
         "list_collections",
         "get_collection_structure",
@@ -341,6 +342,7 @@ async def test_namespace_read_scope(
         "search_document_content",  # documents.info
         "export_document",  # documents.export
         "search_documents",  # documents.search
+        "list_recently_updated_documents",  # documents.search
         "get_document_id_from_title",  # documents.search
         "get_document_backlinks",  # documents.list
         "list_document_attachments",  # documents.info
@@ -383,6 +385,7 @@ async def test_namespace_write_documents_only(
         "search_document_content",
         "export_document",
         "search_documents",
+        "list_recently_updated_documents",
         "get_document_id_from_title",
         "get_document_backlinks",
         "list_document_attachments",
@@ -442,6 +445,7 @@ async def test_mixed_namespace_and_route_scope(
         "search_document_content",
         "export_document",
         "search_documents",
+        "list_recently_updated_documents",
         "get_document_id_from_title",
         "get_document_backlinks",
         "list_document_attachments",

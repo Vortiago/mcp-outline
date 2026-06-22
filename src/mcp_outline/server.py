@@ -50,19 +50,29 @@ port = int(os.getenv("MCP_PORT", "3000"))
 
 # Server instructions — injected into the LLM's system prompt
 # by MCP clients. Keep under 2KB (Claude Code truncates at 2KB).
-def _build_instructions(read_only: bool) -> str:
+def _build_instructions(read_only: bool, recent_documents: bool = True) -> str:
     """Build MCP instructions matching the registered tools.
 
-    Editing guidance is omitted in read-only mode so the
-    LLM is never directed to unregistered tools.
+    Guidance is omitted for tools that are not registered so the
+    LLM is never directed to them: editing guidance in read-only
+    mode, and the recent-changes tool when
+    OUTLINE_DISABLE_RECENT_DOCUMENTS is set.
     """
+    finding = (
+        "Finding content: search_documents or "
+        "get_document_id_from_title to get document IDs, "
+        "list_collections to discover collections"
+    )
+    if recent_documents:
+        finding += (
+            ", list_recently_updated_documents to see what changed recently"
+        )
+    finding += "."
     parts = [
         "Manages documents in Outline, a wiki and knowledge "
         "base. Use for searching, reading, navigating, "
         "editing, and organizing documents and collections.",
-        "Finding content: search_documents or "
-        "get_document_id_from_title to get document IDs, "
-        "list_collections to discover collections.",
+        finding,
         "Large documents: start with get_document_toc to "
         "see heading structure, then read_document_section "
         "to read by heading, search_document_content to "
@@ -90,7 +100,9 @@ def _build_instructions(read_only: bool) -> str:
 
 _INSTRUCTIONS = _build_instructions(
     read_only=os.getenv("OUTLINE_READ_ONLY", "").lower()
-    in ("true", "1", "yes")
+    in ("true", "1", "yes"),
+    recent_documents=os.getenv("OUTLINE_DISABLE_RECENT_DOCUMENTS", "").lower()
+    not in ("true", "1", "yes"),
 )
 
 # Create a FastMCP server instance with a name and port configuration

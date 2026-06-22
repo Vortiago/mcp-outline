@@ -34,7 +34,7 @@ This MCP server bridges AI assistants with Outline's document management platfor
 register_all(mcp)
   |- health.register_routes(mcp)               # Always
   |- documents.register(mcp)
-  |   |- document_search.register_tools()      # Always
+  |   |- document_search.register_tools()      # Always (recent-changes tool: if not OUTLINE_DISABLE_RECENT_DOCUMENTS)
   |   |- document_reading.register_tools()     # Always
   |   |- document_navigation.register_tools()  # Always
   |   |- document_attachments.register_tools() # Always
@@ -365,6 +365,7 @@ OUTLINE_CACHE_MAX_SIZE=100                 # Max cached documents (default: 100)
 OUTLINE_DISABLE_AI_TOOLS=true              # Disable AI tools
 OUTLINE_READ_ONLY=true                     # Disable all write operations
 OUTLINE_DISABLE_DELETE=true                # Disable delete operations only
+OUTLINE_DISABLE_RECENT_DOCUMENTS=true      # Disable the recent-changes tool only
 OUTLINE_DYNAMIC_TOOL_LIST=true             # Enable per-user tool filtering (requires apiKeys.list scope)
 
 # MCP server (optional)
@@ -376,6 +377,7 @@ MCP_PORT=3000                              # Server port
 **Access Control Notes**:
 - `OUTLINE_READ_ONLY`: Blocks entire write modules at registration (content, lifecycle, organization, batch_operations)
 - `OUTLINE_DISABLE_DELETE`: Conditionally registers delete tools within document_lifecycle and collection_tools
+- `OUTLINE_DISABLE_RECENT_DOCUMENTS`: Conditionally registers the `list_recently_updated_documents` tool within document_search (opt-out; registered by default)
 - `OUTLINE_DYNAMIC_TOOL_LIST`: Off by default. Uses `apiKeys.list` to introspect API key scopes and filters tools per-user based on scope matching. Scoped API keys must include `apiKeys.list` in their scope array for introspection to work. Fail-open: if scope introspection fails, all tools are shown. Set to `true` to enable.
 - Read-only mode takes precedence: If both are set, server operates in read-only mode
 
