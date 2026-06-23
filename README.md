@@ -137,6 +137,7 @@ Setup guides for more clients: [Docker (HTTP), Cline, Codex, Windsurf, and other
 | `OUTLINE_READ_ONLY` | No | `false` | `true` = disable ALL write operations ([details](docs/configuration.md#read-only-mode)) |
 | `OUTLINE_DISABLE_DELETE` | No | `false` | `true` = disable only delete operations ([details](docs/configuration.md#disable-delete-operations)) |
 | `OUTLINE_DISABLE_AI_TOOLS` | No | `false` | `true` = disable AI tools (for Outline instances without OpenAI) |
+| `OUTLINE_DISABLE_RECENT_DOCUMENTS` | No | `false` | `true` = disable the `list_recently_updated_documents` tool |
 | `OUTLINE_DYNAMIC_TOOL_LIST` | No | `false` | `true` = enable per-user tool filtering by role/key scopes ([details](docs/configuration.md#dynamic-tool-list)) |
 | `OUTLINE_MAX_CONNECTIONS` | No | `100` | Max concurrent connections in pool |
 | `OUTLINE_MAX_KEEPALIVE` | No | `20` | Max idle connections in pool |
@@ -155,6 +156,7 @@ Setup guides for more clients: [Docker (HTTP), Cline, Codex, Windsurf, and other
 |---------|---------|--------|
 | Read-only mode | `OUTLINE_READ_ONLY=true` | Disables all write operations — only search, read, and export tools available |
 | Disable deletes | `OUTLINE_DISABLE_DELETE=true` | Disables only delete operations, all other writes allowed |
+| Disable recent-changes tool | `OUTLINE_DISABLE_RECENT_DOCUMENTS=true` | Disables only the `list_recently_updated_documents` tool |
 | Dynamic tool list | `OUTLINE_DYNAMIC_TOOL_LIST=true` | Filters tools per-user based on Outline role and API key scopes |
 | Per-user Outline API keys | `x-outline-api-key` header | Each user passes their own Outline API key in HTTP mode for multi-user setups |
 
@@ -166,6 +168,7 @@ Read-only mode takes precedence over disable-delete. See [Configuration Guide](d
 
 ### Search & Discovery
 - `search_documents(query, collection_id?, limit?, offset?, statusFilter?)` - Search documents by keywords with pagination. Defaults to published documents; pass `statusFilter` with `draft`, `archived`, and/or `published` to include other states
+- `list_recently_updated_documents(date_filter?, collection_id?, status_filter?, limit?, offset?)` - List documents by most recent change, newest first (e.g. "what changed this week"). `date_filter` windows by last change: `day`/`week`/`month`/`year` (default `week`). Defaults to published documents
 - `list_collections()` - List all collections
 - `get_collection_structure(collection_id)` - Get document hierarchy within a collection
 - `get_document_id_from_title(query, collection_id?)` - Find document ID by title search

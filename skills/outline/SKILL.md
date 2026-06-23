@@ -28,8 +28,9 @@ description: Conventions and efficient workflows for Outline knowledge bases via
 
 ## Search defaults to published only
 
-Drafts and archived docs are invisible to `search_documents` unless
-widened: `status_filter=["draft", "published", "archived"]`.
+Drafts and archived docs are invisible to `search_documents` and
+`list_recently_updated_documents` unless widened:
+`status_filter=["draft", "published", "archived"]`.
 
 ## Reading large documents
 

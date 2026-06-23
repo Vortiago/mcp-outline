@@ -367,25 +367,37 @@ class OutlineClient:
 
     async def search_documents(
         self,
-        query: str,
+        query: str = "",
         collection_id: Optional[str] = None,
         limit: int = 25,
         offset: int = 0,
         status_filter: Optional[
             List[Literal["draft", "archived", "published"]]
         ] = None,
+        sort: Optional[str] = None,
+        direction: Optional[str] = None,
+        date_filter: Optional[Literal["day", "week", "month", "year"]] = None,
     ) -> Dict[str, Any]:
         """
         Search for documents using keywords.
 
+        An empty ``query`` turns this into a plain listing ordered by ``sort``
+        (the Outline ``documents.search`` endpoint allows an empty query),
+        which is how recency listings are built.
+
         Args:
-            query: Search terms
+            query: Search terms. Empty string lists without ranking.
             collection_id: Optional collection to search within
             limit: Maximum number of results to return (default: 25)
             offset: Number of results to skip for pagination (default: 0)
             status_filter: Document statuses to include in results. Allowed
                 values are "draft", "archived", and "published". Defaults to
                 ["published"].
+            sort: Optional field to order by (e.g. "updatedAt", "createdAt",
+                "title").
+            direction: Optional sort direction ("ASC" or "DESC").
+            date_filter: Optional server-side window on last-modified time.
+                One of "day", "week", "month", or "year".
 
         Returns:
             Dict containing 'data' (list of results) and 'pagination' metadata
@@ -400,6 +412,12 @@ class OutlineClient:
         }
         if collection_id:
             data["collectionId"] = collection_id
+        if sort:
+            data["sort"] = sort
+        if direction:
+            data["direction"] = direction
+        if date_filter:
+            data["dateFilter"] = date_filter
 
         response = await self.post("documents.search", data)
         return response

@@ -78,6 +78,7 @@ Exploration process:
 
 Available tools (identified by suffix — use whatever full name appears in your tool list):
 - `search_documents` — search for documents by keywords
+- `list_recently_updated_documents` — list documents by most recent change (e.g. "what changed this week"); optional `date_filter` time window
 - `read_document` — read document content (supports offset/limit for line ranges)
 - `get_document_toc` — get heading structure with line numbers (use before reading sections)
 - `read_document_section` — read a specific section by heading name (preferred over full read)

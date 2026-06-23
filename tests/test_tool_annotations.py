@@ -26,6 +26,7 @@ async def test_read_only_tools_have_correct_annotations(fresh_mcp_server):
     # Define expected read-only tools
     read_only_tools = [
         "search_documents",
+        "list_recently_updated_documents",
         "read_document",
         "get_attachment_url",
         "fetch_attachment",
@@ -129,6 +130,7 @@ async def test_idempotent_tools(fresh_mcp_server):
         "delete_document",
         "archive_document",
         "search_documents",
+        "list_recently_updated_documents",
         "batch_delete_documents",
         "read_document",
         "get_attachment_url",

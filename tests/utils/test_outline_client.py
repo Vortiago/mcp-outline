@@ -524,6 +524,55 @@ class TestOutlineClient:
         )
 
     @pytest.mark.asyncio
+    async def test_search_documents_forwards_recency_params(self):
+        """documents.search forwards sort/direction/dateFilter and allows an
+        empty query so it can act as a recency listing."""
+        client = OutlineClient()
+
+        with patch.object(
+            client,
+            "post",
+            new=AsyncMock(return_value={"data": [], "pagination": {}}),
+        ) as mock_post:
+            result = await client.search_documents(
+                query="",
+                sort="updatedAt",
+                direction="DESC",
+                date_filter="week",
+            )
+
+        mock_post.assert_called_once_with(
+            "documents.search",
+            {
+                "query": "",
+                "limit": 25,
+                "offset": 0,
+                "statusFilter": ["published"],
+                "sort": "updatedAt",
+                "direction": "DESC",
+                "dateFilter": "week",
+            },
+        )
+        assert result == {"data": [], "pagination": {}}
+
+    @pytest.mark.asyncio
+    async def test_search_documents_omits_recency_params_by_default(self):
+        """sort/direction/dateFilter keys are absent when not provided."""
+        client = OutlineClient()
+
+        with patch.object(
+            client,
+            "post",
+            new=AsyncMock(return_value={"data": []}),
+        ) as mock_post:
+            await client.search_documents("policy")
+
+        sent = mock_post.call_args.args[1]
+        assert "sort" not in sent
+        assert "direction" not in sent
+        assert "dateFilter" not in sent
+
+    @pytest.mark.asyncio
     async def test_get_attachment_redirect_url_success(self):
         """Test get_attachment_redirect_url returns Location header."""
         client = OutlineClient()
