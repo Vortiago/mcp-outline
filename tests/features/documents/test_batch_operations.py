@@ -716,6 +716,66 @@ class TestBatchCreateDocuments:
     @patch(
         "mcp_outline.features.documents.batch_operations.get_outline_client"
     )
+    async def test_batch_create_lists_created_ids_section(
+        self, mock_get_client, register_batch_tools
+    ):
+        """Created IDs appear in a dedicated 'Created Document IDs'
+        section, not only inline in the per-item details."""
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = [
+            {"data": {"id": "new1", "title": "Document 1"}},
+            {"data": {"id": "new2", "title": "Document 2"}},
+        ]
+        mock_get_client.return_value = mock_client
+
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
+        )
+
+        documents = [
+            BatchCreateItem(title="Doc 1", collection_id="col1"),
+            BatchCreateItem(title="Doc 2", collection_id="col1"),
+        ]
+
+        result = await register_batch_tools.tools["batch_create_documents"](
+            documents
+        )
+
+        assert "Created Document IDs:" in result
+        assert "  - new1" in result
+        assert "  - new2" in result
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.batch_operations.get_outline_client"
+    )
+    async def test_batch_create_omits_ids_section_when_all_fail(
+        self, mock_get_client, register_batch_tools
+    ):
+        """No 'Created Document IDs' section when nothing was created."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = {}  # no "data" -> failure
+        mock_get_client.return_value = mock_client
+
+        from mcp_outline.features.documents.models import (
+            BatchCreateItem,
+        )
+
+        documents = [
+            BatchCreateItem(title="Doc 1", collection_id="col1"),
+        ]
+
+        result = await register_batch_tools.tools["batch_create_documents"](
+            documents
+        )
+
+        assert "Failed: 1" in result
+        assert "Created Document IDs:" not in result
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.batch_operations.get_outline_client"
+    )
     async def test_batch_create_empty_list(
         self, mock_get_client, register_batch_tools
     ):
@@ -723,6 +783,72 @@ class TestBatchCreateDocuments:
         result = await register_batch_tools.tools["batch_create_documents"]([])
 
         assert "Error: No documents provided" in result
+
+
+class TestRunBatchEngine:
+    """Tests for shared _run_batch behavior, exercised via archive.
+
+    These error paths are centralized in _run_batch, so covering them
+    once through one tool exercises them for all five batch tools.
+    """
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.batch_operations.get_outline_client"
+    )
+    async def test_unexpected_exception_is_isolated(
+        self, mock_get_client, register_batch_tools
+    ):
+        """A non-OutlineClientError is isolated per item and the batch
+        continues with the remaining items."""
+        mock_client = AsyncMock()
+        mock_client.archive_document.side_effect = [
+            ValueError("boom"),
+            {"id": "doc2", "title": "Document 2"},
+        ]
+        mock_get_client.return_value = mock_client
+
+        result = await register_batch_tools.tools["batch_archive_documents"](
+            ["doc1", "doc2"]
+        )
+
+        assert "Total: 2" in result
+        assert "Succeeded: 1" in result
+        assert "Failed: 1" in result
+        assert "Unexpected error: boom" in result
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.batch_operations.get_outline_client"
+    )
+    async def test_client_init_failure_reported(
+        self, mock_get_client, register_batch_tools
+    ):
+        """A client-init OutlineClientError aborts before the loop."""
+        mock_get_client.side_effect = OutlineClientError("no api key")
+
+        result = await register_batch_tools.tools["batch_archive_documents"](
+            ["doc1", "doc2"]
+        )
+
+        assert "Error initializing client: no api key" in result
+
+    @pytest.mark.asyncio
+    @patch(
+        "mcp_outline.features.documents.batch_operations.get_outline_client"
+    )
+    async def test_client_init_unexpected_error_reported(
+        self, mock_get_client, register_batch_tools
+    ):
+        """A non-OutlineClientError during init maps to the generic
+        unexpected-error message."""
+        mock_get_client.side_effect = RuntimeError("kaboom")
+
+        result = await register_batch_tools.tools["batch_archive_documents"](
+            ["doc1"]
+        )
+
+        assert "Unexpected error: kaboom" in result
 
 
 class TestHelperFunctions:
