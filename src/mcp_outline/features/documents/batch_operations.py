@@ -293,14 +293,17 @@ def register_tools(mcp) -> None:
                 "parent_document_id."
             )
 
-        async def op(client: OutlineClient, doc_id: str) -> Dict[str, Any]:
-            data = {"id": doc_id}
-            if collection_id:
-                data["collectionId"] = collection_id
-            if parent_document_id:
-                data["parentDocumentId"] = parent_document_id
+        # Destination is the same for every document; build it once.
+        destination: Dict[str, str] = {}
+        if collection_id:
+            destination["collectionId"] = collection_id
+        if parent_document_id:
+            destination["parentDocumentId"] = parent_document_id
 
-            response = await client.post("documents.move", data)
+        async def op(client: OutlineClient, doc_id: str) -> Dict[str, Any]:
+            response = await client.post(
+                "documents.move", {"id": doc_id, **destination}
+            )
             if response.get("data"):
                 doc_data = response.get("data", {})
                 return _create_result_entry(
