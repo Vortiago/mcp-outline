@@ -550,14 +550,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.20.0" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.20.0,<2" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "anyio", specifier = ">=4.11.0" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.20.0" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.20.0,<2" },
     { name = "poethepoet", specifier = ">=0.32.0" },
     { name = "pre-commit", specifier = ">=4.0.0" },
     { name = "pyright", specifier = ">=1.1.407" },
