@@ -1,5 +1,7 @@
 # MCP Outline Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.Vortiago%2Fmcp-outline.svg)](https://mcptoplist.com/server/io.github.Vortiago%2Fmcp-outline)
+
 > ## 📢 Official Outline MCP Server Available
 >
 > Outline now ships an **official MCP server** — we recommend using it.
