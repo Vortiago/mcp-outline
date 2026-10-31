@@ -32,6 +32,15 @@ async def test_server_initialization():
     assert len(await mcp.list_tools()) > 0  # Ensure functions are registered
 
 
+def test_server_reports_package_version():
+    """serverInfo.version is the installed mcp-outline version."""
+    from importlib.metadata import version
+
+    from mcp_outline.server import mcp
+
+    assert mcp.version == version("mcp-outline")
+
+
 def test_instructions_mention_editing_by_default():
     """Default instructions guide the LLM to edit tools."""
     from mcp_outline.server import _build_instructions

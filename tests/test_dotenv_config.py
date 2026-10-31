@@ -188,4 +188,5 @@ def test_sse_skips_api_key_check():
                 transport="sse",
                 host=mcp_outline.server.host,
                 port=mcp_outline.server.port,
+                max_request_body_size=mcp_outline.server.MAX_REQUEST_BODY_BYTES,
             )
