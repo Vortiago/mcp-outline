@@ -31,7 +31,7 @@ def register_tools(mcp) -> None:
     Register document lifecycle tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
     disable_delete = os.getenv("OUTLINE_DISABLE_DELETE", "").lower() in (
         "true",
@@ -41,7 +41,7 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False, destructiveHint=True, idempotentHint=True
+            read_only_hint=False, destructive_hint=True, idempotent_hint=True
         ),
         meta={
             "endpoint": "documents.archive",
@@ -85,7 +85,7 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False, destructiveHint=False, idempotentHint=True
+            read_only_hint=False, destructive_hint=False, idempotent_hint=True
         ),
         meta={
             "endpoint": "documents.restore",
@@ -127,7 +127,9 @@ def register_tools(mcp) -> None:
 
         @mcp.tool(
             annotations=ToolAnnotations(
-                readOnlyHint=False, destructiveHint=True, idempotentHint=True
+                read_only_hint=False,
+                destructive_hint=True,
+                idempotent_hint=True,
             ),
             meta={
                 "endpoint": "documents.delete",
@@ -197,7 +199,7 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False, destructiveHint=False, idempotentHint=True
+            read_only_hint=False, destructive_hint=False, idempotent_hint=True
         ),
         meta={
             "endpoint": "documents.restore",
@@ -237,7 +239,7 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=True, destructiveHint=False, idempotentHint=True
+            read_only_hint=True, destructive_hint=False, idempotent_hint=True
         ),
         meta={
             "endpoint": "documents.archived",
@@ -273,7 +275,7 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=True, destructiveHint=False, idempotentHint=True
+            read_only_hint=True, destructive_hint=False, idempotent_hint=True
         ),
         meta={
             "endpoint": "documents.deleted",

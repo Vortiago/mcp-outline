@@ -4,18 +4,15 @@ Utilities used across multiple test modules.  E2E-specific
 helpers live in ``tests/e2e/helpers.py``.
 """
 
-from mcp.types import ListToolsRequest
+from mcp import Client
 
 
 async def list_tools_via_handler(mcp_server):
-    """Call list_tools through the lowlevel MCP handler.
+    """Call ``tools/list`` through an in-process MCP client.
 
-    This is the code path real MCP clients use
-    (``tools/list`` JSON-RPC request).  The handler is
-    registered during ``FastMCP.__init__`` and may differ
-    from the instance-level ``mcp.list_tools`` attribute
-    that ``install_dynamic_tool_list`` patches.
+    This is the code path real MCP clients use, so the server
+    middleware (dynamic tool filtering) runs.
     """
-    handler = mcp_server._mcp_server.request_handlers[ListToolsRequest]
-    server_result = await handler(ListToolsRequest())
-    return server_result.root.tools
+    async with Client(mcp_server) as client:
+        result = await client.list_tools()
+    return result.tools

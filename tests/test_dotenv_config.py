@@ -151,7 +151,7 @@ def test_stdio_starts_without_api_key():
 
         with patch.object(mcp_outline.server.mcp, "run") as mock_run:
             mcp_outline.server.main()
-            mock_run.assert_called_once_with(transport="stdio")
+            mock_run.assert_called_once_with()
 
 
 def test_stdio_starts_with_api_key():
@@ -167,7 +167,7 @@ def test_stdio_starts_with_api_key():
 
         with patch.object(mcp_outline.server.mcp, "run") as mock_run:
             mcp_outline.server.main()
-            mock_run.assert_called_once_with(transport="stdio")
+            mock_run.assert_called_once_with()
 
 
 def test_sse_skips_api_key_check():
@@ -184,4 +184,8 @@ def test_sse_skips_api_key_check():
 
         with patch.object(mcp_outline.server.mcp, "run") as mock_run:
             mcp_outline.server.main()
-            mock_run.assert_called_once_with(transport="sse")
+            mock_run.assert_called_once_with(
+                transport="sse",
+                host=mcp_outline.server.host,
+                port=mcp_outline.server.port,
+            )

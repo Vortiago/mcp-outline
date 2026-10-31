@@ -121,7 +121,7 @@ parameters, update the agent, the skill, and the server instructions
 
 - `get_outline_client()` - Async function that creates an OutlineClient. Checks for a per-user Outline API key from the `x-outline-api-key` HTTP header first (SSE/streamable-http), then falls back to `OUTLINE_API_KEY` env var.
 - `get_resolved_api_key()` - Returns the resolved API key (header > env var) as a string. Used by both the client factory and the document cache for keying.
-- `_get_header_api_key()` - Reads the `x-outline-api-key` header from the MCP SDK's `request_ctx` ContextVar. Returns `None` for stdio or when header is absent.
+- `_get_header_api_key()` - Reads the `x-outline-api-key` header through `request_context.get_request_header()`. Returns `None` for stdio or when the header is absent.
 - `OutlineClientError` - Exception class for client-related errors
 
 ### Document Cache (`utils/document_cache.py`)
@@ -139,10 +139,14 @@ In-memory LRU cache with configurable TTL for document content. Reduces Outline 
 **Edit tools** (`edit_document`) operate on cached text; `save=True` (default) pushes to Outline immediately. `edit_document(edits=[], save=True)` flushes staged changes.
 **Writers** (`update_document`, `batch_update_documents`, `delete_document`) explicitly evict the caller's own entry (`evict()`) plus all clean copies (`evict_document()`) after a successful API call; other users' staged edits survive and surface a conflict at their own save time.
 
-### Copilot CLI Patch (`patches/copilot_cli.py`)
+### Server Middleware
 
-Workaround for GitHub Copilot CLI sending `""` instead of `{}` for empty tool parameters.
-Applied before server initialization. Patches `mcp.types.CallToolRequestParams` with a field validator.
+`server.py` passes these to `MCPServer(middleware=[...])`, outermost first:
+
+- `request_context.capture_request_headers` stores the HTTP request headers of each message in a ContextVar. `get_request_header()` reads them. The value is `None` for stdio.
+- `patches.coerce_empty_tool_arguments` turns the `""` arguments that GitHub Copilot CLI sends for a tool with no parameters into `{}`, before the SDK validates them.
+
+`install_dynamic_tool_list` appends a third middleware that filters the `tools/list` result.
 
 ## Implementation Patterns
 
@@ -154,7 +158,7 @@ Feature modules follow this pattern:
 # 1. Imports (standard lib -> third-party -> local)
 import os
 from typing import Any, Optional
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 from mcp_outline.features.documents.common import (
     get_outline_client,
@@ -170,15 +174,15 @@ def _format_search_results(data: dict) -> str:
 
 
 # 3. Tool registration function
-def register_tools(mcp: FastMCP) -> None:
+def register_tools(mcp: MCPServer) -> None:
     """Register all tools in this module."""
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=True,
-            destructiveHint=False,
-            idempotentHint=True,
-            openWorldHint=True,
+            read_only_hint=True,
+            destructive_hint=False,
+            idempotent_hint=True,
+            open_world_hint=True,
         )
     )
     async def search_documents(
@@ -219,8 +223,8 @@ async def new_operation(self, param: str) -> dict:
 ```python
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnlyHint=False,
-        destructiveHint=False,
+        read_only_hint=False,
+        destructive_hint=False,
     ),
     meta={"endpoint": "namespace.method", "min_role": "member"},
 )
@@ -385,7 +389,7 @@ MCP_PORT=3000                              # Server port
 - Use `await` for ALL client method calls
 - Always use `await get_outline_client()` to get client instance
 - Catch exceptions, return error strings
-- Use `ToolAnnotations` on all tools (readOnlyHint, destructiveHint, etc.)
+- Use `ToolAnnotations` on all tools (read_only_hint, destructive_hint, etc.)
 - Follow KISS principle
 
 ### Pre-Commit Checks

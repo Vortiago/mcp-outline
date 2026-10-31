@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
@@ -19,11 +19,8 @@ from mcp_outline.features.dynamic_tools import (
     build_tool_endpoint_map,
     install_dynamic_tool_list,
 )
-from mcp_outline.patches import patch_for_copilot_cli
-
-# Apply compatibility patches for MCP clients
-# This must happen before creating the FastMCP instance
-patch_for_copilot_cli()
+from mcp_outline.patches import coerce_empty_tool_arguments
+from mcp_outline.request_context import capture_request_headers
 
 # Strip empty env vars so that dotenv can fill them from the
 # config file.  MCP clients (e.g. Claude Code) may pass
@@ -105,12 +102,10 @@ _INSTRUCTIONS = _build_instructions(
     not in ("true", "1", "yes"),
 )
 
-# Create a FastMCP server instance with a name and port configuration
-mcp = FastMCP(
+mcp = MCPServer(
     "Document Outline",
-    host=host,
-    port=port,
     instructions=_INSTRUCTIONS,
+    middleware=[capture_request_headers, coerce_empty_tool_arguments],
 )
 
 # Register all features
@@ -181,8 +176,10 @@ def main() -> None:
                 "(x-outline-api-key header)."
             )
 
-    # Start the server with the specified transport
-    mcp.run(transport=transport_mode)
+    if transport_mode == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport=transport_mode, host=host, port=port)
 
 
 if __name__ == "__main__":

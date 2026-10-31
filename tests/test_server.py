@@ -6,7 +6,7 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
@@ -20,7 +20,7 @@ from tests.helpers import list_tools_via_handler
 @pytest.fixture
 def fresh_mcp_server():
     """Create a fresh MCP server instance for testing."""
-    return FastMCP("Test Server")
+    return MCPServer("Test Server")
 
 
 @pytest.mark.anyio
@@ -229,7 +229,7 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
         assert "ask_ai_about_documents" in tool_names
 
     # Test 2: AI tools disabled when both flags are set
-    fresh_mcp_server2 = FastMCP("Test Server 2")
+    fresh_mcp_server2 = MCPServer("Test Server 2")
     with patch.dict(
         os.environ,
         {"OUTLINE_READ_ONLY": "true", "OUTLINE_DISABLE_AI_TOOLS": "true"},
@@ -279,7 +279,7 @@ async def test_dynamic_tool_list_composes_with_read_only():
 
     Uses the lowlevel handler path to match real MCP clients.
     """
-    mcp = FastMCP("Test Compose")
+    mcp = MCPServer("Test Compose")
     with patch.dict(
         os.environ,
         {
@@ -317,7 +317,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
 
     Uses the lowlevel handler path to match real MCP clients.
     """
-    mcp = FastMCP("Test Compose Delete")
+    mcp = MCPServer("Test Compose Delete")
     with patch.dict(
         os.environ,
         {

@@ -137,14 +137,14 @@ def register_tools(mcp) -> None:
     Register document search tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
     disable_recent = os.getenv(
         "OUTLINE_DISABLE_RECENT_DOCUMENTS", ""
     ).lower() in ("true", "1", "yes")
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "documents.search",
             "min_role": "viewer",
@@ -222,7 +222,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error during search: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "collections.list",
             "min_role": "viewer",
@@ -261,7 +261,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error listing collections: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "collections.documents",
             "min_role": "viewer",
@@ -293,7 +293,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "documents.search",
             "min_role": "viewer",
@@ -365,7 +365,7 @@ def register_tools(mcp) -> None:
 
         @mcp.tool(
             annotations=ToolAnnotations(
-                readOnlyHint=True, idempotentHint=True
+                read_only_hint=True, idempotent_hint=True
             ),
             meta={
                 "endpoint": "documents.search",

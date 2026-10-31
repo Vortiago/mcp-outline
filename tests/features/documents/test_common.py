@@ -3,153 +3,77 @@ Tests for common utilities (get_outline_client, _get_header_api_key).
 """
 
 import os
-from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Optional
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from starlette.datastructures import Headers
 
 from mcp_outline.features.documents.common import (
     OutlineClientError,
     _get_header_api_key,
     get_outline_client,
 )
-
-# ---------------------------------------------------------------------------
-# Helpers: lightweight stand-ins for Starlette Request / MCP RequestContext
-# ---------------------------------------------------------------------------
+from mcp_outline.request_context import capture_request_headers
 
 
-class _FakeHeaders:
-    """Minimal mapping that mimics Starlette Headers."""
+async def _header_key_during_request(
+    headers: Optional[dict],
+) -> Optional[str]:
+    """Run the header middleware and read the key inside the message.
 
-    def __init__(self, mapping: dict):
-        self._data = {k.lower(): v for k, v in mapping.items()}
+    ``headers=None`` stands for a message with no HTTP request (stdio).
+    """
+    request = (
+        None if headers is None else SimpleNamespace(headers=Headers(headers))
+    )
+    ctx = SimpleNamespace(request=request)
 
-    def get(self, key: str, default=None):
-        return self._data.get(key.lower(), default)
+    async def call_next(_ctx):
+        return _get_header_api_key()
 
-
-class _FakeRequest:
-    """Minimal stand-in for a Starlette Request."""
-
-    def __init__(self, headers: Optional[dict] = None):
-        self.headers = _FakeHeaders(headers or {})
-
-
-@dataclass
-class _FakeRequestContext:
-    """Minimal stand-in for mcp RequestContext."""
-
-    request: object = field(default=None)
-
-
-# ---------------------------------------------------------------------------
-# Tests for _get_header_api_key
-# ---------------------------------------------------------------------------
+    return await capture_request_headers(ctx, call_next)  # type: ignore[arg-type]
 
 
 class TestGetHeaderApiKey:
     """Tests for the _get_header_api_key helper."""
 
     def test_returns_none_outside_request_context(self):
-        """No request context set -> returns None."""
-        result = _get_header_api_key()
-        assert result is None
+        """No message in progress -> returns None."""
+        assert _get_header_api_key() is None
 
-    def test_returns_key_from_header(self):
+    @pytest.mark.asyncio
+    async def test_returns_key_from_header(self):
         """Header present -> returns key value."""
-        fake_ctx = _FakeRequestContext(
-            request=_FakeRequest(headers={"x-outline-api-key": "sk-test-key"})
+        result = await _header_key_during_request(
+            {"x-outline-api-key": "sk-test-key"}
         )
-        with patch(
-            "mcp_outline.features.documents.common.request_ctx",
-            create=True,
-        ) as mock_var:
-            mock_var.get.return_value = fake_ctx
-            # Patch the import inside _get_header_api_key
-            with patch.dict(
-                "sys.modules",
-                {
-                    "mcp.server.lowlevel.server": type(
-                        "mod",
-                        (),
-                        {"request_ctx": mock_var},
-                    )
-                },
-            ):
-                result = _get_header_api_key()
         assert result == "sk-test-key"
 
-    def test_returns_none_when_header_absent(self):
+    @pytest.mark.asyncio
+    async def test_returns_none_when_header_absent(self):
         """Request exists but header missing -> None."""
-        fake_ctx = _FakeRequestContext(request=_FakeRequest(headers={}))
-        with patch.dict(
-            "sys.modules",
-            {
-                "mcp.server.lowlevel.server": type(
-                    "mod",
-                    (),
-                    {
-                        "request_ctx": type(
-                            "cv",
-                            (),
-                            {"get": lambda self: fake_ctx},
-                        )()
-                    },
-                )
-            },
-        ):
-            result = _get_header_api_key()
-        assert result is None
+        assert await _header_key_during_request({}) is None
 
-    def test_sanitizes_header_value(self):
+    @pytest.mark.asyncio
+    async def test_sanitizes_header_value(self):
         """Quoted/whitespace values are cleaned."""
-        fake_ctx = _FakeRequestContext(
-            request=_FakeRequest(
-                headers={"x-outline-api-key": '  "sk-quoted"  '}
-            )
+        result = await _header_key_during_request(
+            {"x-outline-api-key": '  "sk-quoted"  '}
         )
-        with patch.dict(
-            "sys.modules",
-            {
-                "mcp.server.lowlevel.server": type(
-                    "mod",
-                    (),
-                    {
-                        "request_ctx": type(
-                            "cv",
-                            (),
-                            {"get": lambda self: fake_ctx},
-                        )()
-                    },
-                )
-            },
-        ):
-            result = _get_header_api_key()
         assert result == "sk-quoted"
 
-    def test_returns_none_when_request_is_none(self):
-        """RequestContext with request=None -> None."""
-        fake_ctx = _FakeRequestContext(request=None)
-        with patch.dict(
-            "sys.modules",
-            {
-                "mcp.server.lowlevel.server": type(
-                    "mod",
-                    (),
-                    {
-                        "request_ctx": type(
-                            "cv",
-                            (),
-                            {"get": lambda self: fake_ctx},
-                        )()
-                    },
-                )
-            },
-        ):
-            result = _get_header_api_key()
-        assert result is None
+    @pytest.mark.asyncio
+    async def test_returns_none_when_request_is_none(self):
+        """Message with no HTTP request (stdio) -> None."""
+        assert await _header_key_during_request(None) is None
+
+    @pytest.mark.asyncio
+    async def test_header_cleared_after_message(self):
+        """The header does not outlive its message."""
+        await _header_key_during_request({"x-outline-api-key": "sk-gone"})
+        assert _get_header_api_key() is None
 
 
 # ---------------------------------------------------------------------------

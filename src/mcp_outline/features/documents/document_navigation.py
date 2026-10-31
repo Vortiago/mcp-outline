@@ -50,11 +50,11 @@ def register_tools(mcp) -> None:
     Register document navigation tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "documents.info",
             "min_role": "viewer",
@@ -105,7 +105,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "documents.info",
             "min_role": "viewer",
@@ -207,7 +207,7 @@ def register_tools(mcp) -> None:
             return f"Unexpected error: {str(e)}"
 
     @mcp.tool(
-        annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+        annotations=ToolAnnotations(read_only_hint=True, idempotent_hint=True),
         meta={
             "endpoint": "documents.info",
             "min_role": "viewer",

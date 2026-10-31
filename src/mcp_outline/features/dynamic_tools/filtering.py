@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import anyio
-from mcp.types import Tool as MCPTool
+from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 
 from mcp_outline.features.documents.common import (
     _get_header_api_key,
@@ -18,7 +18,7 @@ from mcp_outline.features.dynamic_tools.scope_matching import (
 from mcp_outline.utils.outline_client import OutlineClient, OutlineError
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
 logger = logging.getLogger(__name__)
 
@@ -242,26 +242,30 @@ async def get_blocked_tools(
 
 
 def install_dynamic_tool_list(
-    mcp: "FastMCP",
+    mcp: "MCPServer",
     tool_endpoint_map: dict[str, str],
     role_blocked_map: dict[str, frozenset[str]],
 ) -> None:
     """Install per-request tool filtering on *mcp*.
 
-    Re-registers the lowlevel ``tools/list`` handler so that
-    tools blocked by the API key's scopes or user role are
-    hidden.  Disabled by default; set
-    ``OUTLINE_DYNAMIC_TOOL_LIST=true`` to enable.
+    Adds a server middleware that hides tools from the ``tools/list``
+    result when the API key's scopes or user role block them.
+    Disabled by default; set ``OUTLINE_DYNAMIC_TOOL_LIST=true`` to
+    enable.
 
     Call this **after** ``register_all(mcp)``.
     """
     if not _is_enabled():
         return
 
-    original_list_tools = mcp.list_tools
-
-    async def filtered_list_tools() -> list[MCPTool]:
-        tools: list[MCPTool] = await original_list_tools()
+    async def filter_tool_list(
+        ctx: ServerRequestContext[Any, Any], call_next: CallNext
+    ) -> HandlerResult:
+        result = await call_next(ctx)
+        # The runner serialises a handler result before middleware sees
+        # it, so a tools/list result is a wire-format dict.
+        if ctx.method != "tools/list" or not isinstance(result, dict):
+            return result
 
         try:
             api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
@@ -273,18 +277,16 @@ def install_dynamic_tool_list(
                 tool_endpoint_map,
                 role_blocked_map,
             )
-
-            if blocked:
-                return [t for t in tools if t.name not in blocked]
         except Exception as exc:
             logger.debug(
                 "Dynamic tool filtering failed (%s), returning full tool list",
                 type(exc).__name__,
             )
+            return result
 
-        return tools
+        if not blocked:
+            return result
+        tools = [t for t in result["tools"] if t["name"] not in blocked]
+        return {**result, "tools": tools}
 
-    # Re-register with the lowlevel server so the protocol
-    # handler calls our filtered function instead of the
-    # original captured reference.
-    mcp._mcp_server.list_tools()(filtered_list_tools)
+    mcp.middleware.append(filter_tool_list)

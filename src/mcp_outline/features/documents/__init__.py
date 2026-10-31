@@ -25,7 +25,7 @@ def register(
     Register document management features with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
         api_key: Optional API key for Outline
         api_url: Optional API URL for Outline
     """

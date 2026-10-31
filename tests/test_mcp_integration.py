@@ -36,8 +36,8 @@ async def test_mcp_server_integration():
         async with ClientSession(read, write) as session:
             # Initialize the session
             result = await session.initialize()
-            assert result.serverInfo.name == "Document Outline"
-            assert result.protocolVersion is not None
+            assert result.server_info.name == "Document Outline"
+            assert result.protocol_version is not None
 
             # List available tools
             tools_result = await session.list_tools()

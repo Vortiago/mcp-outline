@@ -19,14 +19,14 @@ def register_tools(mcp) -> None:
     Register document organization tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=True,
-            idempotentHint=False,
+            read_only_hint=False,
+            destructive_hint=True,
+            idempotent_hint=False,
         ),
         meta={
             "endpoint": "documents.move",

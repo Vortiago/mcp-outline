@@ -15,7 +15,7 @@ flowchart TB
         A --> C["build_role_blocked_map()"]
         B --> D["install_dynamic_tool_list(mcp, maps)"]
         C --> D
-        D --> E["Wrap tools/list handler"]
+        D --> E["Add tools/list middleware"]
     end
 
     subgraph Runtime ["Runtime (per request)"]
@@ -37,7 +37,7 @@ Every `@mcp.tool()` decorator carries metadata that drives filtering:
 
 ```python
 @mcp.tool(
-    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True),
+    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True),
     meta={"endpoint": "documents.delete", "min_role": "member"},
 )
 async def delete_document(...) -> str:
@@ -50,13 +50,13 @@ After `register_all(mcp)`, `introspect.py` scans all registered tools via `mcp._
 | `tool_endpoint_map` | `meta["endpoint"]` | `{tool_name: "namespace.method"}` — used for scope matching |
 | `role_blocked_map` | `meta["min_role"]` | `{role: frozenset(blocked_names)}` — used for role-based blocking |
 
-`min_role` declares the minimum Outline role required (`"viewer"`, `"member"`, or `"admin"`). This is independent of `readOnlyHint`, which controls `OUTLINE_READ_ONLY` module registration.
+`min_role` declares the minimum Outline role required (`"viewer"`, `"member"`, or `"admin"`). This is independent of `read_only_hint`, which controls `OUTLINE_READ_ONLY` module registration.
 
-These maps are passed to `install_dynamic_tool_list()`, which wraps the `tools/list` protocol handler with a filtering function.
+These maps are passed to `install_dynamic_tool_list()`, which adds a server middleware that filters the `tools/list` result.
 
 ## Runtime: Per-Request Filtering
 
-On each `tools/list` call, the wrapped handler:
+On each `tools/list` call, the middleware:
 
 1. Resolves the API key from `x-outline-api-key` header (HTTP) or `OUTLINE_API_KEY` env var (stdio)
 2. Runs two checks concurrently (role and scopes)

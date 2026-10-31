@@ -48,12 +48,12 @@ This is independent of scope matching — both results are combined
 (union).  Fails open: if `auth.info` errors, only scope matching
 is applied.
 
-**Important**: `min_role` is independent of `readOnlyHint`.
-`readOnlyHint` controls `OUTLINE_READ_ONLY` module registration.
+**Important**: `min_role` is independent of `read_only_hint`.
+`read_only_hint` controls `OUTLINE_READ_ONLY` module registration.
 `min_role` controls per-request role filtering.  Examples:
-- `add_comment`: `readOnlyHint=False` but `min_role="viewer"`
+- `add_comment`: `read_only_hint=False` but `min_role="viewer"`
   (viewers can comment in Outline)
-- `list_archived_documents`: `readOnlyHint=True` but
+- `list_archived_documents`: `read_only_hint=True` but
   `min_role="member"` (Outline requires Member role)
 
 **Outline bug (v1.5.0)**: global scopes like `"read"` get `/api/`

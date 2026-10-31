@@ -12,7 +12,7 @@ from mcp_outline.features.documents.collection_tools import (
 from mcp_outline.features.documents.common import OutlineClientError
 
 
-# Mock FastMCP for registering tools
+# Mock MCPServer for registering tools
 class MockMCP:
     def __init__(self):
         self.tools = {}

@@ -5,11 +5,10 @@ Verifies that the ``OUTLINE_DYNAMIC_TOOL_LIST`` feature correctly
 filters tools by introspecting API key scopes via ``apiKeys.list``
 and user role via ``auth.info``.
 
-**Important**: filtering tests call ``list_tools`` through the
-lowlevel MCP handler (``_mcp_server.request_handlers``), which is
-the code path real MCP clients hit.  Calling
-``mcp.list_tools()`` directly would only exercise the instance
-attribute — which can diverge from the registered handler.
+**Important**: filtering tests call ``tools/list`` through an
+in-process MCP client, the code path real MCP clients hit.  The
+filter is server middleware, so ``mcp.list_tools()`` alone does not
+run it.
 """
 
 import logging
@@ -17,8 +16,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from mcp.server.fastmcp import FastMCP
-from mcp.types import ListToolsRequest
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
@@ -33,7 +31,7 @@ from tests.helpers import list_tools_via_handler
 
 def _build_maps():
     """Build tool maps from a temporary server for test assertions."""
-    _mcp = FastMCP("map-builder")
+    _mcp = MCPServer("map-builder")
     register_all(_mcp)
     return (
         build_tool_endpoint_map(_mcp),
@@ -47,7 +45,7 @@ _ENDPOINT_MAP, _ROLE_MAP = _build_maps()
 @pytest.fixture
 def fresh_mcp_server():
     """Create a fresh MCP server instance for testing."""
-    return FastMCP("Test Server")
+    return MCPServer("Test Server")
 
 
 # ------------------------------------------------------------------
@@ -57,14 +55,12 @@ def fresh_mcp_server():
 
 @pytest.mark.anyio
 async def test_disabled_by_default(fresh_mcp_server):
-    """Feature is off when env var is unset — handler unchanged."""
+    """Feature is off when env var is unset: no middleware added."""
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
         register_all(fresh_mcp_server)
 
-        handler_before = fresh_mcp_server._mcp_server.request_handlers[
-            ListToolsRequest
-        ]
+        middleware_before = len(fresh_mcp_server.middleware)
 
         install_dynamic_tool_list(
             fresh_mcp_server,
@@ -72,24 +68,20 @@ async def test_disabled_by_default(fresh_mcp_server):
             build_role_blocked_map(fresh_mcp_server),
         )
 
-        handler_after = fresh_mcp_server._mcp_server.request_handlers[
-            ListToolsRequest
-        ]
-        assert handler_after is handler_before
+        middleware_after = len(fresh_mcp_server.middleware)
+        assert middleware_after == middleware_before
 
 
 @pytest.mark.anyio
 async def test_explicitly_enabled(fresh_mcp_server):
-    """Feature is on when env var is 'true' — handler re-registered."""
+    """Feature is on when env var is 'true': middleware added."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
     ):
         register_all(fresh_mcp_server)
 
-        handler_before = fresh_mcp_server._mcp_server.request_handlers[
-            ListToolsRequest
-        ]
+        middleware_before = len(fresh_mcp_server.middleware)
 
         install_dynamic_tool_list(
             fresh_mcp_server,
@@ -97,10 +89,8 @@ async def test_explicitly_enabled(fresh_mcp_server):
             build_role_blocked_map(fresh_mcp_server),
         )
 
-        handler_after = fresh_mcp_server._mcp_server.request_handlers[
-            ListToolsRequest
-        ]
-        assert handler_after is not handler_before
+        middleware_after = len(fresh_mcp_server.middleware)
+        assert middleware_after == middleware_before + 1
 
 
 @pytest.mark.anyio
@@ -297,9 +287,9 @@ async def test_all_tools_have_endpoint_meta(
 async def test_all_tools_have_read_only_hint(
     fresh_mcp_server,
 ):
-    """Every registered tool must set readOnlyHint explicitly.
+    """Every registered tool must set read_only_hint explicitly.
 
-    A tool without annotations (or with ``readOnlyHint=None``)
+    A tool without annotations (or with ``read_only_hint=None``)
     would slip through the write-tool derivation.  This test
     ensures the read/write classification is exhaustive so
     that derived sets (e.g. ``ALL_TOOLS`` in E2E tests) stay
@@ -310,9 +300,9 @@ async def test_all_tools_have_read_only_hint(
     missing = [
         t.name
         for t in tools
-        if t.annotations is None or t.annotations.readOnlyHint is None
+        if t.annotations is None or t.annotations.read_only_hint is None
     ]
-    assert not missing, f"Tools without explicit readOnlyHint: {missing}"
+    assert not missing, f"Tools without explicit read_only_hint: {missing}"
 
 
 @pytest.mark.anyio
@@ -341,7 +331,7 @@ async def test_all_tools_have_min_role_meta(
 @pytest.mark.anyio
 async def test_build_role_blocked_map_rejects_invalid_min_role():
     """Invalid min_role values must raise ValueError at startup."""
-    mcp = FastMCP("invalid-role-test")
+    mcp = MCPServer("invalid-role-test")
 
     @mcp.tool(
         meta={"endpoint": "test.op", "min_role": "moderator"},
@@ -782,20 +772,20 @@ async def test_get_blocked_tools_last4_collision_across_pages():
 async def test_enabled_values():
     """Feature should activate for 'true', '1', and 'yes'."""
     for val in ("true", "True", "TRUE", "1", "yes", "Yes"):
-        mcp = FastMCP("Test")
+        mcp = MCPServer("Test")
         with patch.dict(
             os.environ,
             {"OUTLINE_DYNAMIC_TOOL_LIST": val},
         ):
             register_all(mcp)
-            handler_before = mcp._mcp_server.request_handlers[ListToolsRequest]
+            middleware_before = len(mcp.middleware)
             install_dynamic_tool_list(
                 mcp,
                 build_tool_endpoint_map(mcp),
                 build_role_blocked_map(mcp),
             )
-            handler_after = mcp._mcp_server.request_handlers[ListToolsRequest]
-            assert handler_after is not handler_before, (
+            middleware_after = len(mcp.middleware)
+            assert middleware_after == middleware_before + 1, (
                 f"Expected enabled for value '{val}'"
             )
 

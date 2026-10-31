@@ -6,7 +6,7 @@ destructive, idempotent, and open-world operations.
 """
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 
@@ -14,12 +14,12 @@ from mcp_outline.features import register_all
 @pytest.fixture
 def fresh_mcp_server():
     """Create a fresh MCP server instance for testing."""
-    return FastMCP("Test Server")
+    return MCPServer("Test Server")
 
 
 @pytest.mark.anyio
 async def test_read_only_tools_have_correct_annotations(fresh_mcp_server):
-    """Test that read-only tools have readOnlyHint=True."""
+    """Test that read-only tools have read_only_hint=True."""
     register_all(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
 
@@ -49,14 +49,14 @@ async def test_read_only_tools_have_correct_annotations(fresh_mcp_server):
         assert tool.annotations is not None, (
             f"Tool {tool_name} has no annotations"
         )
-        assert tool.annotations.readOnlyHint is True, (
-            f"Tool {tool_name} should have readOnlyHint=True"
+        assert tool.annotations.read_only_hint is True, (
+            f"Tool {tool_name} should have read_only_hint=True"
         )
 
 
 @pytest.mark.anyio
 async def test_destructive_tools_have_correct_annotations(fresh_mcp_server):
-    """Test that destructive tools have destructiveHint=True."""
+    """Test that destructive tools have destructive_hint=True."""
     register_all(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
 
@@ -83,8 +83,8 @@ async def test_destructive_tools_have_correct_annotations(fresh_mcp_server):
         assert tool.annotations is not None, (
             f"Tool {tool_name} has no annotations"
         )
-        assert tool.annotations.destructiveHint is True, (
-            f"Tool {tool_name} should have destructiveHint=True"
+        assert tool.annotations.destructive_hint is True, (
+            f"Tool {tool_name} should have destructive_hint=True"
         )
 
 
@@ -111,17 +111,17 @@ async def test_non_destructive_write_tools(fresh_mcp_server):
         assert tool.annotations is not None, (
             f"Tool {tool_name} has no annotations"
         )
-        assert tool.annotations.readOnlyHint is False, (
-            f"Tool {tool_name} should have readOnlyHint=False"
+        assert tool.annotations.read_only_hint is False, (
+            f"Tool {tool_name} should have read_only_hint=False"
         )
-        assert tool.annotations.destructiveHint is False, (
-            f"Tool {tool_name} should have destructiveHint=False"
+        assert tool.annotations.destructive_hint is False, (
+            f"Tool {tool_name} should have destructive_hint=False"
         )
 
 
 @pytest.mark.anyio
 async def test_idempotent_tools(fresh_mcp_server):
-    """Test that idempotent tools have idempotentHint=True."""
+    """Test that idempotent tools have idempotent_hint=True."""
     register_all(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
 
@@ -163,19 +163,19 @@ async def test_idempotent_tools(fresh_mcp_server):
         assert tool.annotations is not None, (
             f"Tool {tool_name} has no annotations"
         )
-        assert tool.annotations.idempotentHint is True, (
-            f"Tool {tool_name} should have idempotentHint=True"
+        assert tool.annotations.idempotent_hint is True, (
+            f"Tool {tool_name} should have idempotent_hint=True"
         )
 
 
 @pytest.mark.anyio
 async def test_ai_tools_have_open_world_hint(fresh_mcp_server):
-    """Test that AI tools have openWorldHint=True."""
+    """Test that AI tools have open_world_hint=True."""
     register_all(fresh_mcp_server)
     tools = await fresh_mcp_server.list_tools()
 
-    # Only AI tools should have openWorldHint (can discover new insights)
-    # Regular search works with known entities, so no openWorldHint
+    # Only AI tools should have open_world_hint (can discover new insights)
+    # Regular search works with known entities, so no open_world_hint
     ai_tools = ["ask_ai_about_documents"]
 
     for tool_name in ai_tools:
@@ -186,8 +186,8 @@ async def test_ai_tools_have_open_world_hint(fresh_mcp_server):
         assert tool.annotations is not None, (
             f"Tool {tool_name} has no annotations"
         )
-        assert tool.annotations.openWorldHint is True, (
-            f"Tool {tool_name} should have openWorldHint=True"
+        assert tool.annotations.open_world_hint is True, (
+            f"Tool {tool_name} should have open_world_hint=True"
         )
 
 
@@ -200,7 +200,7 @@ async def test_search_documents_status_filter_schema(fresh_mcp_server):
     tool = next((t for t in tools if t.name == "search_documents"), None)
     assert tool is not None
 
-    status_filter = tool.inputSchema["properties"]["status_filter"]
+    status_filter = tool.input_schema["properties"]["status_filter"]
     array_schema = next(
         schema
         for schema in status_filter["anyOf"]

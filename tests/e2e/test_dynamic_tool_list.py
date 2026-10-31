@@ -34,11 +34,12 @@ import sys
 import time
 
 import httpx
+import httpx2
 import pytest
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools.introspect import (
@@ -62,7 +63,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.anyio]
 
 def _build_expected_tools():
     """Build expected tool sets by introspecting registered tools."""
-    _mcp = FastMCP("tool-set-builder")
+    _mcp = MCPServer("tool-set-builder")
     register_all(_mcp)
     endpoint_map = build_tool_endpoint_map(_mcp)
     all_tools = set(endpoint_map) - {"ask_ai_about_documents"}
@@ -188,14 +189,14 @@ def _stop(process: subprocess.Popen) -> None:
 
 async def _list_tools_http(api_key: str) -> set[str]:
     """List tool names via streamable-http with per-request key."""
-    http_client = httpx.AsyncClient(
+    http_client = httpx2.AsyncClient(
         headers={"x-outline-api-key": api_key},
-        timeout=httpx.Timeout(30.0, read=300.0),
+        timeout=httpx2.Timeout(30.0, read=300.0),
     )
     async with streamable_http_client(
         url=f"{HTTP_BASE}/mcp",
         http_client=http_client,
-    ) as (read, write, _):
+    ) as (read, write):
         async with ClientSession(read, write) as s:
             await s.initialize()
             result = await s.list_tools()

@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
 # Outline workspace roles ordered by privilege level.
 ROLE_LEVELS: dict[str, int] = {
@@ -22,7 +22,7 @@ ROLE_LEVELS: dict[str, int] = {
 
 
 def build_tool_endpoint_map(
-    mcp: "FastMCP",
+    mcp: "MCPServer",
 ) -> dict[str, str]:
     """Return ``{tool_name: endpoint}`` from tool metadata.
 
@@ -38,7 +38,7 @@ def build_tool_endpoint_map(
 
 
 def build_role_blocked_map(
-    mcp: "FastMCP",
+    mcp: "MCPServer",
 ) -> dict[str, frozenset[str]]:
     """Return ``{role: blocked_tool_names}`` from ``min_role``.
 

@@ -218,14 +218,14 @@ class TestBlockedToolsForScopes:
 
     @pytest.fixture(autouse=True)
     def _build_map(self):
-        from mcp.server.fastmcp import FastMCP
+        from mcp.server.mcpserver import MCPServer
 
         from mcp_outline.features import register_all
         from mcp_outline.features.dynamic_tools.introspect import (
             build_tool_endpoint_map,
         )
 
-        mcp = FastMCP("scope-test")
+        mcp = MCPServer("scope-test")
         register_all(mcp)
         self.tool_endpoint_map = build_tool_endpoint_map(mcp)
 

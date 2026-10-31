@@ -12,7 +12,7 @@ from mcp_outline.features.resources.document_resources import (
 )
 
 
-# Mock FastMCP for registering resources
+# Mock MCPServer for registering resources
 class MockMCP:
     def __init__(self):
         self.resources = {}
