@@ -7,11 +7,12 @@ A simple MCP server that provides document outline capabilities.
 import logging
 import os
 import sys
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
@@ -19,11 +20,8 @@ from mcp_outline.features.dynamic_tools import (
     build_tool_endpoint_map,
     install_dynamic_tool_list,
 )
-from mcp_outline.patches import patch_for_copilot_cli
-
-# Apply compatibility patches for MCP clients
-# This must happen before creating the FastMCP instance
-patch_for_copilot_cli()
+from mcp_outline.patches import coerce_empty_tool_arguments
+from mcp_outline.request_context import capture_request_headers
 
 # Strip empty env vars so that dotenv can fill them from the
 # config file.  MCP clients (e.g. Claude Code) may pass
@@ -46,6 +44,19 @@ host = os.getenv("MCP_HOST", "127.0.0.1")
 
 # Get port from environment variable, default to 3000
 port = int(os.getenv("MCP_PORT", "3000"))
+
+# The SDK caps an HTTP request body at 4 MiB, which rejects a large
+# batch_create_documents or update_document call. Outline accepts more.
+MAX_REQUEST_BODY_BYTES = 100 * 1024 * 1024
+
+
+def _server_version() -> str:
+    """Return the installed mcp-outline version for serverInfo."""
+    try:
+        return version("mcp-outline")
+    except PackageNotFoundError:
+        # A source tree that is not installed has no package metadata.
+        return ""
 
 
 # Server instructions — injected into the LLM's system prompt
@@ -105,12 +116,11 @@ _INSTRUCTIONS = _build_instructions(
     not in ("true", "1", "yes"),
 )
 
-# Create a FastMCP server instance with a name and port configuration
-mcp = FastMCP(
+mcp = MCPServer(
     "Document Outline",
-    host=host,
-    port=port,
+    version=_server_version(),
     instructions=_INSTRUCTIONS,
+    middleware=[capture_request_headers, coerce_empty_tool_arguments],
 )
 
 # Register all features
@@ -181,8 +191,15 @@ def main() -> None:
                 "(x-outline-api-key header)."
             )
 
-    # Start the server with the specified transport
-    mcp.run(transport=transport_mode)
+    if transport_mode == "stdio":
+        mcp.run()
+    else:
+        mcp.run(
+            transport=transport_mode,
+            host=host,
+            port=port,
+            max_request_body_size=MAX_REQUEST_BODY_BYTES,
+        )
 
 
 if __name__ == "__main__":

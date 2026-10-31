@@ -1,10 +1,9 @@
 """
 Guardrail tests for critical dependency version pins in pyproject.toml.
 
-Issue #134: the MCP Python SDK v2 is a breaking release (stateless
-protocol core -- no ``initialize`` handshake, no ``Mcp-Session-Id``
-header). The ``mcp[cli]`` requirement must keep an upper bound that
-excludes v2 so a routine re-lock cannot silently pull it in.
+A major release of the MCP Python SDK breaks the server (issue #134 for
+v2). The ``mcp[cli]`` requirement keeps an upper bound that excludes the
+next major release, so a routine re-lock cannot pull it in.
 """
 
 import re
@@ -28,16 +27,16 @@ def test_pyproject_declares_two_mcp_requirements():
     assert len(_mcp_specifiers()) == 2
 
 
-def test_mcp_cli_pinned_below_v2():
-    """Every ``mcp[cli]`` pin excludes the breaking SDK v2 while still
-    allowing the latest v1 release (issue #134)."""
+def test_mcp_cli_pinned_below_v3():
+    """Every ``mcp[cli]`` pin excludes the next major SDK release while
+    allowing the v2 release the server is migrated to."""
     specs = _mcp_specifiers()
     assert specs, "no mcp[cli] requirement found in pyproject.toml"
     for spec in specs:
         sset = SpecifierSet(spec)
-        assert not sset.contains("2.0.0", prereleases=True), (
-            f"mcp[cli]{spec} allows the breaking SDK v2"
+        assert not sset.contains("3.0.0", prereleases=True), (
+            f"mcp[cli]{spec} allows the next major SDK release"
         )
-        assert sset.contains("1.28.1"), (
-            f"mcp[cli]{spec} must still allow the latest v1 release"
+        assert sset.contains("2.3.0"), (
+            f"mcp[cli]{spec} must allow the migrated v2 release"
         )

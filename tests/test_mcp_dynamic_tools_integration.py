@@ -35,7 +35,7 @@ async def test_dynamic_tool_list_server_starts():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             result = await session.initialize()
-            assert result.serverInfo.name == "Document Outline"
+            assert result.server_info.name == "Document Outline"
 
             # Verify tools are still returned
             tools_result = await session.list_tools()

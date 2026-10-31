@@ -48,12 +48,12 @@ async def test_list_collections_tool_schema():
             )
 
             # The schema should be a valid JSON Schema
-            assert isinstance(list_collections_tool.inputSchema, dict)
+            assert isinstance(list_collections_tool.input_schema, dict)
 
             # For a tool with no parameters, the schema should be:
             # - Either {"type": "object", "properties": {}}
             # - Or {"type": "object"} with no properties
-            schema = list_collections_tool.inputSchema
+            schema = list_collections_tool.input_schema
             assert schema.get("type") == "object", (
                 "Input schema must be of type 'object'"
             )
@@ -161,17 +161,17 @@ async def test_compare_search_and_list_schemas():
             assert list_tool is not None, "list_collections not found"
 
             # Both should have type: object
-            assert search_tool.inputSchema.get("type") == "object"
-            assert list_tool.inputSchema.get("type") == "object"
+            assert search_tool.input_schema.get("type") == "object"
+            assert list_tool.input_schema.get("type") == "object"
 
             # search_documents should have required parameters
-            search_props = search_tool.inputSchema.get("properties", {})
+            search_props = search_tool.input_schema.get("properties", {})
             assert "query" in search_props, (
                 "search_documents should have query parameter"
             )
 
             # list_collections should have no required parameters
-            list_required = list_tool.inputSchema.get("required", [])
+            list_required = list_tool.input_schema.get("required", [])
 
             # Verify that list_collections accepts empty arguments
             assert len(list_required) == 0, (

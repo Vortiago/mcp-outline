@@ -186,14 +186,14 @@ def register_tools(mcp) -> None:
     Register batch operation tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=True,
-            idempotentHint=True,
+            read_only_hint=False,
+            destructive_hint=True,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "documents.archive",
@@ -244,9 +244,9 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=True,
-            idempotentHint=True,
+            read_only_hint=False,
+            destructive_hint=True,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "documents.move",
@@ -319,9 +319,9 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=True,
-            idempotentHint=True,
+            read_only_hint=False,
+            destructive_hint=True,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "documents.delete",
@@ -386,9 +386,9 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=True,
-            idempotentHint=True,
+            read_only_hint=False,
+            destructive_hint=True,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "documents.update",
@@ -465,9 +465,9 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=True,
-            idempotentHint=True,
+            read_only_hint=False,
+            destructive_hint=True,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "documents.create",

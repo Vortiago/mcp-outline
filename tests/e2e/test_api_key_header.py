@@ -16,6 +16,7 @@ import sys
 import time
 
 import httpx
+import httpx2
 import pytest
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import (
@@ -113,16 +114,16 @@ async def test_header_api_key_overrides_env_var(
             f"Server did not bind on port {E2E_PORT} within {STARTUP_TIMEOUT}s"
         )
 
-        http_client = httpx.AsyncClient(
+        http_client = httpx2.AsyncClient(
             headers={
                 "x-outline-api-key": outline_api_key,
             },
-            timeout=httpx.Timeout(30.0, read=300.0),
+            timeout=httpx2.Timeout(30.0, read=300.0),
         )
         async with streamable_http_client(
             url=f"{E2E_BASE}/mcp",
             http_client=http_client,
-        ) as (read, write, _):
+        ) as (read, write):
             async with ClientSession(read, write) as s:
                 await s.initialize()
                 result = await s.call_tool("list_collections")
@@ -162,7 +163,7 @@ async def test_env_var_used_when_no_header(outline_stack, outline_api_key):
         # to the env var.
         async with streamable_http_client(
             url=f"{E2E_BASE}/mcp",
-        ) as (read, write, _):
+        ) as (read, write):
             async with ClientSession(read, write) as s:
                 await s.initialize()
                 result = await s.call_tool("list_collections")

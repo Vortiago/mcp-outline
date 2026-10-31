@@ -50,12 +50,12 @@ def register_tools(mcp) -> None:
     Register AI tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=True, openWorldHint=True, idempotentHint=False
+            read_only_hint=True, open_world_hint=True, idempotent_hint=False
         ),
         meta={
             "endpoint": "documents.answerQuestion",

@@ -1,10 +1,5 @@
-"""
-Patches for MCP SDK compatibility.
+"""Compatibility fixes for MCP clients that break the protocol."""
 
-This module contains runtime patches for third-party libraries to handle
-edge cases and compatibility issues with different MCP clients.
-"""
+from mcp_outline.patches.copilot_cli import coerce_empty_tool_arguments
 
-from mcp_outline.patches.copilot_cli import patch_for_copilot_cli
-
-__all__ = ["patch_for_copilot_cli"]
+__all__ = ["coerce_empty_tool_arguments"]

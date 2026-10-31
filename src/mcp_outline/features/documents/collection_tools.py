@@ -54,7 +54,7 @@ def register_tools(mcp) -> None:
     Register collection management tools with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
     # Check environment variables for conditional registration
     read_only = os.getenv("OUTLINE_READ_ONLY", "").lower() in (
@@ -71,9 +71,9 @@ def register_tools(mcp) -> None:
     # Export tools (always registered)
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=True,
-            destructiveHint=False,
-            idempotentHint=True,
+            read_only_hint=True,
+            destructive_hint=False,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "collections.export",
@@ -124,9 +124,9 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(
         annotations=ToolAnnotations(
-            readOnlyHint=True,
-            destructiveHint=False,
-            idempotentHint=True,
+            read_only_hint=True,
+            destructive_hint=False,
+            idempotent_hint=True,
         ),
         meta={
             "endpoint": "collections.export_all",
@@ -175,9 +175,9 @@ def register_tools(mcp) -> None:
 
         @mcp.tool(
             annotations=ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=False,
-                idempotentHint=False,
+                read_only_hint=False,
+                destructive_hint=False,
+                idempotent_hint=False,
             ),
             meta={
                 "endpoint": "collections.create",
@@ -229,9 +229,9 @@ def register_tools(mcp) -> None:
 
         @mcp.tool(
             annotations=ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=True,
-                idempotentHint=False,
+                read_only_hint=False,
+                destructive_hint=True,
+                idempotent_hint=False,
             ),
             meta={
                 "endpoint": "collections.update",
@@ -291,9 +291,9 @@ def register_tools(mcp) -> None:
 
         @mcp.tool(
             annotations=ToolAnnotations(
-                readOnlyHint=False,
-                destructiveHint=True,
-                idempotentHint=True,
+                read_only_hint=False,
+                destructive_hint=True,
+                idempotent_hint=True,
             ),
             meta={
                 "endpoint": "collections.delete",

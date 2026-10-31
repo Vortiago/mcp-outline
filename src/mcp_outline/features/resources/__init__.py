@@ -21,7 +21,7 @@ def register(mcp):
     Register all resource handlers with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
     collection_resources.register_resources(mcp)
     document_resources.register_resources(mcp)

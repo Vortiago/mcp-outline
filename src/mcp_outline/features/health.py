@@ -29,7 +29,7 @@ def register_routes(mcp) -> None:
     Register health check routes with the MCP server.
 
     Args:
-        mcp: The FastMCP server instance
+        mcp: The MCPServer server instance
     """
 
     @mcp.custom_route(path="/health", methods=["GET"])

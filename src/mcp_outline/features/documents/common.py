@@ -7,6 +7,7 @@ This module provides shared functionality used by both tools and resources.
 import os
 from typing import Optional
 
+from mcp_outline.request_context import get_request_header
 from mcp_outline.utils.outline_client import (
     OutlineClient,
     OutlineError,
@@ -21,33 +22,11 @@ class OutlineClientError(Exception):
 
 
 def _get_header_api_key() -> Optional[str]:
-    """Get Outline API key from the current HTTP request header.
+    """Return the sanitised ``x-outline-api-key`` request header.
 
-    Reads the ``x-outline-api-key`` header from the MCP SDK's
-    request context. The SDK stores the Starlette ``Request``
-    object in a ``ContextVar`` during every tool call for both
-    SSE and streamable-http transports.
-
-    Returns ``None`` when:
-    - Not inside a request context (e.g. startup, tests)
-    - Using stdio transport (no HTTP request available)
-    - The header is not present in the request
-
-    Returns:
-        Sanitized API key string, or None.
+    None for stdio, outside a message, or when the header is absent.
     """
-    try:
-        from mcp.server.lowlevel.server import (
-            request_ctx,
-        )
-
-        ctx = request_ctx.get()
-        if ctx.request is not None:
-            raw = ctx.request.headers.get("x-outline-api-key")
-            return _sanitize_value(raw)
-    except (LookupError, ImportError, AttributeError):
-        pass
-    return None
+    return _sanitize_value(get_request_header("x-outline-api-key"))
 
 
 def get_resolved_api_key() -> str:

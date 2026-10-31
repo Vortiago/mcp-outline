@@ -6,7 +6,7 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_outline.features import register_all
 from mcp_outline.features.dynamic_tools import (
@@ -14,13 +14,13 @@ from mcp_outline.features.dynamic_tools import (
     build_tool_endpoint_map,
     install_dynamic_tool_list,
 )
-from tests.helpers import list_tools_via_handler
+from tests.helpers import list_tools_via_client
 
 
 @pytest.fixture
 def fresh_mcp_server():
     """Create a fresh MCP server instance for testing."""
-    return FastMCP("Test Server")
+    return MCPServer("Test Server")
 
 
 @pytest.mark.anyio
@@ -30,6 +30,15 @@ async def test_server_initialization():
 
     assert mcp.name == "Document Outline"
     assert len(await mcp.list_tools()) > 0  # Ensure functions are registered
+
+
+def test_server_reports_package_version():
+    """serverInfo.version is the installed mcp-outline version."""
+    from importlib.metadata import version
+
+    from mcp_outline.server import mcp
+
+    assert mcp.version == version("mcp-outline")
 
 
 def test_instructions_mention_editing_by_default():
@@ -229,7 +238,7 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
         assert "ask_ai_about_documents" in tool_names
 
     # Test 2: AI tools disabled when both flags are set
-    fresh_mcp_server2 = FastMCP("Test Server 2")
+    fresh_mcp_server2 = MCPServer("Test Server 2")
     with patch.dict(
         os.environ,
         {"OUTLINE_READ_ONLY": "true", "OUTLINE_DISABLE_AI_TOOLS": "true"},
@@ -245,10 +254,7 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
 async def test_dynamic_tool_list_when_enabled(
     fresh_mcp_server,
 ):
-    """Dynamic tool list should filter via the MCP protocol handler.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """Dynamic tool list should filter via the MCP protocol handler."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
@@ -266,7 +272,7 @@ async def test_dynamic_tool_list_when_enabled(
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" in tool_names
@@ -275,11 +281,8 @@ async def test_dynamic_tool_list_when_enabled(
 
 @pytest.mark.anyio
 async def test_dynamic_tool_list_composes_with_read_only():
-    """Dynamic + read-only should compose: write tools absent.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
-    mcp = FastMCP("Test Compose")
+    """Dynamic + read-only should compose: write tools absent."""
+    mcp = MCPServer("Test Compose")
     with patch.dict(
         os.environ,
         {
@@ -301,7 +304,7 @@ async def test_dynamic_tool_list_composes_with_read_only():
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(mcp)
+            tools = await list_tools_via_client(mcp)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" not in tool_names
@@ -314,10 +317,8 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
 
     Delete tools are absent at registration.  The dynamic filter
     should still work for remaining write tools without errors.
-
-    Uses the lowlevel handler path to match real MCP clients.
     """
-    mcp = FastMCP("Test Compose Delete")
+    mcp = MCPServer("Test Compose Delete")
     with patch.dict(
         os.environ,
         {
@@ -338,7 +339,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(mcp)
+            tools = await list_tools_via_client(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names
@@ -354,7 +355,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             new_callable=AsyncMock,
             return_value=set(role_map["viewer"]),
         ):
-            tools = await list_tools_via_handler(mcp)
+            tools = await list_tools_via_client(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names
