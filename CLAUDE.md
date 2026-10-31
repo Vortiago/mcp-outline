@@ -161,11 +161,13 @@ from mcp_outline.features.documents.common import (
     OutlineClientError,
 )
 
+
 # 2. Helper formatters (private functions)
 def _format_search_results(data: dict) -> str:
     """Format API response for user display."""
     # Clean, readable output formatting
     pass
+
 
 # 3. Tool registration function
 def register_tools(mcp: FastMCP) -> None:
@@ -195,9 +197,7 @@ def register_tools(mcp: FastMCP) -> None:
         """
         try:
             client = await get_outline_client()
-            result = await client.search_documents(
-                query, collection_id
-            )
+            result = await client.search_documents(query, collection_id)
             return _format_search_results(result)
         except OutlineClientError as e:
             return f"Outline API error: {str(e)}"
@@ -265,17 +265,13 @@ tool metadata by `introspect.py` — no separate map files need updating.
 ```python
 # In OutlineClient methods
 try:
-    response = await self._client_pool.post(
-        url, headers=headers, json=data
-    )
+    response = await self._client_pool.post(url, headers=headers, json=data)
     response.raise_for_status()
     return response.json()
 except httpx.HTTPStatusError as e:
     if e.response.status_code == 429:
         raise OutlineError(f"Rate limited")
-    raise OutlineError(
-        f"HTTP {e.response.status_code}: {e.response.text}"
-    )
+    raise OutlineError(f"HTTP {e.response.status_code}: {e.response.text}")
 except httpx.TimeoutException as e:
     raise OutlineError(f"Request timeout: {str(e)}")
 except httpx.RequestError as e:
@@ -299,7 +295,7 @@ Mock `OutlineClient` in async tests:
 ```python
 @pytest.mark.asyncio
 async def test_tool():
-    with patch('module.get_outline_client') as mock_get_client:
+    with patch("module.get_outline_client") as mock_get_client:
         mock_client = AsyncMock()
         mock_client.method.return_value = {"data": "value"}
         mock_get_client.return_value = mock_client
