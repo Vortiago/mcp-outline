@@ -9,9 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import anyio
 from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 
-from mcp_outline.features.documents.common import (
-    _get_header_api_key,
-)
+from mcp_outline.features.documents.common import get_resolved_api_key
 from mcp_outline.features.dynamic_tools.scope_matching import (
     blocked_tools_for_scopes,
 )
@@ -268,7 +266,7 @@ def install_dynamic_tool_list(
             return result
 
         try:
-            api_key = _get_header_api_key() or os.getenv("OUTLINE_API_KEY")
+            api_key = get_resolved_api_key()
             api_url = os.getenv("OUTLINE_API_URL")
 
             blocked = await get_blocked_tools(
@@ -284,8 +282,6 @@ def install_dynamic_tool_list(
             )
             return result
 
-        if not blocked:
-            return result
         tools = [t for t in result["tools"] if t["name"] not in blocked]
         return {**result, "tools": tools}
 

@@ -1,8 +1,9 @@
 """
-Test to simulate GitHub Copilot CLI behavior with different tool schemas.
+Tests for GitHub Copilot CLI compatibility.
 
-This test simulates what happens when an LLM sees tool schemas with
-different parameter configurations and what arguments it might generate.
+The first tests run the middleware that turns Copilot's empty-string
+tool arguments into {}. The rest record how Copilot reacts to
+different tool schemas.
 """
 
 import json

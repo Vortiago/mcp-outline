@@ -14,7 +14,7 @@ from mcp_outline.features.dynamic_tools import (
     build_tool_endpoint_map,
     install_dynamic_tool_list,
 )
-from tests.helpers import list_tools_via_handler
+from tests.helpers import list_tools_via_client
 
 
 @pytest.fixture
@@ -254,10 +254,7 @@ async def test_ai_tools_work_with_read_only(fresh_mcp_server):
 async def test_dynamic_tool_list_when_enabled(
     fresh_mcp_server,
 ):
-    """Dynamic tool list should filter via the MCP protocol handler.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """Dynamic tool list should filter via the MCP protocol handler."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
@@ -275,7 +272,7 @@ async def test_dynamic_tool_list_when_enabled(
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" in tool_names
@@ -284,10 +281,7 @@ async def test_dynamic_tool_list_when_enabled(
 
 @pytest.mark.anyio
 async def test_dynamic_tool_list_composes_with_read_only():
-    """Dynamic + read-only should compose: write tools absent.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """Dynamic + read-only should compose: write tools absent."""
     mcp = MCPServer("Test Compose")
     with patch.dict(
         os.environ,
@@ -310,7 +304,7 @@ async def test_dynamic_tool_list_composes_with_read_only():
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(mcp)
+            tools = await list_tools_via_client(mcp)
             tool_names = [tool.name for tool in tools]
 
             assert "create_document" not in tool_names
@@ -323,8 +317,6 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
 
     Delete tools are absent at registration.  The dynamic filter
     should still work for remaining write tools without errors.
-
-    Uses the lowlevel handler path to match real MCP clients.
     """
     mcp = MCPServer("Test Compose Delete")
     with patch.dict(
@@ -347,7 +339,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(mcp)
+            tools = await list_tools_via_client(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names
@@ -363,7 +355,7 @@ async def test_disable_delete_composes_with_dynamic_tool_list():
             new_callable=AsyncMock,
             return_value=set(role_map["viewer"]),
         ):
-            tools = await list_tools_via_handler(mcp)
+            tools = await list_tools_via_client(mcp)
             names = [t.name for t in tools]
 
             assert "delete_document" not in names

@@ -1,5 +1,6 @@
 """
-Tests for common utilities (get_outline_client, _get_header_api_key).
+Tests for common utilities (get_outline_client, _get_header_api_key)
+and the request header middleware that _get_header_api_key reads.
 """
 
 import os
@@ -43,7 +44,7 @@ class TestGetHeaderApiKey:
         """No message in progress -> returns None."""
         assert _get_header_api_key() is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_returns_key_from_header(self):
         """Header present -> returns key value."""
         result = await _header_key_during_request(
@@ -51,12 +52,12 @@ class TestGetHeaderApiKey:
         )
         assert result == "sk-test-key"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_returns_none_when_header_absent(self):
         """Request exists but header missing -> None."""
         assert await _header_key_during_request({}) is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_sanitizes_header_value(self):
         """Quoted/whitespace values are cleaned."""
         result = await _header_key_during_request(
@@ -64,12 +65,12 @@ class TestGetHeaderApiKey:
         )
         assert result == "sk-quoted"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_returns_none_when_request_is_none(self):
         """Message with no HTTP request (stdio) -> None."""
         assert await _header_key_during_request(None) is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_header_cleared_after_message(self):
         """The header does not outlive its message."""
         await _header_key_during_request({"x-outline-api-key": "sk-gone"})

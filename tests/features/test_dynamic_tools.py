@@ -26,7 +26,7 @@ from mcp_outline.features.dynamic_tools import (
     install_dynamic_tool_list,
 )
 from mcp_outline.utils.outline_client import OutlineError
-from tests.helpers import list_tools_via_handler
+from tests.helpers import list_tools_via_client
 
 
 def _build_maps():
@@ -53,52 +53,29 @@ def fresh_mcp_server():
 # ------------------------------------------------------------------
 
 
-@pytest.mark.anyio
-async def test_disabled_by_default(fresh_mcp_server):
+def _install_adds_middleware(mcp: MCPServer) -> bool:
+    """Register all tools, install the filter, and report whether the
+    install added a middleware."""
+    register_all(mcp)
+    middleware_before = len(mcp.middleware)
+    install_dynamic_tool_list(
+        mcp,
+        build_tool_endpoint_map(mcp),
+        build_role_blocked_map(mcp),
+    )
+    return len(mcp.middleware) == middleware_before + 1
+
+
+def test_disabled_by_default(fresh_mcp_server):
     """Feature is off when env var is unset: no middleware added."""
     with patch.dict(os.environ, {}, clear=False):
         os.environ.pop("OUTLINE_DYNAMIC_TOOL_LIST", None)
-        register_all(fresh_mcp_server)
-
-        middleware_before = len(fresh_mcp_server.middleware)
-
-        install_dynamic_tool_list(
-            fresh_mcp_server,
-            build_tool_endpoint_map(fresh_mcp_server),
-            build_role_blocked_map(fresh_mcp_server),
-        )
-
-        middleware_after = len(fresh_mcp_server.middleware)
-        assert middleware_after == middleware_before
-
-
-@pytest.mark.anyio
-async def test_explicitly_enabled(fresh_mcp_server):
-    """Feature is on when env var is 'true': middleware added."""
-    with patch.dict(
-        os.environ,
-        {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
-    ):
-        register_all(fresh_mcp_server)
-
-        middleware_before = len(fresh_mcp_server.middleware)
-
-        install_dynamic_tool_list(
-            fresh_mcp_server,
-            build_tool_endpoint_map(fresh_mcp_server),
-            build_role_blocked_map(fresh_mcp_server),
-        )
-
-        middleware_after = len(fresh_mcp_server.middleware)
-        assert middleware_after == middleware_before + 1
+        assert not _install_adds_middleware(fresh_mcp_server)
 
 
 @pytest.mark.anyio
 async def test_viewer_sees_only_viewer_tools(fresh_mcp_server):
-    """Blocked tools for viewer role should not appear in tool list.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """Blocked tools for viewer role should not appear in tool list."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
@@ -115,7 +92,7 @@ async def test_viewer_sees_only_viewer_tools(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=_ROLE_MAP["viewer"],
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             names = {t.name for t in tools}
 
             # Viewer-accessible tools present
@@ -138,10 +115,7 @@ async def test_viewer_sees_only_viewer_tools(fresh_mcp_server):
 
 @pytest.mark.anyio
 async def test_member_sees_all_tools(fresh_mcp_server):
-    """No blocked tools → all tools visible.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """No blocked tools → all tools visible."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
@@ -158,7 +132,7 @@ async def test_member_sees_all_tools(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=set(),
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "search_documents" in names
@@ -169,10 +143,7 @@ async def test_member_sees_all_tools(fresh_mcp_server):
 
 @pytest.mark.anyio
 async def test_scoped_key_without_write(fresh_mcp_server):
-    """Scoped key blocking write endpoints hides write tools.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """Scoped key blocking write endpoints hides write tools."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
@@ -189,7 +160,7 @@ async def test_scoped_key_without_write(fresh_mcp_server):
             new_callable=AsyncMock,
             return_value=_ROLE_MAP["viewer"],
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "search_documents" in names
@@ -202,10 +173,7 @@ async def test_scoped_key_without_write(fresh_mcp_server):
 async def test_graceful_degradation_scope_check_error(
     fresh_mcp_server,
 ):
-    """When get_blocked_tools raises, return all tools (fail-open).
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """When get_blocked_tools raises, return all tools (fail-open)."""
     with patch.dict(
         os.environ,
         {
@@ -225,7 +193,7 @@ async def test_graceful_degradation_scope_check_error(
             new_callable=AsyncMock,
             side_effect=Exception("unexpected error"),
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             names = {t.name for t in tools}
 
             # All tools should be returned on error
@@ -237,10 +205,7 @@ async def test_graceful_degradation_scope_check_error(
 async def test_graceful_degradation_no_api_key(
     fresh_mcp_server,
 ):
-    """When no API key is available, return all tools.
-
-    Uses the lowlevel handler path to match real MCP clients.
-    """
+    """When no API key is available, return all tools."""
     with patch.dict(
         os.environ,
         {"OUTLINE_DYNAMIC_TOOL_LIST": "true"},
@@ -254,10 +219,10 @@ async def test_graceful_degradation_no_api_key(
         )
 
         with patch(
-            "mcp_outline.features.dynamic_tools.filtering._get_header_api_key",
-            return_value=None,
+            "mcp_outline.features.dynamic_tools.filtering.get_resolved_api_key",
+            return_value="",
         ):
-            tools = await list_tools_via_handler(fresh_mcp_server)
+            tools = await list_tools_via_client(fresh_mcp_server)
             names = {t.name for t in tools}
 
             assert "create_document" in names
@@ -772,20 +737,8 @@ async def test_get_blocked_tools_last4_collision_across_pages():
 async def test_enabled_values():
     """Feature should activate for 'true', '1', and 'yes'."""
     for val in ("true", "True", "TRUE", "1", "yes", "Yes"):
-        mcp = MCPServer("Test")
-        with patch.dict(
-            os.environ,
-            {"OUTLINE_DYNAMIC_TOOL_LIST": val},
-        ):
-            register_all(mcp)
-            middleware_before = len(mcp.middleware)
-            install_dynamic_tool_list(
-                mcp,
-                build_tool_endpoint_map(mcp),
-                build_role_blocked_map(mcp),
-            )
-            middleware_after = len(mcp.middleware)
-            assert middleware_after == middleware_before + 1, (
+        with patch.dict(os.environ, {"OUTLINE_DYNAMIC_TOOL_LIST": val}):
+            assert _install_adds_middleware(MCPServer("Test")), (
                 f"Expected enabled for value '{val}'"
             )
 

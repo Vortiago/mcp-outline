@@ -7,7 +7,7 @@ helpers live in ``tests/e2e/helpers.py``.
 from mcp import Client
 
 
-async def list_tools_via_handler(mcp_server):
+async def list_tools_via_client(mcp_server):
     """Call ``tools/list`` through an in-process MCP client.
 
     This is the code path real MCP clients use, so the server
